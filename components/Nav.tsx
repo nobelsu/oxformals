@@ -9,7 +9,6 @@ const TABS = [
   { id: "browse", label: "Browse" },
   { id: "requests", label: "Requests" },
   { id: "mine", label: "Mine" },
-  { id: "chats", label: "Chats" },
 ] as const;
 
 export function Nav() {

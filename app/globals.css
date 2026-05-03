@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Self-host: add your licensed OneLittleFont.woff2 to /public/fonts/ (web kit from your purchase, or WOFF2 converted from an embeddable license). */
+@font-face {
+  font-family: "One Little Font";
+  src: url("/fonts/OneLittleFont.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --bg: #f2ead8;
   --paper: #f6efe0;
@@ -47,12 +56,12 @@ html,
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-hand), "Patrick Hand", ui-rounded, system-ui, sans-serif;
+  font-family: "One Little Font", var(--font-hand), "Patrick Hand", ui-rounded, system-ui, sans-serif;
   letter-spacing: 0.01em;
 }
 
 .font-display {
-  font-family: var(--font-display), "Caveat", cursive;
+  font-family: "One Little Font", var(--font-display), "Caveat", cursive;
   letter-spacing: 0.02em;
 }
 

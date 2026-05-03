@@ -4,12 +4,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { BrowseTab } from "@/components/swap/BrowseTab";
-import { ChatsTab } from "@/components/swap/ChatsTab";
 import { MineTab } from "@/components/swap/MineTab";
 import { RequestsTab } from "@/components/swap/RequestsTab";
 import { SignInGate } from "@/components/swap/SignInGate";
 
-const TABS = ["browse", "requests", "mine", "chats"] as const;
+const TABS = ["browse", "requests", "mine"] as const;
 type Tab = (typeof TABS)[number];
 
 function isTab(x: string | null): x is Tab {
@@ -23,11 +22,11 @@ export function HomeClient() {
   const urlTab = searchParams.get("tab");
 
   const [tab, setTab] = useState<Tab>(isTab(urlTab) ? urlTab : "browse");
-  const [chatPeerId, setChatPeerId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isTab(urlTab) && urlTab !== tab) {
-      setTab(urlTab);
+    const nextFromUrl: Tab = isTab(urlTab) ? urlTab : "browse";
+    if (nextFromUrl !== tab) {
+      setTab(nextFromUrl);
     }
   }, [urlTab, tab]);
 
@@ -46,14 +45,6 @@ export function HomeClient() {
     [router, searchParams],
   );
 
-  const handleOpenChatWith = useCallback(
-    (userId: string) => {
-      setChatPeerId(userId);
-      setActiveTab("chats");
-    },
-    [setActiveTab],
-  );
-
   const content = useMemo(() => {
     if (tab === "browse") {
       return (
@@ -67,20 +58,15 @@ export function HomeClient() {
       return <SignInGate />;
     }
     if (tab === "requests") {
-      return <RequestsTab onOpenChatWith={handleOpenChatWith} />;
+      return <RequestsTab />;
     }
     if (tab === "mine") {
-      return <MineTab onNavigateToRequests={() => setActiveTab("requests")} />;
+      return (
+        <MineTab onNavigateToRequests={() => setActiveTab("requests")} />
+      );
     }
-    return <ChatsTab initialPeerUserId={chatPeerId} />;
-  }, [
-    tab,
-    isAuthenticated,
-    setActiveTab,
-    router,
-    handleOpenChatWith,
-    chatPeerId,
-  ]);
+    return null;
+  }, [tab, isAuthenticated, setActiveTab, router]);
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 sm:px-6 py-8">{content}</main>

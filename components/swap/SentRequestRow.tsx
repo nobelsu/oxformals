@@ -10,14 +10,12 @@ type Props = {
   request: SwapRequest;
   toUser: User;
   targetListing: Listing | undefined;
-  onMessage: () => void;
 };
 
 export function SentRequestRow({
   request,
   toUser,
   targetListing,
-  onMessage,
 }: Props) {
   const statusLabel =
     request.status === "pending"
@@ -50,13 +48,6 @@ export function SentRequestRow({
         <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
           {statusLabel}
         </span>
-        <button
-          type="button"
-          onClick={onMessage}
-          className="rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] px-3 py-0.5 text-xs transition-colors"
-        >
-          Message
-        </button>
       </div>
     </SketchCard>
   );

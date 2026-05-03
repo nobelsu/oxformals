@@ -8,11 +8,7 @@ import { SentRequestRow } from "./SentRequestRow";
 import { SwapConfirmedModal } from "./SwapConfirmedModal";
 import type { Listing } from "@/lib/data/types";
 
-type Props = {
-  onOpenChatWith: (otherUserId: string) => void;
-};
-
-export function RequestsTab({ onOpenChatWith }: Props) {
+export function RequestsTab() {
   const { user } = useAuth();
   const {
     requests,
@@ -20,7 +16,6 @@ export function RequestsTab({ onOpenChatWith }: Props) {
     getListing,
     acceptRequest,
     declineRequest,
-    openConversationWith,
   } = useData();
 
   const [confirmed, setConfirmed] = useState<{
@@ -74,10 +69,6 @@ export function RequestsTab({ onOpenChatWith }: Props) {
                     });
                   }}
                   onDecline={() => declineRequest(r.id)}
-                  onMessage={() => {
-                    openConversationWith(r.fromUserId, r.targetListingId);
-                    onOpenChatWith(r.fromUserId);
-                  }}
                 />
               );
             })}
@@ -105,10 +96,6 @@ export function RequestsTab({ onOpenChatWith }: Props) {
                   request={r}
                   toUser={toUser}
                   targetListing={getListing(r.targetListingId)}
-                  onMessage={() => {
-                    openConversationWith(r.toUserId, r.targetListingId);
-                    onOpenChatWith(r.toUserId);
-                  }}
                 />
               );
             })}

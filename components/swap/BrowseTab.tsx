@@ -100,21 +100,23 @@ export function BrowseTab({ onNavigateToMine, onSignInRequired }: Props) {
           No open swaps here yet. Try another college or list your own formal.
         </SketchCard>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {browseListings.map((l) => {
-            const owner = getUser(l.ownerUserId);
-            if (!owner) return null;
-            return (
-              <ListingCard
-                key={l.id}
-                listing={l}
-                owner={owner}
-                onRequest={() => handleRequestClick(l)}
-                disabled={!isAuthenticated}
-                disabledLabel={isAuthenticated ? undefined : "Sign in to request"}
-              />
-            );
-          })}
+        <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen px-4 sm:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {browseListings.map((l) => {
+              const owner = getUser(l.ownerUserId);
+              if (!owner) return null;
+              return (
+                <ListingCard
+                  key={l.id}
+                  listing={l}
+                  owner={owner}
+                  onRequest={() => handleRequestClick(l)}
+                  disabled={!isAuthenticated}
+                  disabledLabel={isAuthenticated ? undefined : "Sign in to request"}
+                />
+              );
+            })}
+          </div>
         </div>
       )}
 

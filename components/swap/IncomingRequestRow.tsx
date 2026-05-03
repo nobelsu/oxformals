@@ -12,7 +12,6 @@ type Props = {
   offeringListing: Listing | undefined;
   onAccept: () => void;
   onDecline: () => void;
-  onMessage: () => void;
 };
 
 export function IncomingRequestRow({
@@ -21,7 +20,6 @@ export function IncomingRequestRow({
   offeringListing,
   onAccept,
   onDecline,
-  onMessage,
 }: Props) {
   const isPending = request.status === "pending";
   return (
@@ -64,13 +62,6 @@ export function IncomingRequestRow({
               className="rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] px-4 py-1 text-sm transition-colors"
             >
               Decline
-            </button>
-            <button
-              type="button"
-              onClick={onMessage}
-              className="rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] px-4 py-1 text-sm transition-colors"
-            >
-              Message
             </button>
           </>
         ) : (
