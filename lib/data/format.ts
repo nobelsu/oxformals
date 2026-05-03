@@ -1,0 +1,40 @@
+// "Thu 8 May · 7:15pm"
+export function formatListingDate(iso: string): string {
+  const d = new Date(iso);
+  const day = new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(d);
+  let hours = d.getHours();
+  const minutes = d.getMinutes().toString().padStart(2, "0");
+  const suffix = hours >= 12 ? "pm" : "am";
+  hours = hours % 12 || 12;
+  const time =
+    minutes === "00" ? `${hours}${suffix}` : `${hours}:${minutes}${suffix}`;
+  return `${day} · ${time}`;
+}
+
+export function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+  }).format(d);
+}
+
+export function formatRelativeTime(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.round(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `${days}d`;
+  const d = new Date(ts);
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+  }).format(d);
+}

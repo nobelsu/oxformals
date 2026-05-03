@@ -1,26 +1,69 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg: #f2ead8;
+  --paper: #f6efe0;
+  --ink: #1a140f;
+  --ink-muted: #5a4d40;
+  --ink-soft: #9a8c7a;
+  --tag: #20140d;
+  --tag-ink: #f6efe0;
+  --accent: #edbfba;
+  --accent-hover: #e3a9a2;
+  --accent-ink: #ffffff;
+  --danger: #c96360;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #1a140f;
+    --paper: #241b14;
+    --ink: #f2ead8;
+    --ink-muted: #c9bfb1;
+    --ink-soft: #8a7d70;
+    --tag: #f2ead8;
+    --tag-ink: #1a140f;
+    --accent: #edbfba;
+    --accent-hover: #e3a9a2;
+    --accent-ink: #1a140f;
   }
 }
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-soft: var(--ink-soft);
+  --color-tag: var(--tag);
+  --color-tag-ink: var(--tag-ink);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --font-hand: var(--font-hand);
+  --font-display: var(--font-display);
+}
+
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-hand), "Patrick Hand", ui-rounded, system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.font-display {
+  font-family: var(--font-display), "Caveat", cursive;
+  letter-spacing: 0.02em;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
 }
