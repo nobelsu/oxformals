@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { SketchCard } from "@/components/ui/SketchCard";
@@ -16,10 +16,37 @@ type Props = {
   onSignInRequired: () => void;
 };
 
+const BROWSE_TAB_FONT_CSS = `
+.browse-tab-root > section:first-of-type h1 {
+  font-size: clamp(3.375rem, 9vw, 5.625rem);
+  line-height: 1;
+}
+.browse-tab-root > section:first-of-type > p {
+  font-size: 1.03125rem;
+  line-height: 1.45;
+}
+@media (min-width: 640px) {
+  .browse-tab-root > section:first-of-type > p {
+    font-size: 1.21875rem;
+  }
+}
+.browse-tab-root > section:first-of-type button {
+  font-size: 0.84375rem;
+}
+.browse-tab-root > section:nth-of-type(2) .text-4xl {
+  font-size: 2.4375rem;
+}
+.browse-tab-root > section:nth-of-type(2) .text-sm {
+  font-size: 0.796875rem;
+}
+.browse-tab-root > div.flex-wrap button {
+  font-size: 0.796875rem;
+}
+`;
+
 export function BrowseTab({ onNavigateToMine, onSignInRequired }: Props) {
   const { user, isAuthenticated } = useAuth();
   const {
-    users,
     listings,
     requestSwap,
     getUser,
@@ -27,6 +54,16 @@ export function BrowseTab({ onNavigateToMine, onSignInRequired }: Props) {
 
   const [collegeFilter, setCollegeFilter] = useState<string | null>(null);
   const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
+
+  useEffect(() => {
+    const styleId = "browse-tab-type-scale";
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = BROWSE_TAB_FONT_CSS;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   const browseListings = useMemo(
     () =>
@@ -48,14 +85,10 @@ export function BrowseTab({ onNavigateToMine, onSignInRequired }: Props) {
     [listings, user],
   );
 
-  const stats = useMemo(() => {
-    const active = listings.filter((l) => l.status === "active");
-    return {
-      people: users.length,
-      openSwaps: active.length,
-      colleges: new Set(active.map((l) => l.college)).size,
-    };
-  }, [users, listings]);
+  const openSwaps = useMemo(
+    () => listings.filter((l) => l.status === "active").length,
+    [listings],
+  );
 
   const availableColleges = useMemo(
     () =>
@@ -82,26 +115,26 @@ export function BrowseTab({ onNavigateToMine, onSignInRequired }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <Hero onList={onNavigateToMine} />
-      <StatsStrip
-        people={stats.people}
-        openSwaps={stats.openSwaps}
-        colleges={stats.colleges}
-      />
-      <CollegeFilter
-        active={collegeFilter}
-        onChange={setCollegeFilter}
-        availableColleges={availableColleges}
-      />
+    <>
+      <div className="browse-tab-root flex flex-col gap-10">
+        <Hero onList={onNavigateToMine} />
+        <StatsStrip openSwaps={openSwaps} />
+        <CollegeFilter
+          active={collegeFilter}
+          onChange={setCollegeFilter}
+          availableColleges={availableColleges}
+        />
 
-      {browseListings.length === 0 ? (
-        <SketchCard className="p-8 text-center text-[var(--ink-muted)]">
-          No open swaps here yet. Try another college or list your own formal.
-        </SketchCard>
-      ) : (
-        <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen px-4 sm:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {browseListings.length === 0 ? (
+          <SketchCard className="p-10 text-center text-[var(--ink-muted)] text-[0.9375rem] sm:text-[1.125rem] leading-snug">
+            No open swaps here yet. Try another college or list your own formal.
+          </SketchCard>
+        ) : (
+          <div
+            data-browse-listings
+            className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen px-4 sm:px-6"
+          >
+            <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {browseListings.map((l) => {
               const owner = getUser(l.ownerUserId);
               if (!owner) return null;
@@ -116,9 +149,10 @@ export function BrowseTab({ onNavigateToMine, onSignInRequired }: Props) {
                 />
               );
             })}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <RequestSwapModal
         open={!!requestTarget}
@@ -135,6 +169,6 @@ export function BrowseTab({ onNavigateToMine, onSignInRequired }: Props) {
           setRequestTarget(null);
         }}
       />
-    </div>
+    </>
   );
 }

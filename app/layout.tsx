@@ -1,20 +1,14 @@
 import type { Metadata } from "next";
-import { Caveat, Patrick_Hand } from "next/font/google";
+import { Schoolbell } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { DataProvider } from "@/components/data/DataProvider";
 import { Nav } from "@/components/Nav";
 
-const patrickHand = Patrick_Hand({
-  variable: "--font-hand",
+const schoolbell = Schoolbell({
+  variable: "--font-sans",
   subsets: ["latin"],
   weight: "400",
-});
-
-const caveat = Caveat({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -30,7 +24,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${patrickHand.variable} ${caveat.variable} h-full antialiased`}
+      className={`${schoolbell.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <AuthProvider>

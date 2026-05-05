@@ -27,8 +27,17 @@ function id(prefix: string): string {
   return `${prefix}_${rand}`;
 }
 
+function hydrateListing(raw: Listing): Listing {
+  return {
+    ...raw,
+    year: raw.year ?? "",
+    role: raw.role ?? "",
+  };
+}
+
 function loadListings(): Listing[] {
-  return readJSON<Listing[]>(K.listings, []);
+  const rows = readJSON<Listing[]>(K.listings, []);
+  return rows.map((raw) => hydrateListing(raw));
 }
 function saveListings(v: Listing[]): void {
   writeJSON(K.listings, v);
@@ -57,6 +66,9 @@ function loadWishlists(): Wishlists {
 function saveWishlists(v: Wishlists): void {
   writeJSON(K.wishlists, v);
 }
+
+/** Fields collected in the list-a-formal form (profile supplies the rest). */
+export type NewListingInput = Pick<Listing, "dateTime" | "seats" | "message">;
 
 export type CreateListingInput = Omit<
   Listing,
@@ -125,6 +137,45 @@ export const dataClient = {
       r.id === requestId ? { ...r, status } : r,
     );
     saveRequests(next);
+  },
+
+  /** Recipient accepts: confirms both listings and declines other pending requests that use either listing. */
+  acceptRequest(requestId: string): SwapRequest | null {
+    const all = loadRequests();
+    const req = all.find((r) => r.id === requestId);
+    if (!req || req.status !== "pending") return null;
+    const target = loadListings().find((l) => l.id === req.targetListingId);
+    const offering = loadListings().find((l) => l.id === req.offeringListingId);
+    if (!target || !offering) return null;
+
+    const touched = new Set([req.targetListingId, req.offeringListingId]);
+    const next = all.map((r) => {
+      if (r.id === requestId) return { ...r, status: "accepted" as const };
+      if (r.status !== "pending") return r;
+      if (touched.has(r.targetListingId) || touched.has(r.offeringListingId)) {
+        return { ...r, status: "declined" as const };
+      }
+      return r;
+    });
+    saveRequests(next);
+    const listings = loadListings();
+    saveListings(
+      listings.map((l) =>
+        l.id === req.targetListingId || l.id === req.offeringListingId
+          ? { ...l, status: "confirmed" as const }
+          : l,
+      ),
+    );
+    return next.find((r) => r.id === requestId) ?? null;
+  },
+
+  /** Sender cancels a pending outbound request (removes it from storage). */
+  withdrawRequest(requestId: string): boolean {
+    const all = loadRequests();
+    const req = all.find((r) => r.id === requestId);
+    if (!req || req.status !== "pending") return false;
+    saveRequests(all.filter((r) => r.id !== requestId));
+    return true;
   },
 
   // Conversations & messages

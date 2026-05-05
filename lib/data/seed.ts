@@ -7,15 +7,17 @@ type DemoUser = {
   name: string;
   college: string;
   year: string;
+  role: string;
   interests: string[];
 };
 
 const DEMO_USERS: DemoUser[] = [
   {
     email: "olivia@demo.formalswap",
-    name: "Olivia B.",
+    name: "Juyeon M.",
     college: "Trinity",
     year: "2nd year",
+    role: "Undergraduate",
     interests: ["rowing", "debate", "jazz"],
   },
   {
@@ -23,6 +25,7 @@ const DEMO_USERS: DemoUser[] = [
     name: "Tom M.",
     college: "Pembroke",
     year: "3rd year",
+    role: "Undergraduate",
     interests: ["rugby", "film", "cooking"],
   },
   {
@@ -30,13 +33,15 @@ const DEMO_USERS: DemoUser[] = [
     name: "Lucy W.",
     college: "Magdalen",
     year: "2nd year",
+    role: "Undergraduate",
     interests: ["poetry", "punting", "tennis"],
   },
   {
     email: "raj@demo.formalswap",
-    name: "Raj P.",
+    name: "Jujmun.",
     college: "Merton",
     year: "Postgrad",
+    role: "Postgraduate",
     interests: ["chess", "baking"],
   },
   {
@@ -44,6 +49,7 @@ const DEMO_USERS: DemoUser[] = [
     name: "Sophie K.",
     college: "Christ Church",
     year: "1st year",
+    role: "Undergraduate",
     interests: ["choir", "drawing", "hiking"],
   },
   {
@@ -51,6 +57,7 @@ const DEMO_USERS: DemoUser[] = [
     name: "Ben D.",
     college: "Wadham",
     year: "4th year",
+    role: "Undergraduate",
     interests: ["climbing", "photography"],
   },
 ];
@@ -77,7 +84,7 @@ function seedListings(demoUsers: User[]) {
         dateTime: daysFromNow(4, 19, 15),
         seats: 2,
         year: olivia.year,
-        swapFor: ["Balliol", "Merton", "Keble"],
+        role: olivia.role,
         message: "Been dying to try somewhere new!",
       },
     ],
@@ -88,7 +95,7 @@ function seedListings(demoUsers: User[]) {
         dateTime: daysFromNow(5, 19, 0),
         seats: 1,
         year: tom.year,
-        swapFor: ["Christ Church", "Magdalen"],
+        role: tom.role,
         message: "Happy to chat first.",
       },
     ],
@@ -99,7 +106,7 @@ function seedListings(demoUsers: User[]) {
         dateTime: daysFromNow(6, 19, 30),
         seats: 2,
         year: lucy.year,
-        swapFor: ["Worcester", "St John's"],
+        role: lucy.role,
         message: "",
       },
     ],
@@ -110,7 +117,7 @@ function seedListings(demoUsers: User[]) {
         dateTime: daysFromNow(8, 19, 0),
         seats: 1,
         year: raj.year,
-        swapFor: ["New College", "Trinity"],
+        role: raj.role,
         message: "Veggie menu available.",
       },
     ],
@@ -121,7 +128,7 @@ function seedListings(demoUsers: User[]) {
         dateTime: daysFromNow(10, 19, 30),
         seats: 3,
         year: sophie.year,
-        swapFor: ["Wadham", "Balliol"],
+        role: sophie.role,
         message: "Bringing two friends.",
       },
     ],
@@ -132,7 +139,7 @@ function seedListings(demoUsers: User[]) {
         dateTime: daysFromNow(12, 19, 0),
         seats: 2,
         year: ben.year,
-        swapFor: ["Exeter", "Keble", "Jesus"],
+        role: ben.role,
         message: "",
       },
     ],
@@ -152,7 +159,7 @@ function seedCurrentUserListing(currentUser: User) {
     dateTime: daysFromNow(4, 19, 15),
     seats: 2,
     year: currentUser.year,
-    swapFor: ["Trinity", "Merton", "Magdalen"],
+    role: currentUser.role,
     message: "Swap welcome — drop me a line!",
   });
 }

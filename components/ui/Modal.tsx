@@ -7,10 +7,18 @@ type Props = {
   open: boolean;
   onClose: () => void;
   title?: string;
+  /** Merged onto the inner SketchCard (e.g. max width / scroll). */
+  panelClassName?: string;
   children: ReactNode;
 };
 
-export function Modal({ open, onClose, title, children }: Props) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  panelClassName = "",
+  children,
+}: Props) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -37,7 +45,12 @@ export function Modal({ open, onClose, title, children }: Props) {
         className="absolute inset-0 bg-[var(--ink)]/30 backdrop-blur-sm"
         onClick={onClose}
       />
-      <SketchCard seed={2} className="relative w-full max-w-md p-6">
+      <SketchCard
+        seed={2}
+        className={["relative w-full max-w-md overflow-y-auto p-6", panelClassName]
+          .filter(Boolean)
+          .join(" ")}
+      >
         {title && (
           <h2 className="mb-4 font-display text-3xl uppercase tracking-wide">{title}</h2>
         )}

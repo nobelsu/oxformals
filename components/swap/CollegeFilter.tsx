@@ -10,16 +10,19 @@ type Props = {
 };
 
 export function CollegeFilter({ active, onChange, availableColleges }: Props) {
-  const extras =
-    availableColleges
-      ?.filter(
-        (c) =>
-          !COLLEGE_FILTER_HIGHLIGHTS.includes(
-            c as (typeof COLLEGE_FILTER_HIGHLIGHTS)[number],
-          ),
-      )
-      .sort() ?? [];
-  const chips = [...COLLEGE_FILTER_HIGHLIGHTS, ...extras];
+  const colleges = availableColleges ?? [];
+  const highlighted = COLLEGE_FILTER_HIGHLIGHTS.filter((c) =>
+    colleges.includes(c),
+  );
+  const others = colleges
+    .filter(
+      (c) =>
+        !COLLEGE_FILTER_HIGHLIGHTS.includes(
+          c as (typeof COLLEGE_FILTER_HIGHLIGHTS)[number],
+        ),
+    )
+    .sort();
+  const chips = [...highlighted, ...others];
 
   return (
     <div className="flex flex-wrap gap-2 justify-center">

@@ -13,8 +13,9 @@ import { userStore } from "@/lib/auth/userStore";
 import type { User } from "@/lib/auth/types";
 import {
   dataClient,
-  type CreateListingInput,
+  type NewListingInput,
 } from "@/lib/data/dataClient";
+import { normalizeCollegeName } from "@/lib/data/colleges";
 import { ensureSeeded } from "@/lib/data/seed";
 import type {
   Conversation,
@@ -35,7 +36,7 @@ export type DataContextValue = {
   getListing: (listingId: string) => Listing | undefined;
   messagesFor: (conversationId: string) => Message[];
 
-  createListing: (input: CreateListingInput) => Listing | null;
+  createListing: (input: NewListingInput) => Listing | null;
   requestSwap: (args: {
     targetListingId: string;
     offeringListingId: string;
@@ -43,6 +44,7 @@ export type DataContextValue = {
   }) => SwapRequest | null;
   acceptRequest: (requestId: string) => SwapRequest | null;
   declineRequest: (requestId: string) => void;
+  withdrawRequest: (requestId: string) => boolean;
   sendMessage: (conversationId: string, body: string) => void;
   openConversationWith: (otherUserId: string, listingId?: string) => Conversation | null;
   toggleWishlist: (college: string) => void;
@@ -116,9 +118,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
   );
 
   const createListing = useCallback(
-    (input: CreateListingInput): Listing | null => {
+    (input: NewListingInput): Listing | null => {
       if (!user) return null;
-      const l = dataClient.createListing(user.id, input);
+      const college = normalizeCollegeName(user.college);
+      const year = user.year.trim();
+      const role = user.role.trim();
+      if (!college || !year || !role) return null;
+      const l = dataClient.createListing(user.id, {
+        college,
+        year,
+        role,
+        ...input,
+      });
       refresh();
       return l;
     },
@@ -157,23 +168,41 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const acceptRequest = useCallback(
     (requestId: string): SwapRequest | null => {
+      if (!user) return null;
       const req = dataClient.listRequests().find((r) => r.id === requestId);
-      if (!req) return null;
-      dataClient.respondToRequest(requestId, "accepted");
-      dataClient.setListingStatus(req.targetListingId, "confirmed");
-      dataClient.setListingStatus(req.offeringListingId, "confirmed");
+      if (!req || req.toUserId !== user.id || req.status !== "pending") {
+        return null;
+      }
+      const updated = dataClient.acceptRequest(requestId);
       refresh();
-      return { ...req, status: "accepted" };
+      return updated;
     },
-    [refresh],
+    [user, refresh],
   );
 
   const declineRequest = useCallback(
     (requestId: string) => {
+      if (!user) return;
+      const req = dataClient.listRequests().find((r) => r.id === requestId);
+      if (!req || req.toUserId !== user.id || req.status !== "pending") return;
       dataClient.respondToRequest(requestId, "declined");
       refresh();
     },
-    [refresh],
+    [user, refresh],
+  );
+
+  const withdrawRequest = useCallback(
+    (requestId: string): boolean => {
+      if (!user) return false;
+      const req = dataClient.listRequests().find((r) => r.id === requestId);
+      if (!req || req.fromUserId !== user.id || req.status !== "pending") {
+        return false;
+      }
+      const ok = dataClient.withdrawRequest(requestId);
+      if (ok) refresh();
+      return ok;
+    },
+    [user, refresh],
   );
 
   const sendMessage = useCallback(
@@ -219,6 +248,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       requestSwap,
       acceptRequest,
       declineRequest,
+      withdrawRequest,
       sendMessage,
       openConversationWith,
       toggleWishlist,
@@ -237,6 +267,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       requestSwap,
       acceptRequest,
       declineRequest,
+      withdrawRequest,
       sendMessage,
       openConversationWith,
       toggleWishlist,

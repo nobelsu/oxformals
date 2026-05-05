@@ -9,6 +9,7 @@ type Props = {
   size?: "sm" | "md";
   as?: "button" | "span";
   variant?: "filled" | "outline";
+  className?: string;
 };
 
 export function Chip({
@@ -18,6 +19,7 @@ export function Chip({
   size = "md",
   as = "button",
   variant,
+  className = "",
 }: Props) {
   const mode = variant ?? (active === false ? "outline" : "filled");
   const sizing =
@@ -38,7 +40,7 @@ export function Chip({
 
   const base =
     "inline-flex items-center rounded-full whitespace-nowrap leading-none";
-  const cls = `${base} ${sizing} ${mode === "filled" ? filled : outline} ${activeFilled} ${hover}`;
+  const cls = `${base} ${sizing} ${mode === "filled" ? filled : outline} ${activeFilled} ${hover} ${className}`.trim();
 
   if (as === "span") {
     return <span className={cls}>{children}</span>;

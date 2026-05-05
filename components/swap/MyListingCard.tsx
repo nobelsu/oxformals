@@ -24,33 +24,39 @@ export function MyListingCard({
   return (
     <SketchCard
       seed={seedFrom(listing.id)}
-      className="flex flex-col gap-3 p-5"
+      className="flex h-full min-h-[13.2rem] flex-col gap-3 overflow-hidden p-5 sm:min-h-[15.6rem]"
     >
-      <header className="flex items-start justify-between gap-3">
-        <h3 className="font-display text-3xl uppercase tracking-wide">
+      <header className="flex min-w-0 shrink-0 items-start justify-between gap-3">
+        <h3 className="line-clamp-3 min-w-0 flex-1 break-words font-display text-3xl uppercase tracking-wide">
           {listing.college}
         </h3>
-        <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
+        <span className="shrink-0 rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
           {statusMap[listing.status]}
         </span>
       </header>
 
-      <div className="text-[var(--ink-muted)]">
+      <div className="shrink-0 truncate text-[var(--ink-muted)]">
         {formatListingDate(listing.dateTime)} · {listing.seats}{" "}
         {listing.seats === 1 ? "seat" : "seats"}
       </div>
 
-      {pendingRequestCount > 0 && (
-        <button
-          type="button"
-          onClick={onViewRequests}
-          className="text-left text-sm text-[var(--ink)] underline underline-offset-4"
-        >
-          {pendingRequestCount}{" "}
-          {pendingRequestCount === 1 ? "request" : "requests"} — check Requests
-          tab
-        </button>
-      )}
+      <div className="shrink-0 truncate text-sm text-[var(--ink-soft)]">
+        {[listing.year, listing.role].filter(Boolean).join(" · ")}
+      </div>
+
+      <div className="mt-auto min-h-0 w-full shrink-0">
+        {pendingRequestCount > 0 ? (
+          <button
+            type="button"
+            onClick={onViewRequests}
+            className="w-full break-words text-balance text-left text-sm leading-snug text-[var(--ink)] underline underline-offset-4"
+          >
+            {pendingRequestCount}{" "}
+            {pendingRequestCount === 1 ? "request" : "requests"} — check Requests
+            tab
+          </button>
+        ) : null}
+      </div>
     </SketchCard>
   );
 }

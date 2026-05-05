@@ -48,7 +48,7 @@ function NavInner() {
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 py-5 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
         <div />
 
-        <ul className="flex items-center gap-6 sm:gap-10 justify-center overflow-x-auto">
+        <ul className="flex min-w-0 max-w-full items-center justify-center gap-4 overflow-x-auto overflow-y-hidden sm:gap-10">
           {TABS.map((t) => {
             const isActive = onHome && activeTab === t.id;
             return (

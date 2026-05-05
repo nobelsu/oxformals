@@ -1,10 +1,17 @@
+export type AvatarSource =
+  | { kind: "image"; dataUrl: string }
+  | { kind: "preset"; id: string };
+
 export type User = {
   id: string;
   email: string;
   name: string;
   college: string;
   year: string;
+  /** e.g. Undergraduate, Postgraduate — shown on listings when you post. */
+  role: string;
   interests: string[];
+  avatar?: AvatarSource;
 };
 
 export type Session = {
@@ -22,5 +29,6 @@ export type SignupInput = {
   name: string;
   college: string;
   year: string;
+  role: string;
   interests?: string[];
 };

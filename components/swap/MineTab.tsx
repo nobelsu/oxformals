@@ -3,9 +3,8 @@
 import { useMemo } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
-import { InterestsEditor } from "./InterestsEditor";
-import { ListFormalForm } from "./ListFormalForm";
 import { MyListingCard } from "./MyListingCard";
+import { ProfileEditor } from "./ProfileEditor";
 import { WishlistChips } from "./WishlistChips";
 
 type Props = {
@@ -14,8 +13,7 @@ type Props = {
 
 export function MineTab({ onNavigateToRequests }: Props) {
   const { user } = useAuth();
-  const { listings, requests, wishlist, createListing, toggleWishlist } =
-    useData();
+  const { listings, requests, wishlist, toggleWishlist } = useData();
 
   const myListings = useMemo(
     () => (user ? listings.filter((l) => l.ownerUserId === user.id) : []),
@@ -35,16 +33,17 @@ export function MineTab({ onNavigateToRequests }: Props) {
 
   return (
     <div className="flex flex-col gap-10">
-      <InterestsEditor />
+      <ProfileEditor />
 
       <section>
         <h2 className="font-display text-3xl uppercase tracking-wide">My listings</h2>
         {myListings.length === 0 ? (
           <p className="mt-2 text-[var(--ink-muted)]">
-            Nothing listed yet. Post your first formal below.
+            Nothing listed yet. Open the Requests tab and tap + next to
+            &quot;Requests I&apos;ve sent&quot; to list a formal.
           </p>
         ) : (
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="mt-4 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
             {myListings.map((l) => (
               <MyListingCard
                 key={l.id}
@@ -56,14 +55,6 @@ export function MineTab({ onNavigateToRequests }: Props) {
           </div>
         )}
       </section>
-
-      <ListFormalForm
-        defaultCollege={user.college}
-        defaultYear={user.year}
-        onSubmit={(input) => {
-          createListing(input);
-        }}
-      />
 
       <WishlistChips selected={wishlist} onToggle={toggleWishlist} />
     </div>

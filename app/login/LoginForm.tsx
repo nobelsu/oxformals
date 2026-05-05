@@ -25,6 +25,7 @@ export function LoginForm() {
   const [name, setName] = useState("");
   const [college, setCollege] = useState("");
   const [year, setYear] = useState("");
+  const [role, setRole] = useState("");
   const [interests, setInterests] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,8 +61,8 @@ export function LoginForm() {
   async function onProfileSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    if (!name.trim() || !college.trim() || !year.trim()) {
-      setError("Just a name, college and year — promise it's quick.");
+    if (!name.trim() || !college.trim() || !year.trim() || !role.trim()) {
+      setError("Add name, college, year, and role — it only takes a moment.");
       return;
     }
     setSubmitting(true);
@@ -71,6 +72,7 @@ export function LoginForm() {
         name: name.trim(),
         college: college.trim(),
         year: year.trim(),
+        role: role.trim(),
         interests: parseInterests(interests),
       });
       router.replace(nextPath);
@@ -168,6 +170,18 @@ export function LoginForm() {
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
                 placeholder="2nd year"
+                className={inputCls}
+              />
+            </label>
+
+            <label className="flex flex-col gap-2">
+              <span className="text-sm text-[var(--ink-muted)]">Role</span>
+              <input
+                type="text"
+                required
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                placeholder="Undergraduate"
                 className={inputCls}
               />
             </label>

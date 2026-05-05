@@ -6,8 +6,10 @@ export type Listing = {
   college: string;
   dateTime: string; // ISO
   seats: 1 | 2 | 3;
+  /** Snapshot from the poster's profile when the listing was created. */
   year: string;
-  swapFor: string[];
+  /** Snapshot from the poster's profile when the listing was created. */
+  role: string;
   message: string;
   status: ListingStatus;
   createdAt: number;

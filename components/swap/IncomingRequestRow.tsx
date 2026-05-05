@@ -3,7 +3,7 @@
 import { Avatar } from "@/components/ui/Avatar";
 import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
 import type { User } from "@/lib/auth/types";
-import { formatListingDate } from "@/lib/data/format";
+import { formatListingDate, formatRelativeTime } from "@/lib/data/format";
 import type { Listing, SwapRequest } from "@/lib/data/types";
 
 type Props = {
@@ -27,7 +27,7 @@ export function IncomingRequestRow({
       seed={seedFrom(request.id)}
       className="flex flex-col sm:flex-row sm:items-center gap-4 p-4"
     >
-      <Avatar name={fromUser.name} />
+      <Avatar name={fromUser.name} source={fromUser.avatar} />
       <div className="flex-1 min-w-0">
         <div className="text-lg leading-tight">
           {fromUser.name}{" "}
@@ -44,6 +44,9 @@ export function IncomingRequestRow({
             “{request.message}”
           </p>
         )}
+        <p className="mt-1 text-xs text-[var(--ink-soft)]">
+          Sent {formatRelativeTime(request.createdAt)}
+        </p>
       </div>
 
       <div className="flex gap-2 shrink-0">

@@ -92,7 +92,9 @@ export function SketchCard({
         className="pointer-events-none absolute inset-0 overflow-visible"
         aria-hidden
       />
-      <div className="relative">{children}</div>
+      <div className="relative flex h-full min-h-0 min-w-0 flex-col">
+        {children}
+      </div>
     </div>
   );
 }

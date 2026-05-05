@@ -12,7 +12,9 @@ function hydrate(raw: Partial<User> & { id: string; email: string }): User {
     name: raw.name ?? "",
     college: raw.college ?? "",
     year: raw.year ?? "",
+    role: raw.role ?? "",
     interests: Array.isArray(raw.interests) ? raw.interests : [],
+    avatar: raw.avatar,
   };
 }
 
@@ -48,6 +50,7 @@ export const userStore = {
         name: input.name,
         college: input.college,
         year: input.year,
+        role: input.role,
         interests:
           input.interests !== undefined
             ? input.interests
@@ -63,7 +66,9 @@ export const userStore = {
       name: input.name,
       college: input.college,
       year: input.year,
+      role: input.role,
       interests: input.interests ?? [],
+      avatar: undefined,
     };
     save([...users, created]);
     return created;
