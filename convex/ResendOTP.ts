@@ -2,6 +2,14 @@ import { Email } from "@convex-dev/auth/providers/Email";
 import { generateRandomString, type RandomReader } from "@oslojs/crypto/random";
 import { Resend as ResendAPI } from "resend";
 
+function normalizeEmail(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+
+function isOxfordEmail(email: string): boolean {
+  return email.endsWith("@ox.ac.uk");
+}
+
 /**
  * OTP via Resend. `Email()` defaults to id `"email"`; we override to `"resend"` so the
  * provider id matches Auth.js Resend / existing Convex deployments and the client
@@ -11,6 +19,11 @@ import { Resend as ResendAPI } from "resend";
  */
 const emailProvider = Email({
   sendVerificationRequest: async ({ identifier: email, token }) => {
+    const normalizedEmail = normalizeEmail(email);
+    if (!isOxfordEmail(normalizedEmail)) {
+      throw new Error("Only Oxford email addresses ending in @ox.ac.uk are allowed");
+    }
+
     const apiKey = process.env.AUTH_RESEND_KEY;
     if (!apiKey) {
       throw new Error("AUTH_RESEND_KEY is not set");
@@ -18,7 +31,7 @@ const emailProvider = Email({
     const resend = new ResendAPI(apiKey);
     const { error } = await resend.emails.send({
       from: "FormalSwap <onboarding@resend.dev>",
-      to: [email],
+      to: [normalizedEmail],
       subject: "Your FormalSwap sign-in code",
       text: `Your code is ${token}\n\nIt expires in 10 minutes.`,
     });

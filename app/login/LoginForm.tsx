@@ -7,6 +7,14 @@ import { SketchCard } from "@/components/ui/SketchCard";
 
 type Step = "email" | "code" | "profile";
 
+function normalizeEmail(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+
+function isOxfordEmail(email: string): boolean {
+  return email.endsWith("@ox.ac.uk");
+}
+
 function parseInterests(raw: string): string[] {
   return raw
     .split(",")
@@ -17,7 +25,7 @@ function parseInterests(raw: string): string[] {
 function formatVerifyError(message: string): string {
   const lower = message.toLowerCase();
   if (lower.includes("could not verify") || lower.includes("invalid")) {
-    return "That code doesn’t match or has expired. Try again or request a new code.";
+    return "That code doesn't match or has expired. Try again or request a new code.";
   }
   if (lower.includes("expired")) {
     return "That code has expired. Request a new one.";
@@ -68,15 +76,19 @@ export function LoginForm() {
   async function onEmailSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    const trimmed = email.trim();
-    if (!trimmed.includes("@")) {
+    const normalized = normalizeEmail(email);
+    if (!normalized.includes("@")) {
       setError("That doesn't look like an email.");
+      return;
+    }
+    if (!isOxfordEmail(normalized)) {
+      setError("Use your Oxford email address ending in @ox.ac.uk.");
       return;
     }
     setSubmitting(true);
     try {
-      await requestCode(trimmed);
-      setEmail(trimmed);
+      await requestCode(normalized);
+      setEmail(normalized);
       setStep("code");
       setCode("");
     } catch {
