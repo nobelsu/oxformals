@@ -35,8 +35,11 @@ function NavInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") ?? "browse";
-  const onHome = pathname === "/";
+  const isRequestsDetail = pathname?.startsWith("/requests/") ?? false;
+  const activeTab = isRequestsDetail
+    ? "requests"
+    : searchParams.get("tab") ?? "browse";
+  const onTabbedPage = pathname === "/" || isRequestsDetail;
 
   function hrefFor(tab: string): string {
     if (tab === "browse") return "/";
@@ -50,7 +53,7 @@ function NavInner() {
 
         <ul className="flex min-w-0 max-w-full items-center justify-center gap-4 overflow-x-auto overflow-y-hidden sm:gap-10">
           {TABS.map((t) => {
-            const isActive = onHome && activeTab === t.id;
+            const isActive = onTabbedPage && activeTab === t.id;
             return (
               <li key={t.id}>
                 <Link

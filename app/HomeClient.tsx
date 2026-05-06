@@ -61,9 +61,7 @@ export function HomeClient() {
       return <RequestsTab />;
     }
     if (tab === "mine") {
-      return (
-        <MineTab onNavigateToRequests={() => setActiveTab("requests")} />
-      );
+      return <MineTab />;
     }
     return null;
   }, [tab, isAuthenticated, setActiveTab, router]);

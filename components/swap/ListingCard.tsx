@@ -4,7 +4,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
 import type { User } from "@/lib/auth/types";
-import { formatListingDate } from "@/lib/data/format";
+import { formatListingDate, formatYearLabel } from "@/lib/data/format";
 import type { Listing } from "@/lib/data/types";
 
 type Props = {
@@ -44,8 +44,15 @@ export function ListingCard({
             {owner.name.split(" ")[0]}
           </div>
           <div className="truncate text-[1.155rem] text-[var(--ink-soft)]">
-            {[listing.year, listing.role].filter(Boolean).join(" · ") ||
-              [owner.college, owner.year].filter(Boolean).join(" · ")}
+            {[
+              formatYearLabel(listing.year) || listing.year,
+              listing.role,
+            ]
+              .filter(Boolean)
+              .join(" · ") ||
+              [owner.college, formatYearLabel(owner.year) || owner.year]
+                .filter(Boolean)
+                .join(" · ")}
           </div>
         </div>
       </div>

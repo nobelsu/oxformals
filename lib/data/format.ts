@@ -38,3 +38,31 @@ export function formatRelativeTime(ts: number): string {
     month: "short",
   }).format(d);
 }
+
+function ordinalSuffix(value: number): string {
+  const mod100 = value % 100;
+  if (mod100 >= 11 && mod100 <= 13) return "th";
+  switch (value % 10) {
+    case 1:
+      return "st";
+    case 2:
+      return "nd";
+    case 3:
+      return "rd";
+    default:
+      return "th";
+  }
+}
+
+export function formatYearLabel(raw: string | number | null | undefined): string {
+  if (raw == null) return "";
+  const value = String(raw).trim();
+  if (!value) return "";
+
+  const numericLike = value.match(/^(\d+)(?:st|nd|rd|th)?(?:\s*year)?$/i);
+  if (!numericLike) return value;
+
+  const year = Number(numericLike[1]);
+  if (!Number.isFinite(year) || year <= 0) return value;
+  return `${year}${ordinalSuffix(year)} year`;
+}

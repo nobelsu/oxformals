@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { SketchCard } from "@/components/ui/SketchCard";
 
 type Step = "email" | "code" | "profile";
+const ROLE_OPTIONS = ["Undergrad", "Masters", "DPhil"] as const;
 
 function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
@@ -15,11 +16,8 @@ function isOxfordEmail(email: string): boolean {
   return email.endsWith("@ox.ac.uk");
 }
 
-function parseInterests(raw: string): string[] {
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+function normalizeInterest(raw: string): string {
+  return raw.trim().replace(/\s+/g, " ");
 }
 
 function formatVerifyError(message: string): string {
@@ -55,7 +53,8 @@ export function LoginForm() {
   const [college, setCollege] = useState("");
   const [year, setYear] = useState("");
   const [role, setRole] = useState("");
-  const [interests, setInterests] = useState("");
+  const [interests, setInterests] = useState<string[]>([]);
+  const [interestInput, setInterestInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,15 +137,20 @@ export function LoginForm() {
       setError("Add name, college, year, and role — it only takes a moment.");
       return;
     }
+    const normalizedYear = year.trim();
+    if (!/^\d+$/.test(normalizedYear)) {
+      setError("Year must be a number, e.g. 2.");
+      return;
+    }
     setSubmitting(true);
     try {
       await completeSignup({
         email: email.trim(),
         name: name.trim(),
         college: college.trim(),
-        year: year.trim(),
+        year: normalizedYear,
         role: role.trim(),
-        interests: parseInterests(interests),
+        interests,
       });
       router.replace(nextPath);
     } catch {
@@ -158,6 +162,25 @@ export function LoginForm() {
 
   const inputCls =
     "w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2.5 text-base focus:outline-none focus:border-[var(--accent-hover)]";
+  const selectCls = `${inputCls} pr-12 appearance-none`;
+
+  function addInterest(raw: string) {
+    const next = normalizeInterest(raw);
+    if (!next) return;
+    if (interests.some((item) => item.toLowerCase() === next.toLowerCase())) return;
+    setInterests((prev) => [...prev, next]);
+  }
+
+  function removeInterest(index: number) {
+    setInterests((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function onInterestKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    addInterest(interestInput);
+    setInterestInput("");
+  }
 
   return (
     <div className="min-h-[100dvh] flex items-center justify-center px-6 py-16 bg-[var(--bg)]">
@@ -306,40 +329,88 @@ export function LoginForm() {
               <span className="text-sm text-[var(--ink-muted)]">Year</span>
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="\d+"
                 required
                 value={year}
-                onChange={(e) => setYear(e.target.value)}
-                placeholder="2nd year"
+                onChange={(e) =>
+                  setYear(e.target.value.replace(/\D/g, "").slice(0, 2))
+                }
+                placeholder="2"
                 className={inputCls}
               />
             </label>
 
             <label className="flex flex-col gap-2">
               <span className="text-sm text-[var(--ink-muted)]">Role</span>
-              <input
-                type="text"
-                required
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                placeholder="Undergraduate"
-                className={inputCls}
-              />
+              <div className="relative">
+                <select
+                  required
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className={selectCls}
+                >
+                  <option value="">Choose role</option>
+                  {ROLE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 12 8"
+                    className="h-3.5 w-3.5"
+                    fill="none"
+                  >
+                    <path
+                      d="M1 1.5 6 6.5 11 1.5"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+              </div>
             </label>
 
             <label className="flex flex-col gap-2">
               <span className="text-sm text-[var(--ink-muted)]">
                 Interests{" "}
-                <span className="text-[var(--ink-soft)]">
-                  (comma separated)
-                </span>
+                <span className="text-[var(--ink-soft)]">(press Enter to add)</span>
               </span>
-              <input
-                type="text"
-                value={interests}
-                onChange={(e) => setInterests(e.target.value)}
-                placeholder="rowing, punting, drawing"
-                className={inputCls}
-              />
+              <div className="rounded-3xl border-[2px] border-[var(--ink)] bg-[var(--paper)] px-3 py-3">
+                {interests.length > 0 ? (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {interests.map((interest, index) => (
+                      <span
+                        key={`${interest}-${index}`}
+                        className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--ink)] bg-[var(--bg)] px-3.5 py-1 text-sm text-[var(--ink)]"
+                      >
+                        {interest}
+                        <button
+                          type="button"
+                          onClick={() => removeInterest(index)}
+                          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                          aria-label={`Remove ${interest}`}
+                        >
+                          x
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <input
+                  type="text"
+                  value={interestInput}
+                  onChange={(e) => setInterestInput(e.target.value)}
+                  onKeyDown={onInterestKeyDown}
+                  placeholder="Type an interest and press Enter"
+                  className="w-full border-0 bg-transparent px-1 py-1 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+                />
+              </div>
             </label>
 
             {error && (
