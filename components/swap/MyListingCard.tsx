@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
 import { formatListingDate, formatYearLabel } from "@/lib/data/format";
 import type { Listing } from "@/lib/data/types";
@@ -15,11 +16,18 @@ export function MyListingCard({
   pendingRequestCount,
   onViewRequests,
 }: Props) {
+  const [opening, setOpening] = useState(false);
   const statusMap: Record<Listing["status"], string> = {
     active: "Active",
     confirmed: "Swap confirmed",
     closed: "Closed",
   };
+
+  const handleViewRequests = useCallback(() => {
+    if (!onViewRequests || opening) return;
+    setOpening(true);
+    onViewRequests();
+  }, [onViewRequests, opening]);
 
   const cardContent = (
     <>
@@ -43,40 +51,73 @@ export function MyListingCard({
           .join(" · ")}
       </div>
 
-      <div className="mt-auto min-h-0 w-full shrink-0 text-left text-sm leading-snug text-[var(--ink)] underline underline-offset-4">
-        {pendingRequestCount > 0
-          ? `${pendingRequestCount} ${
-              pendingRequestCount === 1 ? "request" : "requests"
-            } — view listing requests`
-          : "View listing requests"}
-      </div>
+      {pendingRequestCount > 0 ? (
+        <div className="mt-auto min-h-0 w-full shrink-0">
+          <div className="inline-flex items-center gap-2 text-left text-sm leading-snug text-[var(--ink)]">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-4 w-4 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+              <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .738-1.674C19.41 13.855 18 12.148 18 8a6 6 0 1 0-12 0c0 4.148-1.41 5.855-2.738 7.326" />
+            </svg>
+            <span>
+              {pendingRequestCount}{" "}
+              {pendingRequestCount === 1 ? "update" : "updates"}
+            </span>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 
+  const openingOverlay = opening ? (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[color-mix(in_srgb,var(--bg)_86%,transparent)] backdrop-blur-[1px]">
+      <span className="inline-flex items-center gap-3 rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-6 py-3 text-base text-[var(--ink)] shadow-sm">
+        <span
+          aria-hidden="true"
+          className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--ink-soft)] border-t-[var(--ink)]"
+        />
+        Opening...
+      </span>
+    </div>
+  ) : null;
+
   if (onViewRequests) {
     return (
-      <button
-        type="button"
-        onClick={onViewRequests}
-        className="group w-full cursor-pointer text-left"
-        aria-label={`View requests for ${listing.college}`}
-      >
-        <SketchCard
-          seed={seedFrom(listing.id)}
-          className="flex h-full min-h-[13.2rem] flex-col gap-3 overflow-hidden p-5 transition-none group-hover:translate-x-3 group-hover:-translate-y-3 group-hover:shadow-[16px_-16px_0px_var(--bg)] group-focus-visible:translate-x-3 group-focus-visible:-translate-y-3 group-focus-visible:shadow-[16px_-16px_0px_var(--bg)] sm:min-h-[15.6rem]"
+      <>
+        <button
+          type="button"
+          onClick={handleViewRequests}
+          disabled={opening}
+          className="group w-full cursor-pointer text-left disabled:cursor-progress"
+          aria-label={`View requests for ${listing.college}`}
         >
-          {cardContent}
-        </SketchCard>
-      </button>
+          <SketchCard
+            seed={seedFrom(listing.id)}
+            className="flex h-full min-h-[13.2rem] flex-col gap-3 overflow-hidden p-5 transition-none group-hover:translate-x-3 group-hover:-translate-y-3 group-hover:shadow-[16px_-16px_0px_var(--bg)] group-focus-visible:translate-x-3 group-focus-visible:-translate-y-3 group-focus-visible:shadow-[16px_-16px_0px_var(--bg)] sm:min-h-[15.6rem]"
+          >
+            {cardContent}
+          </SketchCard>
+        </button>
+        {openingOverlay}
+      </>
     );
   }
 
   return (
-    <SketchCard
-      seed={seedFrom(listing.id)}
-      className="flex h-full min-h-[13.2rem] flex-col gap-3 overflow-hidden p-5 sm:min-h-[15.6rem]"
-    >
-      {cardContent}
-    </SketchCard>
+    <>
+      <SketchCard
+        seed={seedFrom(listing.id)}
+        className="flex h-full min-h-[13.2rem] flex-col gap-3 overflow-hidden p-5 sm:min-h-[15.6rem]"
+      >
+        {cardContent}
+      </SketchCard>
+      {openingOverlay}
+    </>
   );
 }

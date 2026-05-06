@@ -50,6 +50,7 @@ export function HomeClient() {
       return (
         <BrowseTab
           onNavigateToMine={() => setActiveTab("mine")}
+          onNavigateToRequests={() => setActiveTab("requests")}
           onSignInRequired={() => router.push("/login?next=/")}
         />
       );

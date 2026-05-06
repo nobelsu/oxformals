@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { Avatar, PRESET_AVATARS, PresetAvatarIcon } from "@/components/ui/Avatar";
 import { SketchCard } from "@/components/ui/SketchCard";
@@ -71,7 +78,12 @@ async function fileToSquareDataUrl(file: File): Promise<string | null> {
   }
 }
 
-export function ProfileEditor() {
+type Props = {
+  onDirtyChange?: (dirty: boolean) => void;
+  registerSave?: (saveFn: () => Promise<void>) => void;
+};
+
+export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
   const { user, updateProfile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const collegePickerRef = useRef<HTMLDivElement | null>(null);
@@ -151,7 +163,23 @@ export function ProfileEditor() {
     return [...ROLE_OPTIONS];
   }, [roleDraft]);
 
-  if (!user) return null;
+  const normalizedCollege = normalizeCollegeName(collegeDraft);
+  const normalizedYear = yearDraft.trim();
+  const normalizedRole = roleDraft.trim();
+  const initialCollege = user
+    ? normalizeCollegeName(user.college) || user.college.trim()
+    : "";
+  const initialYear = user?.year.trim() ?? "";
+  const initialRole = user?.role.trim() ?? "";
+  const initialInterests = user?.interests ?? [];
+  const initialAvatar = user?.avatar;
+
+  const profileDirty =
+    normalizedCollege !== initialCollege ||
+    normalizedYear !== initialYear ||
+    normalizedRole !== initialRole ||
+    JSON.stringify(interestsDraft) !== JSON.stringify(initialInterests) ||
+    JSON.stringify(avatarDraft ?? null) !== JSON.stringify(initialAvatar ?? null);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -181,7 +209,8 @@ export function ProfileEditor() {
     setAvatarDraft(undefined);
   }
 
-  async function save() {
+  const save = useCallback(async () => {
+    if (!user) return;
     setError(null);
     setBusy(true);
     try {
@@ -204,7 +233,20 @@ export function ProfileEditor() {
     } finally {
       setBusy(false);
     }
-  }
+  }, [user, yearDraft, updateProfile, collegeDraft, roleDraft, avatarDraft, interestsDraft]);
+
+  useEffect(() => {
+    onDirtyChange?.(profileDirty);
+  }, [profileDirty, onDirtyChange]);
+
+  useEffect(() => {
+    registerSave?.(async () => {
+      if (!profileDirty || busy) return;
+      await save();
+    });
+  }, [registerSave, profileDirty, busy, save]);
+
+  if (!user) return null;
 
   const presetActiveId =
     avatarDraft?.kind === "preset" ? avatarDraft.id : null;
@@ -490,16 +532,11 @@ export function ProfileEditor() {
 
       </div>
 
-      <div className="mt-6 flex justify-end">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void save()}
-          className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm text-white transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {busy ? "Saving…" : saved ? "Saved" : "Save"}
-        </button>
-      </div>
+      {saved ? (
+        <div className="mt-6 flex justify-end">
+          <span className="text-sm text-[var(--ink-muted)]">Saved</span>
+        </div>
+      ) : null}
     </SketchCard>
   );
 }

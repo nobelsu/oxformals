@@ -8,7 +8,6 @@ const avatarValue = v.union(
   v.object({ kind: v.literal("image"), dataUrl: v.string() }),
 );
 
-const avatar = v.optional(avatarValue);
 const avatarOrClear = v.optional(v.union(avatarValue, v.null()));
 
 export const current = query({
@@ -17,6 +16,24 @@ export const current = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
     return await ctx.db.get(userId);
+  },
+});
+
+export const listPublic = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("users").take(200);
+  },
+});
+
+export const myWishlist = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    const user = await ctx.db.get(userId);
+    if (!user) return [];
+    return user.wishlistColleges ?? [];
   },
 });
 
@@ -105,5 +122,44 @@ export const patchProfile = mutation({
       throw new Error("User profile not found.");
     }
     return updated._id;
+  },
+});
+
+export const toggleWishlistCollege = mutation({
+  args: { college: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("User profile not found.");
+
+    const college = args.college.trim();
+    if (!college) throw new Error("College is required.");
+
+    const current = user.wishlistColleges ?? [];
+    const next = current.includes(college)
+      ? current.filter((c) => c !== college)
+      : [...current, college];
+
+    await ctx.db.patch(userId, { wishlistColleges: next });
+    return next;
+  },
+});
+
+export const saveWishlistColleges = mutation({
+  args: { colleges: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("User profile not found.");
+
+    const cleaned = Array.from(
+      new Set(args.colleges.map((college) => college.trim()).filter(Boolean)),
+    );
+    await ctx.db.patch(userId, { wishlistColleges: cleaned });
+    return cleaned;
   },
 });

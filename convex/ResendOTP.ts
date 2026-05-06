@@ -30,9 +30,9 @@ const emailProvider = Email({
     }
     const resend = new ResendAPI(apiKey);
     const { error } = await resend.emails.send({
-      from: "FormalSwap <onboarding@resend.dev>",
+      from: "Oxformals <onboarding@resend.dev>",
       to: [normalizedEmail],
-      subject: "Your FormalSwap sign-in code",
+      subject: "Your Oxformals sign-in code",
       text: `Your code is ${token}\n\nIt expires in 10 minutes.`,
     });
 

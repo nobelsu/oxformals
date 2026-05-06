@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { LoginForm } from "./LoginForm";
 
 export const metadata = {
-  title: "Sign in · FormalSwap",
+  title: "Sign in · Oxformals",
 };
 
 export default function LoginPage() {

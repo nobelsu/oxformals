@@ -14,7 +14,7 @@ const schoolbell = Schoolbell({
 });
 
 export const metadata: Metadata = {
-  title: "FormalSwap",
+  title: "Oxformals",
   description: "Find your next formal.",
 };
 

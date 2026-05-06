@@ -16,7 +16,7 @@ export function Hero({ onList }: Props) {
       <button
         type="button"
         onClick={onList}
-        className="mt-2 rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-6 py-2.5 text-base transition-colors"
+        className="mt-2 cursor-pointer rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-6 py-2.5 text-base transition-colors"
       >
         + List my formal
       </button>

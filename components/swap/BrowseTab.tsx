@@ -13,6 +13,7 @@ import type { Listing } from "@/lib/data/types";
 
 type Props = {
   onNavigateToMine: () => void;
+  onNavigateToRequests: () => void;
   onSignInRequired: () => void;
 };
 
@@ -44,7 +45,11 @@ const BROWSE_TAB_FONT_CSS = `
 }
 `;
 
-export function BrowseTab({ onNavigateToMine, onSignInRequired }: Props) {
+export function BrowseTab({
+  onNavigateToMine,
+  onNavigateToRequests,
+  onSignInRequired,
+}: Props) {
   const { user, isAuthenticated } = useAuth();
   const {
     listings,
@@ -117,7 +122,7 @@ export function BrowseTab({ onNavigateToMine, onSignInRequired }: Props) {
   return (
     <>
       <div className="browse-tab-root flex flex-col gap-10">
-        <Hero onList={onNavigateToMine} />
+        <Hero onList={onNavigateToRequests} />
         <StatsStrip openSwaps={openSwaps} />
         <CollegeFilter
           active={collegeFilter}

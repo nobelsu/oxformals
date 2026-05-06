@@ -46,7 +46,7 @@ export function RequestsTab() {
           <button
             type="button"
             onClick={() => setListFormalOpen(true)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-2xl leading-none text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-2xl leading-none text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
             aria-label="List a formal"
           >
             +

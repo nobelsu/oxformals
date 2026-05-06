@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Chip } from "@/components/ui/Chip";
 import { OXFORD_COLLEGES } from "@/lib/data/colleges";
 
 type Props = {
   selected: string[];
-  onToggle: (college: string) => void;
+  onSave: (colleges: string[]) => Promise<void>;
+  onDirtyChange?: (dirty: boolean) => void;
+  registerSave?: (saveFn: () => Promise<void>) => void;
 };
 
 function renderHighlightedMatch(label: string, query: string) {
@@ -28,8 +30,16 @@ function renderHighlightedMatch(label: string, query: string) {
   );
 }
 
-export function WishlistChips({ selected, onToggle }: Props) {
+export function WishlistChips({
+  selected,
+  onSave,
+  onDirtyChange,
+  registerSave,
+}: Props) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [draftSelected, setDraftSelected] = useState<string[] | null>(null);
+  const effectiveSelected = draftSelected ?? selected;
+
   const filteredColleges = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return OXFORD_COLLEGES;
@@ -37,6 +47,39 @@ export function WishlistChips({ selected, onToggle }: Props) {
       college.toLowerCase().includes(query),
     );
   }, [searchQuery]);
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (effectiveSelected.length !== selected.length) return true;
+    const selectedSet = new Set(selected);
+    return effectiveSelected.some((college) => !selectedSet.has(college));
+  }, [effectiveSelected, selected]);
+
+  useEffect(() => {
+    onDirtyChange?.(hasUnsavedChanges);
+  }, [hasUnsavedChanges, onDirtyChange]);
+
+  useEffect(() => {
+    registerSave?.(async () => {
+      if (!hasUnsavedChanges) return;
+      await onSave(effectiveSelected);
+      setDraftSelected(null);
+    });
+  }, [registerSave, hasUnsavedChanges, onSave, effectiveSelected]);
+
+  function toggleDraft(college: string) {
+    setDraftSelected((prev) => {
+      const source = prev ?? selected;
+      const next = source.includes(college)
+        ? source.filter((item) => item !== college)
+        : [...source, college];
+      if (next.length === selected.length) {
+        const selectedSet = new Set(selected);
+        const isSameAsOriginal = next.every((item) => selectedSet.has(item));
+        if (isSameAsOriginal) return null;
+      }
+      return next;
+    });
+  }
 
   return (
     <section>
@@ -46,7 +89,7 @@ export function WishlistChips({ selected, onToggle }: Props) {
             Formals I want to try
           </h3>
           <p className="mt-1 text-base text-[var(--ink-muted)]">
-            Tap a college to add it to your wishlist.
+            Tap colleges, then save your wishlist.
           </p>
         </div>
         <input
@@ -64,8 +107,8 @@ export function WishlistChips({ selected, onToggle }: Props) {
             key={c}
             size="sm"
             className="!text-base py-1 leading-snug"
-            variant={selected.includes(c) ? "filled" : "outline"}
-            onClick={() => onToggle(c)}
+            variant={effectiveSelected.includes(c) ? "filled" : "outline"}
+            onClick={() => toggleDraft(c)}
           >
             {renderHighlightedMatch(c, searchQuery)}
           </Chip>

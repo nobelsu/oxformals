@@ -187,7 +187,7 @@ export function LoginForm() {
       <SketchCard className="w-full max-w-sm p-8" seed={3}>
         <header className="mb-6 text-center">
           <h1 className="font-display text-5xl tracking-wide uppercase">
-            FormalSwap
+            Oxformals
           </h1>
           <p className="mt-2 text-[var(--ink-muted)]">
             Find your next formal.

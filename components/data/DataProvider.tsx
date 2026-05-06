@@ -3,20 +3,20 @@
 import {
   createContext,
   useCallback,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { useAuth } from "@/components/auth/useAuth";
-import { userStore } from "@/lib/auth/userStore";
+import { api } from "@/convex/_generated/api";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import type { User } from "@/lib/auth/types";
 import {
   dataClient,
   type NewListingInput,
 } from "@/lib/data/dataClient";
 import { normalizeCollegeName } from "@/lib/data/colleges";
-import { ensureSeeded } from "@/lib/data/seed";
 import type {
   Conversation,
   Listing,
@@ -47,44 +47,98 @@ export type DataContextValue = {
   withdrawRequest: (requestId: string) => boolean;
   sendMessage: (conversationId: string, body: string) => void;
   openConversationWith: (otherUserId: string, listingId?: string) => Conversation | null;
-  toggleWishlist: (college: string) => void;
+  saveWishlist: (colleges: string[]) => Promise<void>;
 };
 
 export const DataContext = createContext<DataContextValue | null>(null);
 
+function mapUser(doc: Doc<"users">): User {
+  return {
+    id: doc._id,
+    email: doc.email ?? "",
+    name: doc.name ?? "",
+    college: doc.college ?? "",
+    year: doc.year ?? "",
+    role: doc.role ?? "",
+    interests: doc.interests ?? [],
+    ...(doc.avatar ? { avatar: doc.avatar } : {}),
+  };
+}
+
+function mapListing(doc: Doc<"listings">): Listing {
+  return {
+    id: doc._id,
+    ownerUserId: doc.ownerUserId,
+    college: doc.college,
+    dateTime: doc.dateTime,
+    seats: doc.seats,
+    year: doc.year,
+    role: doc.role,
+    message: doc.message,
+    status: doc.status,
+    createdAt: doc._creationTime,
+  };
+}
+
+function mapRequest(doc: Doc<"requests">): SwapRequest {
+  return {
+    id: doc._id,
+    fromUserId: doc.fromUserId,
+    toUserId: doc.toUserId,
+    targetListingId: doc.targetListingId,
+    offeringListingId: doc.offeringListingId,
+    message: doc.message,
+    status: doc.status,
+    createdAt: doc._creationTime,
+  };
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
   const { status: authStatus, user } = useAuth();
   const [tick, setTick] = useState(0);
-  const [ready, setReady] = useState(false);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
+  const ready = authStatus === "ready";
 
-  useEffect(() => {
-    if (authStatus !== "ready") return;
-    if (user) {
-      ensureSeeded(user);
-    }
-    setReady(true);
-    refresh();
-  }, [authStatus, user, refresh]);
+  const convexUsers = useQuery(api.users.listPublic);
+  const convexListings = useQuery(api.listings.listListings);
+  const incomingRequests = useQuery(
+    api.listings.listRequestsForMe,
+    user ? {} : "skip",
+  );
+  const outgoingRequests = useQuery(
+    api.listings.listRequestsFromMe,
+    user ? {} : "skip",
+  );
+  const wishlist = useQuery(api.users.myWishlist, user ? {} : "skip");
+
+  const createListingMut = useMutation(api.listings.createListing);
+  const createRequestMut = useMutation(api.listings.createRequest);
+  const acceptRequestMut = useMutation(api.listings.acceptRequest);
+  const declineRequestMut = useMutation(api.listings.declineRequest);
+  const withdrawRequestMut = useMutation(api.listings.withdrawRequest);
+  const saveWishlistMut = useMutation(api.users.saveWishlistColleges);
 
   const users = useMemo<User[]>(() => {
-    if (!ready) return [];
-    return userStore.list();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, tick]);
+    if (!ready || convexUsers === undefined) return [];
+    return convexUsers.map(mapUser);
+  }, [ready, convexUsers]);
 
   const listings = useMemo<Listing[]>(() => {
-    if (!ready) return [];
-    return dataClient.listListings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, tick]);
+    if (!ready || convexListings === undefined) return [];
+    return convexListings.map(mapListing);
+  }, [ready, convexListings]);
 
   const requests = useMemo<SwapRequest[]>(() => {
-    if (!ready) return [];
-    return dataClient.listRequests();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, tick]);
+    if (!ready || !user || incomingRequests === undefined || outgoingRequests === undefined) {
+      return [];
+    }
+    const byId = new Map<string, SwapRequest>();
+    for (const req of [...incomingRequests, ...outgoingRequests]) {
+      byId.set(req._id, mapRequest(req));
+    }
+    return Array.from(byId.values()).sort((a, b) => b.createdAt - a.createdAt);
+  }, [ready, user, incomingRequests, outgoingRequests]);
 
   const conversations = useMemo<Conversation[]>(() => {
     if (!ready) return [];
@@ -92,11 +146,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, tick]);
 
-  const wishlist = useMemo<string[]>(() => {
-    if (!ready || !user) return [];
-    return dataClient.getWishlist(user.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user, tick]);
+  const wishlistColleges = useMemo<string[]>(() => {
+    if (!ready || !user || wishlist === undefined) return [];
+    return wishlist;
+  }, [ready, user, wishlist]);
 
   const getUser = useCallback(
     (userId: string) => users.find((u) => u.id === userId),
@@ -124,16 +177,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const year = user.year.trim();
       const role = user.role.trim();
       if (!college || !year || !role) return null;
-      const l = dataClient.createListing(user.id, {
+      void college;
+      void year;
+      void role;
+      void createListingMut({
+        dateTime: input.dateTime,
+        seats: input.seats,
+        message: input.message,
+      });
+      return {
+        id: "pending",
+        ownerUserId: user.id,
         college,
+        dateTime: input.dateTime,
+        seats: input.seats,
         year,
         role,
-        ...input,
-      });
-      refresh();
-      return l;
+        message: input.message,
+        status: "active",
+        createdAt: Date.now(),
+      };
     },
-    [user, refresh],
+    [user, createListingMut],
   );
 
   const requestSwap = useCallback(
@@ -143,13 +208,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       message: string;
     }): SwapRequest | null => {
       if (!user) return null;
-      const target = dataClient.listingById(args.targetListingId);
+      const target = listings.find((l) => l.id === args.targetListingId);
       if (!target) return null;
-      const req = dataClient.createRequest({
-        fromUserId: user.id,
-        toUserId: target.ownerUserId,
-        targetListingId: args.targetListingId,
-        offeringListingId: args.offeringListingId,
+      void createRequestMut({
+        targetListingId: args.targetListingId as Id<"listings">,
+        offeringListingId: args.offeringListingId as Id<"listings">,
         message: args.message,
       });
       const convo = dataClient.ensureConversation(
@@ -161,48 +224,54 @@ export function DataProvider({ children }: { children: ReactNode }) {
         dataClient.sendMessage(convo.id, user.id, args.message.trim());
       }
       refresh();
-      return req;
+      return {
+        id: "pending",
+        fromUserId: user.id,
+        toUserId: target.ownerUserId,
+        targetListingId: args.targetListingId,
+        offeringListingId: args.offeringListingId,
+        message: args.message,
+        status: "pending",
+        createdAt: Date.now(),
+      };
     },
-    [user, refresh],
+    [user, listings, createRequestMut, refresh],
   );
 
   const acceptRequest = useCallback(
     (requestId: string): SwapRequest | null => {
       if (!user) return null;
-      const req = dataClient.listRequests().find((r) => r.id === requestId);
+      const req = requests.find((r) => r.id === requestId);
       if (!req || req.toUserId !== user.id || req.status !== "pending") {
         return null;
       }
-      const updated = dataClient.acceptRequest(requestId);
-      refresh();
-      return updated;
+      void acceptRequestMut({ requestId: requestId as Id<"requests"> });
+      return { ...req, status: "accepted" };
     },
-    [user, refresh],
+    [user, requests, acceptRequestMut],
   );
 
   const declineRequest = useCallback(
     (requestId: string) => {
       if (!user) return;
-      const req = dataClient.listRequests().find((r) => r.id === requestId);
+      const req = requests.find((r) => r.id === requestId);
       if (!req || req.toUserId !== user.id || req.status !== "pending") return;
-      dataClient.respondToRequest(requestId, "declined");
-      refresh();
+      void declineRequestMut({ requestId: requestId as Id<"requests"> });
     },
-    [user, refresh],
+    [user, requests, declineRequestMut],
   );
 
   const withdrawRequest = useCallback(
     (requestId: string): boolean => {
       if (!user) return false;
-      const req = dataClient.listRequests().find((r) => r.id === requestId);
+      const req = requests.find((r) => r.id === requestId);
       if (!req || req.fromUserId !== user.id || req.status !== "pending") {
         return false;
       }
-      const ok = dataClient.withdrawRequest(requestId);
-      if (ok) refresh();
-      return ok;
+      void withdrawRequestMut({ requestId: requestId as Id<"requests"> });
+      return true;
     },
-    [user, refresh],
+    [user, requests, withdrawRequestMut],
   );
 
   const sendMessage = useCallback(
@@ -224,13 +293,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [user, refresh],
   );
 
-  const toggleWishlist = useCallback(
-    (college: string) => {
+  const saveWishlist = useCallback(
+    async (colleges: string[]) => {
       if (!user) return;
-      dataClient.toggleWishlistCollege(user.id, college);
-      refresh();
+      await saveWishlistMut({ colleges });
     },
-    [user, refresh],
+    [user, saveWishlistMut],
   );
 
   const value = useMemo<DataContextValue>(
@@ -240,7 +308,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       listings,
       requests,
       conversations,
-      wishlist,
+      wishlist: wishlistColleges,
       getUser,
       getListing,
       messagesFor,
@@ -251,7 +319,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       withdrawRequest,
       sendMessage,
       openConversationWith,
-      toggleWishlist,
+      saveWishlist,
     }),
     [
       ready,
@@ -259,7 +327,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       listings,
       requests,
       conversations,
-      wishlist,
+      wishlistColleges,
       getUser,
       getListing,
       messagesFor,
@@ -270,7 +338,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       withdrawRequest,
       sendMessage,
       openConversationWith,
-      toggleWishlist,
+      saveWishlist,
     ],
   );
 

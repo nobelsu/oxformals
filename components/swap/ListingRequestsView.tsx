@@ -102,7 +102,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
 
   if (!isAuthenticated) {
     return (
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+      <main className="mx-auto flex min-h-dvh w-full max-w-5xl items-center justify-center px-4 py-8 sm:px-6">
         <SignInGate />
       </main>
     );
