@@ -22,7 +22,7 @@ function normalizeEmail(raw: string): string {
 }
 
 function isOxfordEmail(email: string): boolean {
-  return email.endsWith("ox.ac.uk");
+  return email.endsWith("@ox.ac.uk");
 }
 
 function normalizeInterest(raw: string): string {
@@ -162,7 +162,7 @@ export function LoginForm() {
       return;
     }
     if (!isOxfordEmail(normalized)) {
-      setError("Use your Oxford email address ending in ox.ac.uk.");
+      setError("Use your Oxford email address ending in @ox.ac.uk.");
       return;
     }
     setSubmitting(true);
@@ -286,7 +286,7 @@ export function LoginForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@ox.ac.uk"
+                placeholder="sso@ox.ac.uk"
                 className={inputCls}
               />
             </label>

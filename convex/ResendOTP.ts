@@ -7,7 +7,7 @@ function normalizeEmail(raw: string): string {
 }
 
 function isOxfordEmail(email: string): boolean {
-  return email.endsWith("ox.ac.uk");
+  return email.endsWith("@ox.ac.uk");
 }
 
 function buildOtpEmailHtml({
@@ -109,7 +109,9 @@ const emailProvider = Email({
   sendVerificationRequest: async ({ identifier: email, token }) => {
     const normalizedEmail = normalizeEmail(email);
     if (!isOxfordEmail(normalizedEmail)) {
-      throw new Error("Only Oxford email addresses ending in ox.ac.uk are allowed");
+      throw new Error(
+        "Only Oxford email addresses ending in @ox.ac.uk are allowed",
+      );
     }
 
     const apiKey = process.env.AUTH_RESEND_KEY;
