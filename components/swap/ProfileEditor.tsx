@@ -121,16 +121,24 @@ export function ProfileEditor() {
     setAvatarDraft(undefined);
   }
 
-  function save() {
-    updateProfile({
-      college: normalizeCollegeName(collegeDraft),
-      year: yearDraft.trim(),
-      role: roleDraft.trim(),
-      avatar: avatarDraft,
-      interests: parseInterests(interestsDraft),
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1200);
+  async function save() {
+    setError(null);
+    setBusy(true);
+    try {
+      await updateProfile({
+        college: normalizeCollegeName(collegeDraft),
+        year: yearDraft.trim(),
+        role: roleDraft.trim(),
+        avatar: avatarDraft,
+        interests: parseInterests(interestsDraft),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1200);
+    } catch {
+      setError("Could not save — try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   const previewChips = parseInterests(interestsDraft);
@@ -271,10 +279,11 @@ export function ProfileEditor() {
       <div className="mt-6 flex justify-end">
         <button
           type="button"
-          onClick={save}
-          className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+          disabled={busy}
+          onClick={() => void save()}
+          className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm text-white transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {saved ? "Saved" : "Save"}
+          {busy ? "Saving…" : saved ? "Saved" : "Save"}
         </button>
       </div>
     </SketchCard>

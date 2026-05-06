@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { Schoolbell } from "next/font/google";
 import "./globals.css";
+import { ConvexClientProvider } from "@/app/ConvexClientProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { DataProvider } from "@/components/data/DataProvider";
 import { Nav } from "@/components/Nav";
@@ -22,18 +24,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${schoolbell.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <AuthProvider>
-          <DataProvider>
-            <Nav />
-            <div className="flex-1 flex flex-col">{children}</div>
-          </DataProvider>
-        </AuthProvider>
-      </body>
-    </html>
+    <ConvexAuthNextjsServerProvider>
+      <html
+        lang="en"
+        className={`${schoolbell.variable} h-full antialiased`}
+      >
+        <body className="min-h-full flex flex-col">
+          <ConvexClientProvider>
+            <AuthProvider>
+              <DataProvider>
+                <Nav />
+                <div className="flex-1 flex flex-col">{children}</div>
+              </DataProvider>
+            </AuthProvider>
+          </ConvexClientProvider>
+        </body>
+      </html>
+    </ConvexAuthNextjsServerProvider>
   );
 }

@@ -1,82 +1,218 @@
 "use client";
 
+import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import {
   createContext,
   useCallback,
-  useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
-import { authClient } from "@/lib/auth/authClient";
-import { userStore } from "@/lib/auth/userStore";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import type { SignInResult, SignupInput, User } from "@/lib/auth/types";
 
 type Status = "hydrating" | "ready";
 
+function profileComplete(doc: Doc<"users"> | null | undefined): boolean {
+  if (!doc) return false;
+  return !!(
+    doc.name?.trim() &&
+    doc.college?.trim() &&
+    doc.year?.trim() &&
+    doc.role?.trim()
+  );
+}
+
+function mapDocToUser(doc: Doc<"users">): User {
+  return {
+    id: doc._id,
+    email: doc.email ?? "",
+    name: doc.name ?? "",
+    college: doc.college ?? "",
+    year: doc.year ?? "",
+    role: doc.role ?? "",
+    interests: doc.interests ?? [],
+    ...(doc.avatar ? { avatar: doc.avatar } : {}),
+  };
+}
+
 export type AuthContextValue = {
   status: Status;
   user: User | null;
+  /** Convex session is valid and required profile fields are filled. */
   isAuthenticated: boolean;
-  signIn: (email: string) => Promise<SignInResult>;
+  /** JWT session present but profile is incomplete (show onboarding). */
+  needsOnboarding: boolean;
+  /** Email from the signed-in Convex user document, when available. */
+  authEmail: string | null;
+  /** Step 1: send a 6-digit code to the email (Resend + Convex Auth OTP). */
+  requestCode: (email: string) => Promise<SignInResult>;
+  /** Step 2: verify the code and establish the session. */
+  verifyCode: (email: string, code: string) => Promise<void>;
   completeSignup: (input: SignupInput) => Promise<User>;
-  signOut: () => void;
-  updateProfile: (patch: Partial<Omit<User, "id" | "email">>) => User | null;
+  signOut: () => Promise<void>;
+  updateProfile: (
+    patch: Partial<Omit<User, "id" | "email">>,
+  ) => Promise<User | null>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<Status>("hydrating");
-  const [user, setUser] = useState<User | null>(null);
+  const { isLoading: authLoading, isAuthenticated: jwtAuthenticated } =
+    useConvexAuth();
+  const { signIn: signInWithProvider, signOut: signOutAction } =
+    useAuthActions();
 
-  useEffect(() => {
-    const { user: hydrated } = authClient.getSession();
-    setUser(hydrated);
-    setStatus("ready");
-  }, []);
+  const convexUserDoc = useQuery(api.users.current);
 
-  const signIn = useCallback(async (email: string) => {
-    const result = await authClient.requestMagicLink(email);
-    if (result.status === "signed-in") {
-      setUser(result.user);
-    }
-    return result;
-  }, []);
+  const completeOnboardingMut = useMutation(api.users.completeOnboarding);
+  const patchProfileMut = useMutation(api.users.patchProfile);
 
-  const completeSignup = useCallback(async (input: SignupInput) => {
-    const created = await authClient.completeSignup(input);
-    setUser(created);
-    return created;
-  }, []);
+  const status: Status =
+    authLoading || (jwtAuthenticated && convexUserDoc === undefined)
+      ? "hydrating"
+      : "ready";
 
-  const signOut = useCallback(() => {
-    authClient.signOut();
-    setUser(null);
-  }, []);
+  const needsOnboarding =
+    status === "ready" &&
+    jwtAuthenticated &&
+    convexUserDoc != null &&
+    !profileComplete(convexUserDoc);
+
+  const isAuthenticated =
+    jwtAuthenticated &&
+    convexUserDoc != null &&
+    profileComplete(convexUserDoc);
+
+  const user: User | null =
+    jwtAuthenticated && convexUserDoc && profileComplete(convexUserDoc)
+      ? mapDocToUser(convexUserDoc)
+      : null;
+
+  const authEmail =
+    jwtAuthenticated && convexUserDoc != null && convexUserDoc.email
+      ? convexUserDoc.email
+      : null;
+
+  const requestCode = useCallback(
+    async (email: string) => {
+      const trimmed = email.trim();
+      const formData = new FormData();
+      formData.set("email", trimmed);
+      await signInWithProvider("resend", formData);
+      return { status: "code-sent" as const, email: trimmed };
+    },
+    [signInWithProvider],
+  );
+
+  const verifyCode = useCallback(
+    async (email: string, code: string) => {
+      const trimmedEmail = email.trim();
+      const trimmedCode = code.trim();
+      const formData = new FormData();
+      formData.set("email", trimmedEmail);
+      formData.set("code", trimmedCode);
+      await signInWithProvider("resend", formData);
+    },
+    [signInWithProvider],
+  );
+
+  const completeSignup = useCallback(
+    async (input: SignupInput) => {
+      const userId = await completeOnboardingMut({
+        name: input.name,
+        college: input.college,
+        year: input.year,
+        role: input.role,
+        interests: input.interests,
+      });
+      const email = (convexUserDoc?.email ?? input.email).trim();
+      return {
+        id: userId,
+        email,
+        name: input.name.trim(),
+        college: input.college.trim(),
+        year: input.year.trim(),
+        role: input.role.trim(),
+        interests: input.interests ?? [],
+      } satisfies User;
+    },
+    [completeOnboardingMut, convexUserDoc?.email],
+  );
+
+  const signOut = useCallback(async () => {
+    await signOutAction();
+  }, [signOutAction]);
 
   const updateProfile = useCallback(
-    (patch: Partial<Omit<User, "id" | "email">>): User | null => {
+    async (
+      patch: Partial<Omit<User, "id" | "email">>,
+    ): Promise<User | null> => {
       if (!user) return null;
-      const updated = userStore.patch(user.id, patch);
-      if (!updated) return null;
-      setUser(updated);
-      return updated;
+
+      const payload: {
+        name?: string;
+        college?: string;
+        year?: string;
+        role?: string;
+        interests?: string[];
+        avatar?: User["avatar"] | null;
+      } = {};
+
+      if (patch.name !== undefined) payload.name = patch.name;
+      if (patch.college !== undefined) payload.college = patch.college;
+      if (patch.year !== undefined) payload.year = patch.year;
+      if (patch.role !== undefined) payload.role = patch.role;
+      if (patch.interests !== undefined) payload.interests = patch.interests;
+      if (Object.prototype.hasOwnProperty.call(patch, "avatar")) {
+        payload.avatar = patch.avatar ?? null;
+      }
+
+      if (Object.keys(payload).length === 0) {
+        return user;
+      }
+
+      await patchProfileMut(payload);
+
+      return {
+        ...user,
+        ...patch,
+        interests: patch.interests ?? user.interests,
+        avatar: Object.prototype.hasOwnProperty.call(patch, "avatar")
+          ? patch.avatar
+          : user.avatar,
+      };
     },
-    [user],
+    [user, patchProfileMut],
   );
 
   const value = useMemo<AuthContextValue>(
     () => ({
       status,
       user,
-      isAuthenticated: !!user,
-      signIn,
+      isAuthenticated,
+      needsOnboarding,
+      authEmail,
+      requestCode,
+      verifyCode,
       completeSignup,
       signOut,
       updateProfile,
     }),
-    [status, user, signIn, completeSignup, signOut, updateProfile],
+    [
+      status,
+      user,
+      isAuthenticated,
+      needsOnboarding,
+      authEmail,
+      requestCode,
+      verifyCode,
+      completeSignup,
+      signOut,
+      updateProfile,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -7,7 +7,8 @@ const SESSION_KEY = "formalpal.session";
 // A tiny interface so we can swap this out for Supabase/etc. later by
 // replacing only this file's exported `authClient`.
 export interface AuthClient {
-  requestMagicLink(email: string): Promise<SignInResult>;
+  requestCode(email: string): Promise<SignInResult>;
+  verifyCode(email: string, code: string): Promise<void>;
   completeSignup(input: SignupInput): Promise<User>;
   getSession(): { session: Session | null; user: User | null };
   signOut(): void;
@@ -31,16 +32,17 @@ function writeSession(user: User): Session {
 }
 
 const localAuthClient: AuthClient = {
-  async requestMagicLink(email) {
-    // Simulated magic link: no mail is sent. If the user exists we sign
-    // them in immediately; otherwise we signal that the caller should
-    // collect profile details before creating the account.
+  async requestCode(email) {
+    // Simulated OTP send: no mail (Convex + Resend replace this in the app).
     const existing = userStore.findByEmail(email);
     if (existing) {
       writeSession(existing);
-      return { status: "signed-in", user: existing };
     }
-    return { status: "needs-profile", email: email.trim().toLowerCase() };
+    return { status: "code-sent", email: email.trim().toLowerCase() };
+  },
+
+  async verifyCode() {
+    // No-op for local stub; real verification happens via Convex Auth in production.
   },
 
   async completeSignup(input) {

@@ -78,8 +78,7 @@ function NavInner() {
               <button
                 type="button"
                 onClick={() => {
-                  signOut();
-                  router.push("/");
+                  void signOut().then(() => router.push("/"));
                 }}
                 className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] transition-colors"
               >

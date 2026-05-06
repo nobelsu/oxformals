@@ -4,6 +4,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "./useAuth";
 
+/**
+ * Full app auth (Convex session + completed profile). Users who only have a JWT
+ * but still owe onboarding are not `isAuthenticated` — they are handled on `/login`.
+ */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { status, isAuthenticated } = useAuth();
   const router = useRouter();

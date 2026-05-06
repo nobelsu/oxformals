@@ -1,0 +1,181 @@
+diff --git a/node_modules/@convex-dev/auth/dist/nextjs/server/cookies.js b/node_modules/@convex-dev/auth/dist/nextjs/server/cookies.js
+index 637917f..9ca1d03 100644
+--- a/node_modules/@convex-dev/auth/dist/nextjs/server/cookies.js
++++ b/node_modules/@convex-dev/auth/dist/nextjs/server/cookies.js
+@@ -12,10 +12,23 @@ export async function getRequestCookies() {
+ export async function getRequestCookiesInMiddleware(request) {
+     // maxAge doesn't matter for request cookies since they're only relevant for the
+     // length of the request
+-    return getCookieStore(await headers(), request.cookies, { maxAge: null });
++    const hostHeaders = new Headers();
++    let host = request.headers.get("Host");
++    if (!host) {
++        host = (await headers()).get("Host") ?? "";
++    }
++    if (host) {
++        hostHeaders.set("Host", host);
++    }
++    return getCookieStore(hostHeaders, request.cookies, { maxAge: null });
+ }
+-export async function getResponseCookies(response, cookieConfig) {
+-    return getCookieStore(await headers(), response.cookies, cookieConfig);
++export async function getResponseCookies(response, cookieConfig, hostHeader) {
++    const hostHeaders = new Headers();
++    const host = hostHeader ?? (await headers()).get("Host") ?? "";
++    if (host) {
++        hostHeaders.set("Host", host);
++    }
++    return getCookieStore(hostHeaders, response.cookies, cookieConfig);
+ }
+ function getCookieStore(requestHeaders, responseCookies, cookieConfig) {
+     const isLocalhost = utils.isLocalHost(requestHeaders.get("Host") ?? "");
+diff --git a/node_modules/@convex-dev/auth/dist/nextjs/server/index.js b/node_modules/@convex-dev/auth/dist/nextjs/server/index.js
+index a4bf0fc..2ba327c 100644
+--- a/node_modules/@convex-dev/auth/dist/nextjs/server/index.js
++++ b/node_modules/@convex-dev/auth/dist/nextjs/server/index.js
+@@ -110,7 +110,7 @@ handler, options = {}) {
+         if (authResult.kind === "refreshTokens" &&
+             authResult.refreshTokens !== undefined) {
+             const nextResponse = NextResponse.next(response);
+-            await setAuthCookies(nextResponse, authResult.refreshTokens, cookieConfig);
++            await setAuthCookies(nextResponse, authResult.refreshTokens, cookieConfig, request.headers.get("Host"));
+             return nextResponse;
+         }
+         return response;
+diff --git a/node_modules/@convex-dev/auth/dist/nextjs/server/proxy.js b/node_modules/@convex-dev/auth/dist/nextjs/server/proxy.js
+index fe819ee..07cbf0e 100644
+--- a/node_modules/@convex-dev/auth/dist/nextjs/server/proxy.js
++++ b/node_modules/@convex-dev/auth/dist/nextjs/server/proxy.js
+@@ -56,13 +56,13 @@ export async function proxyAuthActionToConvex(request, options) {
+             logVerbose(`Clearing auth cookies`, verbose);
+             // Send raw error message to client, just like Convex Action would
+             const response = jsonResponse({ error: error.message }, 400);
+-            await setAuthCookies(response, null, cookieConfig);
++            await setAuthCookies(response, null, cookieConfig, request.headers.get("Host"));
+             return response;
+         }
+         if (result.redirect !== undefined) {
+             const { redirect } = result;
+             const response = jsonResponse({ redirect });
+-            (await getResponseCookies(response, cookieConfig)).verifier =
++            (await getResponseCookies(response, cookieConfig, request.headers.get("Host"))).verifier =
+                 result.verifier;
+             logVerbose(`Redirecting to ${redirect}`, verbose);
+             return response;
+@@ -79,7 +79,7 @@ export async function proxyAuthActionToConvex(request, options) {
+                     ? { token: result.tokens.token, refreshToken: "dummy" }
+                     : null,
+             });
+-            await setAuthCookies(response, result.tokens, cookieConfig);
++            await setAuthCookies(response, result.tokens, cookieConfig, request.headers.get("Host"));
+             return response;
+         }
+         return jsonResponse(result);
+@@ -97,7 +97,7 @@ export async function proxyAuthActionToConvex(request, options) {
+         }
+         logVerbose(`Clearing auth cookies`, verbose);
+         const response = jsonResponse(null);
+-        await setAuthCookies(response, null, cookieConfig);
++        await setAuthCookies(response, null, cookieConfig, request.headers.get("Host"));
+         return response;
+     }
+ }
+diff --git a/node_modules/@convex-dev/auth/dist/nextjs/server/request.js b/node_modules/@convex-dev/auth/dist/nextjs/server/request.js
+index f5a3863..7565a58 100644
+--- a/node_modules/@convex-dev/auth/dist/nextjs/server/request.js
++++ b/node_modules/@convex-dev/auth/dist/nextjs/server/request.js
+@@ -1,7 +1,7 @@
+ import { fetchAction } from "convex/nextjs";
+ import { jwtDecode } from "jwt-decode";
+ import { NextResponse } from "next/server";
+-import { getRequestCookies, getRequestCookiesInMiddleware } from "./cookies.js";
++import { getRequestCookiesInMiddleware } from "./cookies.js";
+ import { getConvexNextjsOptions, isCorsRequest, logVerbose, setAuthCookies, } from "./utils.js";
+ export async function handleAuthenticationInRequest(request, options) {
+     const verbose = options.verbose ?? false;
+@@ -11,18 +11,22 @@ export async function handleAuthenticationInRequest(request, options) {
+     // Validate CORS
+     await validateCors(request);
+     // Refresh tokens if necessary
+-    const refreshTokens = await getRefreshedTokens(options);
++    const refreshTokens = await getRefreshedTokens(request, options);
+     // Handle code exchange for OAuth and magic links via server-side redirect
+     const code = requestUrl.searchParams.get("code");
++    const accept = request.headers.get("accept") ?? "";
++    const looksLikeDocumentNavigation = accept.includes("text/html") ||
++        accept.includes("*/*") ||
++        accept.trim() === "";
+     if (code &&
+         request.method === "GET" &&
+-        request.headers.get("accept")?.includes("text/html") &&
++        looksLikeDocumentNavigation &&
+         (options.shouldHandleCode === undefined ||
+             (typeof options.shouldHandleCode === "function"
+                 ? await options.shouldHandleCode(request)
+                 : options.shouldHandleCode))) {
+         logVerbose(`Handling code exchange for OAuth or magic link`, verbose);
+-        const verifier = (await getRequestCookies()).verifier ?? undefined;
++        const verifier = (await getRequestCookiesInMiddleware(request)).verifier ?? undefined;
+         const redirectUrl = new URL(requestUrl);
+         redirectUrl.searchParams.delete("code");
+         try {
+@@ -31,7 +35,7 @@ export async function handleAuthenticationInRequest(request, options) {
+                 throw new Error("Invalid `signIn` action result for code exchange");
+             }
+             const response = NextResponse.redirect(redirectUrl);
+-            await setAuthCookies(response, result.tokens, cookieConfig);
++            await setAuthCookies(response, result.tokens, cookieConfig, request.headers.get("Host"));
+             logVerbose(`Successfully validated code, redirecting to ${redirectUrl.toString()} with auth cookies`, verbose);
+             return { kind: "redirect", response };
+         }
+@@ -39,7 +43,7 @@ export async function handleAuthenticationInRequest(request, options) {
+             console.error(error);
+             logVerbose(`Error validating code, redirecting to ${redirectUrl.toString()} and clearing auth cookies`, verbose);
+             const response = NextResponse.redirect(redirectUrl);
+-            await setAuthCookies(response, null, cookieConfig);
++            await setAuthCookies(response, null, cookieConfig, request.headers.get("Host"));
+             return { kind: "redirect", response };
+         }
+     }
+@@ -57,9 +61,9 @@ async function validateCors(request) {
+ }
+ const REQUIRED_TOKEN_LIFETIME_MS = 60_000; // 1 minute
+ const MINIMUM_REQUIRED_TOKEN_LIFETIME_MS = 10_000; // 10 seconds
+-async function getRefreshedTokens(options) {
++async function getRefreshedTokens(request, options) {
+     const verbose = options.verbose ?? false;
+-    const cookies = await getRequestCookies();
++    const cookies = await getRequestCookiesInMiddleware(request);
+     const { token, refreshToken } = cookies;
+     if (refreshToken === null && token === null) {
+         logVerbose(`No tokens to refresh, returning undefined`, verbose);
+diff --git a/node_modules/@convex-dev/auth/dist/nextjs/server/utils.js b/node_modules/@convex-dev/auth/dist/nextjs/server/utils.js
+index aaa0249..24e4b1e 100644
+--- a/node_modules/@convex-dev/auth/dist/nextjs/server/utils.js
++++ b/node_modules/@convex-dev/auth/dist/nextjs/server/utils.js
+@@ -6,8 +6,8 @@ export function jsonResponse(body, status = 200) {
+         status,
+     });
+ }
+-export async function setAuthCookies(response, tokens, cookieConfig) {
+-    const responseCookies = await getResponseCookies(response, cookieConfig);
++export async function setAuthCookies(response, tokens, cookieConfig, hostHeader) {
++    const responseCookies = await getResponseCookies(response, cookieConfig, hostHeader);
+     if (tokens === null) {
+         responseCookies.token = null;
+         responseCookies.refreshToken = null;
+diff --git a/node_modules/@convex-dev/auth/dist/server/utils.js b/node_modules/@convex-dev/auth/dist/server/utils.js
+index bb05c09..f090e45 100644
+--- a/node_modules/@convex-dev/auth/dist/server/utils.js
++++ b/node_modules/@convex-dev/auth/dist/server/utils.js
+@@ -6,6 +6,8 @@ export function requireEnv(name) {
+     return value;
+ }
+ export function isLocalHost(host) {
+-    return /(localhost|127\.0\.0\.1):\d+/.test(host ?? "");
++    if (!host) return false;
++    const h = host.trim();
++    return /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(h);
+ }
+ //# sourceMappingURL=utils.js.map
+\ No newline at end of file

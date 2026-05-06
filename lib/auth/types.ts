@@ -20,9 +20,8 @@ export type Session = {
   issuedAt: number;
 };
 
-export type SignInResult =
-  | { status: "signed-in"; user: User }
-  | { status: "needs-profile"; email: string };
+/** OTP flows return after the Convex action accepts the send-code request (see AuthProvider). */
+export type SignInResult = { status: "code-sent"; email: string };
 
 export type SignupInput = {
   email: string;
