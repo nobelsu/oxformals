@@ -1,23 +1,51 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { SketchCard } from "@/components/ui/SketchCard";
+import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
 
 type Step = "email" | "code" | "profile";
 const ROLE_OPTIONS = ["Undergrad", "Masters", "DPhil"] as const;
+const COLLEGE_LIST = OXFORD_COLLEGES as readonly string[];
 
 function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
 function isOxfordEmail(email: string): boolean {
-  return email.endsWith("@ox.ac.uk");
+  return email.endsWith("ox.ac.uk");
 }
 
 function normalizeInterest(raw: string): string {
   return raw.trim().replace(/\s+/g, " ");
+}
+
+function renderHighlightedMatch(label: string, query: string) {
+  const q = query.trim();
+  if (!q) return label;
+  const lowerLabel = label.toLowerCase();
+  const lowerQuery = q.toLowerCase();
+  const start = lowerLabel.indexOf(lowerQuery);
+  if (start < 0) return label;
+  const end = start + q.length;
+  return (
+    <>
+      {label.slice(0, start)}
+      <mark className="rounded bg-[var(--accent)]/25 px-0.5 text-current">
+        {label.slice(start, end)}
+      </mark>
+      {label.slice(end)}
+    </>
+  );
 }
 
 function formatVerifyError(message: string): string {
@@ -53,10 +81,15 @@ export function LoginForm() {
   const [college, setCollege] = useState("");
   const [year, setYear] = useState("");
   const [role, setRole] = useState("");
+  const [collegeSearch, setCollegeSearch] = useState("");
+  const [collegePickerOpen, setCollegePickerOpen] = useState(false);
+  const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [interests, setInterests] = useState<string[]>([]);
   const [interestInput, setInterestInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const collegePickerRef = useRef<HTMLDivElement | null>(null);
+  const rolePickerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (status === "ready" && isAuthenticated) {
@@ -72,6 +105,54 @@ export function LoginForm() {
     }
   }, [status, needsOnboarding, authEmail]);
 
+  useEffect(() => {
+    if (!collegePickerOpen && !rolePickerOpen) return;
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      const clickedOutsideCollege = collegePickerRef.current
+        ? !collegePickerRef.current.contains(target)
+        : true;
+      const clickedOutsideRole = rolePickerRef.current
+        ? !rolePickerRef.current.contains(target)
+        : true;
+      if (clickedOutsideCollege) {
+        setCollegePickerOpen(false);
+      }
+      if (clickedOutsideRole) {
+        setRolePickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [collegePickerOpen, rolePickerOpen]);
+
+  const collegeSelectOptions = useMemo(() => {
+    const c = college.trim();
+    if (c && !COLLEGE_LIST.includes(c)) {
+      return [c, ...OXFORD_COLLEGES];
+    }
+    return [...OXFORD_COLLEGES];
+  }, [college]);
+
+  const filteredCollegeOptions = useMemo(() => {
+    const q = collegeSearch.trim().toLowerCase();
+    if (!q) return collegeSelectOptions;
+    return collegeSelectOptions.filter((collegeOption) =>
+      collegeOption.toLowerCase().includes(q),
+    );
+  }, [collegeSearch, collegeSelectOptions]);
+
+  const roleSelectOptions = useMemo(() => {
+    const trimmedRole = role.trim();
+    if (
+      trimmedRole &&
+      !ROLE_OPTIONS.includes(trimmedRole as (typeof ROLE_OPTIONS)[number])
+    ) {
+      return [trimmedRole, ...ROLE_OPTIONS];
+    }
+    return [...ROLE_OPTIONS];
+  }, [role]);
+
   async function onEmailSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -81,7 +162,7 @@ export function LoginForm() {
       return;
     }
     if (!isOxfordEmail(normalized)) {
-      setError("Use your Oxford email address ending in @ox.ac.uk.");
+      setError("Use your Oxford email address ending in ox.ac.uk.");
       return;
     }
     setSubmitting(true);
@@ -91,7 +172,7 @@ export function LoginForm() {
       setStep("code");
       setCode("");
     } catch {
-      setError("Could not send the code — check your Convex and Resend setup.");
+      setError("Could not send the code — check your email and try again.");
     } finally {
       setSubmitting(false);
     }
@@ -124,7 +205,7 @@ export function LoginForm() {
       await requestCode(email.trim());
       setCode("");
     } catch {
-      setError("Could not resend — check your Convex and Resend setup.");
+      setError("Could not resend the code — try again in a moment.");
     } finally {
       setSubmitting(false);
     }
@@ -147,7 +228,7 @@ export function LoginForm() {
       await completeSignup({
         email: email.trim(),
         name: name.trim(),
-        college: college.trim(),
+        college: normalizeCollegeName(college),
         year: normalizedYear,
         role: role.trim(),
         interests,
@@ -162,8 +243,6 @@ export function LoginForm() {
 
   const inputCls =
     "w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2.5 text-base focus:outline-none focus:border-[var(--accent-hover)]";
-  const selectCls = `${inputCls} pr-12 appearance-none`;
-
   function addInterest(raw: string) {
     const next = normalizeInterest(raw);
     if (!next) return;
@@ -262,7 +341,7 @@ export function LoginForm() {
             <button
               type="submit"
               disabled={submitting}
-              className="mt-2 w-full rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 disabled:cursor-not-allowed text-white py-3 text-base transition-colors"
+              className="mt-2 w-full cursor-pointer rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 disabled:cursor-not-allowed text-white py-3 text-base transition-colors"
             >
               {submitting ? "Verifying…" : "Verify"}
             </button>
@@ -270,7 +349,7 @@ export function LoginForm() {
             <button
               type="button"
               disabled={submitting}
-              className="w-full rounded-full border-[2px] border-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] px-4 py-2.5 transition-colors disabled:opacity-60 text-sm"
+              className="w-full cursor-pointer rounded-full border-[2px] border-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] px-4 py-2.5 transition-colors disabled:opacity-60 text-sm"
               onClick={() => void onResendCode()}
             >
               Resend code
@@ -315,14 +394,77 @@ export function LoginForm() {
 
             <label className="flex flex-col gap-2">
               <span className="text-sm text-[var(--ink-muted)]">College</span>
-              <input
-                type="text"
-                required
-                value={college}
-                onChange={(e) => setCollege(e.target.value)}
-                placeholder="Balliol"
-                className={inputCls}
-              />
+              <div ref={collegePickerRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCollegePickerOpen((open) => !open);
+                    setRolePickerOpen(false);
+                    setCollegeSearch(college);
+                  }}
+                  className={`${inputCls} pr-12 text-left`}
+                >
+                  {college || "Choose college"}
+                </button>
+                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 12 8"
+                    className="h-3.5 w-3.5"
+                    fill="none"
+                  >
+                    <path
+                      d="M1 1.5 6 6.5 11 1.5"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                {collegePickerOpen ? (
+                  <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--paper)] p-2 shadow-sm">
+                    <input
+                      type="text"
+                      value={collegeSearch}
+                      onChange={(e) => setCollegeSearch(e.target.value)}
+                      placeholder="Search college"
+                      className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-3 py-1.5 text-sm text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+                    />
+                    <div className="mt-2 max-h-48 overflow-y-auto">
+                      {filteredCollegeOptions.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {filteredCollegeOptions.map((collegeOption) => {
+                            const selected = collegeOption === college;
+                            return (
+                              <button
+                                key={collegeOption}
+                                type="button"
+                                onClick={() => {
+                                  setCollege(collegeOption);
+                                  setCollegeSearch(collegeOption);
+                                  setCollegePickerOpen(false);
+                                }}
+                                className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                                  selected
+                                    ? "bg-[var(--ink)] text-[var(--bg)]"
+                                    : "text-[var(--ink)] hover:bg-[var(--bg)]"
+                                }`}
+                              >
+                                {renderHighlightedMatch(collegeOption, collegeSearch)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="px-2 py-2 text-sm text-[var(--ink-muted)]">
+                          No colleges match that search.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </label>
 
             <label className="flex flex-col gap-2">
@@ -343,20 +485,17 @@ export function LoginForm() {
 
             <label className="flex flex-col gap-2">
               <span className="text-sm text-[var(--ink-muted)]">Role</span>
-              <div className="relative">
-                <select
-                  required
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className={selectCls}
+              <div ref={rolePickerRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRolePickerOpen((open) => !open);
+                    setCollegePickerOpen(false);
+                  }}
+                  className={`${inputCls} pr-12 text-left`}
                 >
-                  <option value="">Choose role</option>
-                  {ROLE_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                  {role || "Choose role"}
+                </button>
                 <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]">
                   <svg
                     aria-hidden="true"
@@ -373,6 +512,32 @@ export function LoginForm() {
                     />
                   </svg>
                 </span>
+                {rolePickerOpen ? (
+                  <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--paper)] p-2 shadow-sm">
+                    <div className="flex flex-col gap-1">
+                      {roleSelectOptions.map((option) => {
+                        const selected = option === role;
+                        return (
+                          <button
+                            key={option}
+                            type="button"
+                            onClick={() => {
+                              setRole(option);
+                              setRolePickerOpen(false);
+                            }}
+                            className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                              selected
+                                ? "bg-[var(--ink)] text-[var(--bg)]"
+                                : "text-[var(--ink)] hover:bg-[var(--bg)]"
+                            }`}
+                          >
+                            {option}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </label>
 
