@@ -13,6 +13,7 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import type { SignInResult, SignupInput, User } from "@/lib/auth/types";
 
 type Status = "hydrating" | "ready";
+const ADMIN_EMAIL = "admin@ox.ac.uk";
 
 function profileComplete(doc: Doc<"users"> | null | undefined): boolean {
   if (!doc) return false;
@@ -99,10 +100,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const requestCode = useCallback(
     async (email: string) => {
       const trimmed = email.trim();
+      const normalizedEmail = trimmed.toLowerCase();
       const formData = new FormData();
       formData.set("email", trimmed);
+      if (normalizedEmail === ADMIN_EMAIL) {
+        await signInWithProvider("admin-email", formData);
+        return { status: "signed-in" as const, email: normalizedEmail };
+      }
       await signInWithProvider("resend", formData);
-      return { status: "code-sent" as const, email: trimmed };
+      return { status: "code-sent" as const, email: normalizedEmail };
     },
     [signInWithProvider],
   );

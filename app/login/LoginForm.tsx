@@ -167,10 +167,12 @@ export function LoginForm() {
     }
     setSubmitting(true);
     try {
-      await requestCode(normalized);
+      const signInResult = await requestCode(normalized);
       setEmail(normalized);
-      setStep("code");
-      setCode("");
+      if (signInResult.status === "code-sent") {
+        setStep("code");
+        setCode("");
+      }
     } catch {
       setError("Could not send the code — check your email and try again.");
     } finally {
