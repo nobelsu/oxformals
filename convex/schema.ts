@@ -23,6 +23,8 @@ export default defineSchema({
     year: v.optional(v.string()),
     role: v.optional(v.string()),
     interests: v.optional(v.array(v.string())),
+    instagramHandle: v.optional(v.string()),
+    whatsappPhone: v.optional(v.string()),
     wishlistColleges: v.optional(v.array(v.string())),
     avatar,
   })

@@ -8,12 +8,17 @@ import type { Listing } from "@/lib/data/types";
 type Props = {
   listing: Listing;
   pendingRequestCount: number;
+  profile?: {
+    year?: string;
+    role?: string;
+  };
   onViewRequests?: () => void;
 };
 
 export function MyListingCard({
   listing,
   pendingRequestCount,
+  profile,
   onViewRequests,
 }: Props) {
   const [opening, setOpening] = useState(false);
@@ -28,6 +33,13 @@ export function MyListingCard({
     setOpening(true);
     onViewRequests();
   }, [onViewRequests, opening]);
+
+  const profileLine = [
+    formatYearLabel(profile?.year || "") || profile?.year || formatYearLabel(listing.year) || listing.year,
+    profile?.role || listing.role,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const cardContent = (
     <>
@@ -46,9 +58,7 @@ export function MyListingCard({
       </div>
 
       <div className="shrink-0 truncate text-sm text-[var(--ink-soft)]">
-        {[formatYearLabel(listing.year) || listing.year, listing.role]
-          .filter(Boolean)
-          .join(" · ")}
+        {profileLine}
       </div>
 
       {pendingRequestCount > 0 ? (
@@ -99,7 +109,7 @@ export function MyListingCard({
         >
           <SketchCard
             seed={seedFrom(listing.id)}
-            className="flex h-full min-h-[13.2rem] flex-col gap-3 overflow-hidden p-5 transition-none group-hover:translate-x-3 group-hover:-translate-y-3 group-hover:shadow-[16px_-16px_0px_var(--bg)] group-focus-visible:translate-x-3 group-focus-visible:-translate-y-3 group-focus-visible:shadow-[16px_-16px_0px_var(--bg)] sm:min-h-[15.6rem]"
+            className="flex h-full min-h-[13.2rem] flex-col gap-3 overflow-hidden p-5 transition-[transform,box-shadow] duration-200 ease-out group-hover:translate-x-3 group-hover:-translate-y-3 group-hover:shadow-[0_12px_26px_rgba(0,0,0,0.16)] group-focus-visible:translate-x-3 group-focus-visible:-translate-y-3 group-focus-visible:shadow-[0_12px_26px_rgba(0,0,0,0.16)] sm:min-h-[15.6rem]"
           >
             {cardContent}
           </SketchCard>

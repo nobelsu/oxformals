@@ -122,13 +122,27 @@ export function BrowseTab({
   return (
     <>
       <div className="browse-tab-root flex flex-col gap-10">
-        <Hero onList={onNavigateToRequests} />
-        <StatsStrip openSwaps={openSwaps} />
-        <CollegeFilter
-          active={collegeFilter}
-          onChange={setCollegeFilter}
-          availableColleges={availableColleges}
-        />
+        <Hero />
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={onNavigateToRequests}
+            className="shrink-0 cursor-pointer rounded-full bg-[var(--accent)] px-8 py-3 text-base text-white transition-colors hover:bg-[var(--accent-hover)]"
+          >
+            + List my formal
+          </button>
+        </div>
+        <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center gap-3">
+          <CollegeFilter
+            active={collegeFilter}
+            onChange={setCollegeFilter}
+            availableColleges={availableColleges}
+            className="justify-center"
+          />
+          <div className="lg:absolute lg:right-0 lg:top-1/2 lg:-translate-y-1/2">
+            <StatsStrip openSwaps={openSwaps} />
+          </div>
+        </div>
 
         {browseListings.length === 0 ? (
           <SketchCard className="p-10 text-center text-[var(--ink-muted)] text-[0.9375rem] sm:text-[1.125rem] leading-snug">

@@ -25,14 +25,20 @@ export function NewRequestPicker({
       open={open}
       onClose={onClose}
       title="Pick a formal to swap for"
-      panelClassName="max-w-5xl max-h-[85vh]"
+      panelClassName="max-w-[96vw] xl:max-w-[1400px] max-h-[90vh]"
     >
       {listings.length === 0 ? (
         <p className="text-[var(--ink-muted)]">
           No open swaps right now. Check back soon, or list one of your own.
         </p>
       ) : (
-        <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          className={`grid items-stretch gap-4 ${
+            listings.length === 1
+              ? "grid-cols-1"
+              : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
+          }`}
+        >
           {listings.map((l) => {
             const owner = getUser(l.ownerUserId);
             if (!owner) return null;

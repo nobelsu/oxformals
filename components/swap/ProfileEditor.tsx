@@ -94,6 +94,12 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
   const [collegePickerOpen, setCollegePickerOpen] = useState(false);
   const [yearDraft, setYearDraft] = useState(user?.year ?? "");
   const [roleDraft, setRoleDraft] = useState(user?.role ?? "");
+  const [instagramHandleDraft, setInstagramHandleDraft] = useState(
+    user?.instagramHandle ?? "",
+  );
+  const [whatsappPhoneDraft, setWhatsappPhoneDraft] = useState(
+    user?.whatsappPhone ?? "",
+  );
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [interestsDraft, setInterestsDraft] = useState<string[]>(
     user?.interests ?? [],
@@ -114,6 +120,8 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
     setCollegeSearch(normalizedCollege);
     setYearDraft(user.year);
     setRoleDraft(user.role);
+    setInstagramHandleDraft(user.instagramHandle ?? "");
+    setWhatsappPhoneDraft(user.whatsappPhone ?? "");
     setInterestsDraft(user.interests);
     setAvatarDraft(user.avatar);
   }, [user]);
@@ -171,6 +179,8 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
     : "";
   const initialYear = user?.year.trim() ?? "";
   const initialRole = user?.role.trim() ?? "";
+  const initialInstagramHandle = user?.instagramHandle?.trim() ?? "";
+  const initialWhatsappPhone = user?.whatsappPhone?.trim() ?? "";
   const initialInterests = user?.interests ?? [];
   const initialAvatar = user?.avatar;
 
@@ -178,6 +188,8 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
     normalizedCollege !== initialCollege ||
     normalizedYear !== initialYear ||
     normalizedRole !== initialRole ||
+    instagramHandleDraft.trim() !== initialInstagramHandle ||
+    whatsappPhoneDraft.trim() !== initialWhatsappPhone ||
     JSON.stringify(interestsDraft) !== JSON.stringify(initialInterests) ||
     JSON.stringify(avatarDraft ?? null) !== JSON.stringify(initialAvatar ?? null);
 
@@ -223,6 +235,8 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
         college: normalizeCollegeName(collegeDraft),
         year: normalizedYear,
         role: roleDraft.trim(),
+        instagramHandle: instagramHandleDraft.trim(),
+        whatsappPhone: whatsappPhoneDraft.trim(),
         avatar: avatarDraft,
         interests: interestsDraft,
       });
@@ -233,7 +247,17 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
     } finally {
       setBusy(false);
     }
-  }, [user, yearDraft, updateProfile, collegeDraft, roleDraft, avatarDraft, interestsDraft]);
+  }, [
+    user,
+    yearDraft,
+    updateProfile,
+    collegeDraft,
+    roleDraft,
+    instagramHandleDraft,
+    whatsappPhoneDraft,
+    avatarDraft,
+    interestsDraft,
+  ]);
 
   useEffect(() => {
     onDirtyChange?.(profileDirty);
@@ -432,6 +456,33 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
                   </div>
                 ) : null}
               </div>
+            </label>
+
+            <label className="flex flex-col gap-2">
+              <span className="text-sm text-[var(--ink-muted)]">
+                Instagram handle
+              </span>
+              <input
+                type="text"
+                value={instagramHandleDraft}
+                onChange={(e) => setInstagramHandleDraft(e.target.value)}
+                placeholder="@yourhandle"
+                className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+              />
+            </label>
+
+            <label className="flex flex-col gap-2">
+              <span className="text-sm text-[var(--ink-muted)]">
+                WhatsApp phone
+              </span>
+              <input
+                type="tel"
+                inputMode="tel"
+                value={whatsappPhoneDraft}
+                onChange={(e) => setWhatsappPhoneDraft(e.target.value)}
+                placeholder="+44 7..."
+                className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+              />
             </label>
           </div>
 

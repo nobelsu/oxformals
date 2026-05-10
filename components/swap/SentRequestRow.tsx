@@ -29,45 +29,46 @@ export function SentRequestRow({
   return (
     <SketchCard
       seed={seedFrom(request.id)}
-      className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center"
+      padded={false}
+      className="relative p-6"
     >
-      <Avatar name={toUser.name} source={toUser.avatar} />
-      <div className="min-w-0 flex-1">
-        <div className="text-lg leading-tight">
-          {targetListing ? `${targetListing.college} formal` : "Swap request"}
-          {targetListing && (
-            <span className="text-[var(--ink-muted)]">
-              {" "}
-              · {formatListingDate(targetListing.dateTime)}
-            </span>
-          )}
-        </div>
-        <div className="text-sm text-[var(--ink-muted)]">
-          requested from {toUser.name}
-        </div>
-        {request.message ? (
-          <p className="mt-1 truncate text-sm italic text-[var(--ink-soft)]">
-            “{request.message}”
+      <span className="absolute right-4 top-3 rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
+        {statusLabel}
+      </span>
+      <div className="flex items-start gap-4">
+        <Avatar name={toUser.name} source={toUser.avatar} />
+        <div className="min-w-0 flex-1 space-y-1.5 pt-1">
+          <div className="text-lg leading-tight">{toUser.name}</div>
+          <div className="text-sm leading-snug text-[var(--ink-muted)]">
+            {targetListing ? targetListing.college : "Swap request"}
+            {targetListing && (
+              <span className="text-[var(--ink-muted)]">
+                {" "}
+                · {formatListingDate(targetListing.dateTime)}
+              </span>
+            )}
+          </div>
+          {request.message ? (
+            <p className="truncate text-sm italic leading-relaxed text-[var(--ink-soft)]">
+              “{request.message}”
+            </p>
+          ) : null}
+          <p className="text-xs leading-relaxed text-[var(--ink-soft)]">
+            Sent {formatRelativeTime(request.createdAt)}
           </p>
-        ) : null}
-        <p className="mt-1 text-xs text-[var(--ink-soft)]">
-          Sent {formatRelativeTime(request.createdAt)}
-        </p>
+        </div>
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
-        <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
-          {statusLabel}
-        </span>
-        {request.status === "pending" && onWithdraw ? (
+      {request.status === "pending" && onWithdraw ? (
+        <div className="mt-3 flex justify-start">
           <button
             type="button"
             onClick={() => onWithdraw(request.id)}
-            className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+            className="rounded-full border-[2px] border-[var(--accent)] bg-[var(--accent)] px-4 py-1 text-sm text-white transition-colors hover:border-[var(--accent-hover)] hover:bg-[var(--accent-hover)]"
           >
             Withdraw
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </SketchCard>
   );
 }

@@ -7,9 +7,15 @@ type Props = {
   active: string | null;
   onChange: (college: string | null) => void;
   availableColleges?: string[];
+  className?: string;
 };
 
-export function CollegeFilter({ active, onChange, availableColleges }: Props) {
+export function CollegeFilter({
+  active,
+  onChange,
+  availableColleges,
+  className = "",
+}: Props) {
   const colleges = availableColleges ?? [];
   const highlighted = COLLEGE_FILTER_HIGHLIGHTS.filter((c) =>
     colleges.includes(c),
@@ -25,7 +31,7 @@ export function CollegeFilter({ active, onChange, availableColleges }: Props) {
   const chips = [...highlighted, ...others];
 
   return (
-    <div className="flex flex-wrap gap-2 justify-center">
+    <div className={`flex flex-wrap gap-2 justify-center ${className}`.trim()}>
       <Chip
         variant={active === null ? "filled" : "outline"}
         onClick={() => onChange(null)}

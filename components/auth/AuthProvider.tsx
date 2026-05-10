@@ -34,6 +34,8 @@ function mapDocToUser(doc: Doc<"users">): User {
     year: doc.year ?? "",
     role: doc.role ?? "",
     interests: doc.interests ?? [],
+    instagramHandle: doc.instagramHandle ?? "",
+    whatsappPhone: doc.whatsappPhone ?? "",
     ...(doc.avatar ? { avatar: doc.avatar } : {}),
   };
 }
@@ -164,6 +166,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         year?: string;
         role?: string;
         interests?: string[];
+        instagramHandle?: string;
+        whatsappPhone?: string;
         avatar?: User["avatar"] | null;
       } = {};
 
@@ -172,6 +176,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (patch.year !== undefined) payload.year = patch.year;
       if (patch.role !== undefined) payload.role = patch.role;
       if (patch.interests !== undefined) payload.interests = patch.interests;
+      if (patch.instagramHandle !== undefined) {
+        payload.instagramHandle = patch.instagramHandle;
+      }
+      if (patch.whatsappPhone !== undefined) {
+        payload.whatsappPhone = patch.whatsappPhone;
+      }
       if (Object.prototype.hasOwnProperty.call(patch, "avatar")) {
         payload.avatar = patch.avatar ?? null;
       }

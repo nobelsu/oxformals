@@ -22,6 +22,13 @@ export function ListingCard({
   disabled,
   disabledLabel,
 }: Props) {
+  const profileLine = [
+    formatYearLabel(owner.year) || owner.year || formatYearLabel(listing.year) || listing.year,
+    owner.role || listing.role,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <SketchCard
       seed={seedFrom(listing.id)}
@@ -44,12 +51,7 @@ export function ListingCard({
             {owner.name.split(" ")[0]}
           </div>
           <div className="truncate text-[1.155rem] text-[var(--ink-soft)]">
-            {[
-              formatYearLabel(listing.year) || listing.year,
-              listing.role,
-            ]
-              .filter(Boolean)
-              .join(" · ") ||
+            {profileLine ||
               [owner.college, formatYearLabel(owner.year) || owner.year]
                 .filter(Boolean)
                 .join(" · ")}
@@ -65,7 +67,7 @@ export function ListingCard({
                 key={tag}
                 size="md"
                 as="span"
-                className="!text-[0.67375rem] min-w-0 flex-1 basis-0 justify-center"
+                className="!text-[0.67375rem]"
               >
                 {tag}
               </Chip>

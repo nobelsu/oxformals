@@ -11,6 +11,8 @@ export type User = {
   /** e.g. Undergraduate, Postgraduate — shown on listings when you post. */
   role: string;
   interests: string[];
+  instagramHandle?: string;
+  whatsappPhone?: string;
   avatar?: AvatarSource;
 };
 

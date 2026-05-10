@@ -76,6 +76,8 @@ export const patchProfile = mutation({
     year: v.optional(v.string()),
     role: v.optional(v.string()),
     interests: v.optional(v.array(v.string())),
+    instagramHandle: v.optional(v.string()),
+    whatsappPhone: v.optional(v.string()),
     avatar: avatarOrClear,
   },
   handler: async (ctx, args) => {
@@ -85,7 +87,14 @@ export const patchProfile = mutation({
     type UserPatch = Partial<
       Pick<
         Doc<"users">,
-        "name" | "college" | "year" | "role" | "interests" | "avatar"
+        | "name"
+        | "college"
+        | "year"
+        | "role"
+        | "interests"
+        | "instagramHandle"
+        | "whatsappPhone"
+        | "avatar"
       >
     >;
 
@@ -105,6 +114,12 @@ export const patchProfile = mutation({
     }
     if (args.interests !== undefined) {
       patch.interests = args.interests;
+    }
+    if (args.instagramHandle !== undefined) {
+      patch.instagramHandle = args.instagramHandle.trim() || undefined;
+    }
+    if (args.whatsappPhone !== undefined) {
+      patch.whatsappPhone = args.whatsappPhone.trim() || undefined;
     }
     if (args.avatar !== undefined) {
       patch.avatar =

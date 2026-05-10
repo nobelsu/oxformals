@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Modal } from "@/components/ui/Modal";
@@ -10,6 +11,7 @@ import { MyListingCard } from "./MyListingCard";
 
 export function RequestsTab() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const { requests, listings, createListing } = useData();
 
@@ -24,6 +26,16 @@ export function RequestsTab() {
   );
 
   const [listFormalOpen, setListFormalOpen] = useState(false);
+  const shouldOpenListModal = searchParams.get("openList") === "1";
+
+  useEffect(() => {
+    if (!shouldOpenListModal) return;
+    setListFormalOpen(true);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("openList");
+    const qs = params.toString();
+    router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+  }, [shouldOpenListModal, router, searchParams]);
 
   const pendingCountByListing = useMemo(() => {
     const map = new Map<string, number>();
@@ -63,6 +75,7 @@ export function RequestsTab() {
                 key={listing.id}
                 listing={listing}
                 pendingRequestCount={pendingCountByListing.get(listing.id) ?? 0}
+                profile={{ year: user.year, role: user.role }}
                 onViewRequests={() => router.push(`/requests/${listing.id}`)}
               />
             ))}

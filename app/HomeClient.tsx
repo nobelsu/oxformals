@@ -31,13 +31,18 @@ export function HomeClient() {
   }, [urlTab, tab]);
 
   const setActiveTab = useCallback(
-    (next: Tab) => {
+    (next: Tab, options?: { openListFormal?: boolean }) => {
       setTab(next);
       const params = new URLSearchParams(searchParams.toString());
       if (next === "browse") {
         params.delete("tab");
       } else {
         params.set("tab", next);
+      }
+      if (next === "requests" && options?.openListFormal) {
+        params.set("openList", "1");
+      } else {
+        params.delete("openList");
       }
       const qs = params.toString();
       router.replace(qs ? `/?${qs}` : "/", { scroll: false });
@@ -50,7 +55,9 @@ export function HomeClient() {
       return (
         <BrowseTab
           onNavigateToMine={() => setActiveTab("mine")}
-          onNavigateToRequests={() => setActiveTab("requests")}
+          onNavigateToRequests={() =>
+            setActiveTab("requests", { openListFormal: true })
+          }
           onSignInRequired={() => router.push("/login?next=/")}
         />
       );
