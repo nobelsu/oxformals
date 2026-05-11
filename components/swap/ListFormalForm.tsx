@@ -6,7 +6,7 @@ import { SketchCard } from "@/components/ui/SketchCard";
 import { normalizeCollegeName } from "@/lib/data/colleges";
 import type { NewListingInput } from "@/lib/data/dataClient";
 
-const SEATS: Array<1 | 2 | 3> = [1, 2, 3];
+const GROUP_SIZES: Array<2 | 3 | 4> = [2, 3, 4];
 
 export type ListingProfileFields = {
   college: string;
@@ -33,7 +33,7 @@ export function ListFormalForm({
   );
 
   const [dateTime, setDateTime] = useState("");
-  const [seats, setSeats] = useState<1 | 2 | 3>(2);
+  const [groupSize, setGroupSize] = useState<2 | 3 | 4>(2);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +55,7 @@ export function ListFormalForm({
     const iso = new Date(dateTime).toISOString();
     onSubmit({
       dateTime: iso,
-      seats,
+      groupSize,
       message: message.trim(),
     });
     setDateTime("");
@@ -82,13 +82,13 @@ export function ListFormalForm({
         </label>
 
         <div className="flex flex-col gap-2">
-          <span className="text-sm text-[var(--ink-muted)]">Seats available</span>
+          <span className="text-sm text-[var(--ink-muted)]">Group size</span>
           <div className="flex gap-2">
-            {SEATS.map((s) => (
+            {GROUP_SIZES.map((s) => (
               <Chip
                 key={s}
-                variant={seats === s ? "filled" : "outline"}
-                onClick={() => setSeats(s)}
+                variant={groupSize === s ? "filled" : "outline"}
+                onClick={() => setGroupSize(s)}
               >
                 {s}
               </Chip>

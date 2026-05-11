@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 
 const avatarValue = v.union(
@@ -44,6 +44,8 @@ export const completeOnboarding = mutation({
     year: v.string(),
     role: v.string(),
     interests: v.optional(v.array(v.string())),
+    instagramHandle: v.optional(v.string()),
+    whatsappPhone: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -63,9 +65,20 @@ export const completeOnboarding = mutation({
       year,
       role,
       interests: args.interests ?? [],
+      instagramHandle: args.instagramHandle?.trim() || undefined,
+      whatsappPhone: args.whatsappPhone?.trim() || undefined,
     });
 
     return userId;
+  },
+});
+
+export const agreeToRules = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    await ctx.db.patch(userId, { agreedToRules: true });
   },
 });
 
@@ -137,6 +150,34 @@ export const patchProfile = mutation({
       throw new Error("User profile not found.");
     }
     return updated._id;
+  },
+});
+
+export const getPublicProfile = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return null;
+
+    const activeListings = await ctx.db
+      .query("listings")
+      .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", args.userId))
+      .take(200);
+
+    return {
+      user: {
+        _id: user._id,
+        name: user.name,
+        college: user.college,
+        year: user.year,
+        role: user.role,
+        interests: user.interests,
+        instagramHandle: user.instagramHandle,
+        whatsappPhone: user.whatsappPhone,
+        avatar: user.avatar,
+      },
+      listings: activeListings.filter((l) => l.status === "active"),
+    };
   },
 });
 

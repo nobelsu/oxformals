@@ -48,8 +48,8 @@ function NavInner() {
 
   return (
     <nav className="w-full bg-[var(--bg)]">
-      <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 py-5 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <div />
+      <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 py-5 flex items-center justify-between gap-4 sm:grid sm:grid-cols-[1fr_auto_1fr]">
+        <div className="hidden sm:block" />
 
         <ul className="flex min-w-0 max-w-full items-center justify-center gap-4 overflow-x-auto overflow-y-hidden sm:gap-10">
           {TABS.map((t) => {
@@ -71,10 +71,10 @@ function NavInner() {
           })}
         </ul>
 
-        <div className="flex items-center justify-end gap-3 text-sm">
+        <div className="flex items-center justify-end gap-3 text-sm whitespace-nowrap">
           {status !== "ready" ? null : isAuthenticated && user ? (
             <>
-              <span className="hidden sm:inline text-[var(--ink-muted)]">
+              <span className="hidden sm:inline whitespace-nowrap text-[var(--ink-muted)]">
                 {user.name.split(" ")[0]}
                 <span className="text-[var(--ink-soft)]"> · {user.college}</span>
               </span>
@@ -83,7 +83,7 @@ function NavInner() {
                 onClick={() => {
                   void signOut().then(() => router.push("/"));
                 }}
-                className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] transition-colors"
+                className="whitespace-nowrap rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] transition-colors"
               >
                 Sign out
               </button>

@@ -37,6 +37,7 @@ function mapDocToUser(doc: Doc<"users">): User {
     instagramHandle: doc.instagramHandle ?? "",
     whatsappPhone: doc.whatsappPhone ?? "",
     ...(doc.avatar ? { avatar: doc.avatar } : {}),
+    agreedToRules: doc.agreedToRules ?? false,
   };
 }
 
@@ -47,6 +48,8 @@ export type AuthContextValue = {
   isAuthenticated: boolean;
   /** JWT session present but profile is incomplete (show onboarding). */
   needsOnboarding: boolean;
+  /** Profile complete but user has not yet agreed to house rules. */
+  needsRulesAgreement: boolean;
   /** Email from the signed-in Convex user document, when available. */
   authEmail: string | null;
   /** Step 1: send a 6-digit code to the email (Resend + Convex Auth OTP). */
@@ -58,6 +61,7 @@ export type AuthContextValue = {
   updateProfile: (
     patch: Partial<Omit<User, "id" | "email">>,
   ) => Promise<User | null>;
+  agreeToRules: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -72,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const completeOnboardingMut = useMutation(api.users.completeOnboarding);
   const patchProfileMut = useMutation(api.users.patchProfile);
+  const agreeToRulesMut = useMutation(api.users.agreeToRules);
 
   const status: Status =
     authLoading || (jwtAuthenticated && convexUserDoc === undefined)
@@ -88,6 +93,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     jwtAuthenticated &&
     convexUserDoc != null &&
     profileComplete(convexUserDoc);
+
+  const needsRulesAgreement =
+    isAuthenticated && convexUserDoc?.agreedToRules !== true;
 
   const user: User | null =
     jwtAuthenticated && convexUserDoc && profileComplete(convexUserDoc)
@@ -135,6 +143,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         year: input.year,
         role: input.role,
         interests: input.interests,
+        instagramHandle: input.instagramHandle,
+        whatsappPhone: input.whatsappPhone,
       });
       const email = (convexUserDoc?.email ?? input.email).trim();
       return {
@@ -145,6 +155,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         year: input.year.trim(),
         role: input.role.trim(),
         interests: input.interests ?? [],
+        instagramHandle: input.instagramHandle?.trim() ?? "",
+        whatsappPhone: input.whatsappPhone?.trim() ?? "",
       } satisfies User;
     },
     [completeOnboardingMut, convexUserDoc?.email],
@@ -204,30 +216,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user, patchProfileMut],
   );
 
+  const agreeToRules = useCallback(async () => {
+    await agreeToRulesMut();
+  }, [agreeToRulesMut]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       status,
       user,
       isAuthenticated,
       needsOnboarding,
+      needsRulesAgreement,
       authEmail,
       requestCode,
       verifyCode,
       completeSignup,
       signOut,
       updateProfile,
+      agreeToRules,
     }),
     [
       status,
       user,
       isAuthenticated,
       needsOnboarding,
+      needsRulesAgreement,
       authEmail,
       requestCode,
       verifyCode,
       completeSignup,
       signOut,
       updateProfile,
+      agreeToRules,
     ],
   );
 

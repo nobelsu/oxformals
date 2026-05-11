@@ -86,6 +86,8 @@ export function LoginForm() {
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [interests, setInterests] = useState<string[]>([]);
   const [interestInput, setInterestInput] = useState("");
+  const [instagramHandle, setInstagramHandle] = useState("");
+  const [whatsappPhone, setWhatsappPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const collegePickerRef = useRef<HTMLDivElement | null>(null);
@@ -216,8 +218,8 @@ export function LoginForm() {
   async function onProfileSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    if (!name.trim() || !college.trim() || !year.trim() || !role.trim()) {
-      setError("Add name, college, year, and role — it only takes a moment.");
+    if (!name.trim() || !college.trim() || !year.trim() || !role.trim() || !whatsappPhone.trim()) {
+      setError("Add name, college, year, role, and phone number — it only takes a moment.");
       return;
     }
     const normalizedYear = year.trim();
@@ -234,6 +236,8 @@ export function LoginForm() {
         year: normalizedYear,
         role: role.trim(),
         interests,
+        instagramHandle: instagramHandle.trim() || undefined,
+        whatsappPhone: whatsappPhone.trim() || undefined,
       });
       router.replace(nextPath);
     } catch {
@@ -265,7 +269,7 @@ export function LoginForm() {
 
   return (
     <div className="min-h-[100dvh] flex items-center justify-center px-6 py-16 bg-[var(--bg)]">
-      <SketchCard className="w-full max-w-sm p-8" seed={3}>
+      <SketchCard className={`w-full p-8 ${step === "profile" ? "max-w-lg" : "max-w-sm"}`} seed={3}>
         <header className="mb-6 text-center">
           <h1 className="font-display text-5xl tracking-wide uppercase">
             Oxformals
@@ -469,79 +473,81 @@ export function LoginForm() {
               </div>
             </label>
 
-            <label className="flex flex-col gap-2">
-              <span className="text-sm text-[var(--ink-muted)]">Year</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="\d+"
-                required
-                value={year}
-                onChange={(e) =>
-                  setYear(e.target.value.replace(/\D/g, "").slice(0, 2))
-                }
-                placeholder="2"
-                className={inputCls}
-              />
-            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex flex-col gap-2">
+                <span className="text-sm text-[var(--ink-muted)]">Year</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d+"
+                  required
+                  value={year}
+                  onChange={(e) =>
+                    setYear(e.target.value.replace(/\D/g, "").slice(0, 2))
+                  }
+                  placeholder="2"
+                  className={inputCls}
+                />
+              </label>
 
-            <label className="flex flex-col gap-2">
-              <span className="text-sm text-[var(--ink-muted)]">Role</span>
-              <div ref={rolePickerRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRolePickerOpen((open) => !open);
-                    setCollegePickerOpen(false);
-                  }}
-                  className={`${inputCls} pr-12 text-left`}
-                >
-                  {role || "Choose role"}
-                </button>
-                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]">
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 12 8"
-                    className="h-3.5 w-3.5"
-                    fill="none"
+              <label className="flex flex-col gap-2">
+                <span className="text-sm text-[var(--ink-muted)]">Role</span>
+                <div ref={rolePickerRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRolePickerOpen((open) => !open);
+                      setCollegePickerOpen(false);
+                    }}
+                    className={`${inputCls} pr-12 text-left`}
                   >
-                    <path
-                      d="M1 1.5 6 6.5 11 1.5"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-                {rolePickerOpen ? (
-                  <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--paper)] p-2 shadow-sm">
-                    <div className="flex flex-col gap-1">
-                      {roleSelectOptions.map((option) => {
-                        const selected = option === role;
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => {
-                              setRole(option);
-                              setRolePickerOpen(false);
-                            }}
-                            className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                              selected
-                                ? "bg-[var(--ink)] text-[var(--bg)]"
-                                : "text-[var(--ink)] hover:bg-[var(--bg)]"
-                            }`}
-                          >
-                            {option}
-                          </button>
-                        );
-                      })}
+                    {role || "Choose role"}
+                  </button>
+                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]">
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 12 8"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                    >
+                      <path
+                        d="M1 1.5 6 6.5 11 1.5"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  {rolePickerOpen ? (
+                    <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--paper)] p-2 shadow-sm">
+                      <div className="flex flex-col gap-1">
+                        {roleSelectOptions.map((option) => {
+                          const selected = option === role;
+                          return (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => {
+                                setRole(option);
+                                setRolePickerOpen(false);
+                              }}
+                              className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                                selected
+                                  ? "bg-[var(--ink)] text-[var(--bg)]"
+                                  : "text-[var(--ink)] hover:bg-[var(--bg)]"
+                              }`}
+                            >
+                              {option}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ) : null}
-              </div>
-            </label>
+                  ) : null}
+                </div>
+              </label>
+            </div>
 
             <label className="flex flex-col gap-2">
               <span className="text-sm text-[var(--ink-muted)]">
@@ -579,6 +585,36 @@ export function LoginForm() {
                 />
               </div>
             </label>
+
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex flex-col gap-2">
+                <span className="text-sm text-[var(--ink-muted)]">
+                  Phone number
+                </span>
+                <input
+                  type="tel"
+                  required
+                  value={whatsappPhone}
+                  onChange={(e) => setWhatsappPhone(e.target.value)}
+                  placeholder="+44 7..."
+                  className={inputCls}
+                />
+              </label>
+
+              <label className="flex flex-col gap-2">
+                <span className="text-sm text-[var(--ink-muted)]">
+                  Instagram{" "}
+                  <span className="text-[var(--ink-soft)]">(optional)</span>
+                </span>
+                <input
+                  type="text"
+                  value={instagramHandle}
+                  onChange={(e) => setInstagramHandle(e.target.value)}
+                  placeholder="your_handle"
+                  className={inputCls}
+                />
+              </label>
+            </div>
 
             {error && (
               <p className="text-sm text-[var(--danger)]">{error}</p>

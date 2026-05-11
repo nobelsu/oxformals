@@ -31,7 +31,8 @@ export const listListings = query({
 export const listMyListings = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await requireUserId(ctx);
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
     return await ctx.db
       .query("listings")
       .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", userId))
@@ -43,7 +44,8 @@ export const listMyListings = query({
 export const listRequestsForMe = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await requireUserId(ctx);
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
     return await ctx.db
       .query("requests")
       .withIndex("by_toUserId", (q) => q.eq("toUserId", userId))
@@ -55,7 +57,8 @@ export const listRequestsForMe = query({
 export const listRequestsFromMe = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await requireUserId(ctx);
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
     return await ctx.db
       .query("requests")
       .withIndex("by_fromUserId", (q) => q.eq("fromUserId", userId))
@@ -67,7 +70,7 @@ export const listRequestsFromMe = query({
 export const createListing = mutation({
   args: {
     dateTime: v.string(),
-    seats: v.union(v.literal(1), v.literal(2), v.literal(3)),
+    groupSize: v.union(v.literal(2), v.literal(3), v.literal(4)),
     message: v.string(),
   },
   handler: async (ctx, args) => {
@@ -91,7 +94,9 @@ export const createListing = mutation({
       ownerUserId: userId,
       college,
       dateTime: new Date(timestamp).toISOString(),
-      seats: args.seats,
+      groupSize: args.groupSize,
+      seatsAvailable: args.groupSize - 1,
+      members: [userId],
       year,
       role,
       message: args.message.trim(),
@@ -139,7 +144,7 @@ export const createRequest = mutation({
       throw new Error("You already sent this request.");
     }
 
-    return await ctx.db.insert("requests", {
+    const requestId = await ctx.db.insert("requests", {
       fromUserId: userId,
       toUserId: target.ownerUserId,
       targetListingId: args.targetListingId,
@@ -147,6 +152,27 @@ export const createRequest = mutation({
       message: args.message.trim(),
       status: "pending",
     });
+
+    const mirrorCandidates = await ctx.db
+      .query("requests")
+      .withIndex("by_targetListingId_and_status", (q) =>
+        q
+          .eq("targetListingId", args.offeringListingId)
+          .eq("status", "pending"),
+      )
+      .take(200);
+    const mirror = mirrorCandidates.find(
+      (r) =>
+        r.offeringListingId === args.targetListingId && r._id !== requestId,
+    );
+
+    if (mirror) {
+      await performAccept(ctx, mirror, [requestId]);
+      await ctx.db.patch(requestId, { status: "accepted" });
+      return { requestId, autoAccepted: true as const };
+    }
+
+    return { requestId, autoAccepted: false as const };
   },
 });
 
@@ -178,6 +204,73 @@ export const withdrawRequest = mutation({
   },
 });
 
+async function performAccept(
+  ctx: MutationCtx,
+  req: Doc<"requests">,
+  skipIds: Id<"requests">[] = [],
+) {
+  const target = await getListingOrThrow(ctx, req.targetListingId);
+  const offering = await getListingOrThrow(ctx, req.offeringListingId);
+  if (target.status !== "active") {
+    throw new Error("Target listing is no longer active.");
+  }
+  if (offering.status !== "active") {
+    throw new Error("Offering listing is no longer active.");
+  }
+  if (target.seatsAvailable <= 0) {
+    throw new Error("No seats available on target listing.");
+  }
+  if (offering.seatsAvailable <= 0) {
+    throw new Error("No seats available on offering listing.");
+  }
+
+  await ctx.db.patch(req._id, { status: "accepted" });
+
+  const newSeats = target.seatsAvailable - 1;
+  const newMembers = [...target.members, req.fromUserId];
+  await ctx.db.patch(req.targetListingId, {
+    seatsAvailable: newSeats,
+    members: newMembers,
+    ...(newSeats === 0 ? { status: "closed" as const } : {}),
+  });
+
+  const newOfferingSeats = offering.seatsAvailable - 1;
+  const newOfferingMembers = [...offering.members, req.toUserId];
+  await ctx.db.patch(req.offeringListingId, {
+    seatsAvailable: newOfferingSeats,
+    members: newOfferingMembers,
+    ...(newOfferingSeats === 0 ? { status: "confirmed" as const } : {}),
+  });
+
+  const idsToSkip = new Set([req._id, ...skipIds]);
+
+  if (newSeats === 0) {
+    const pendingForTarget = await ctx.db
+      .query("requests")
+      .withIndex("by_targetListingId_and_status", (q) =>
+        q.eq("targetListingId", req.targetListingId).eq("status", "pending"),
+      )
+      .take(200);
+    for (const pending of pendingForTarget) {
+      if (idsToSkip.has(pending._id)) continue;
+      await ctx.db.patch(pending._id, { status: "declined" });
+    }
+  }
+
+  if (newOfferingSeats === 0) {
+    const pendingForOffering = await ctx.db
+      .query("requests")
+      .withIndex("by_offeringListingId_and_status", (q) =>
+        q.eq("offeringListingId", req.offeringListingId).eq("status", "pending"),
+      )
+      .take(200);
+    for (const pending of pendingForOffering) {
+      if (idsToSkip.has(pending._id)) continue;
+      await ctx.db.patch(pending._id, { status: "declined" });
+    }
+  }
+}
+
 export const acceptRequest = mutation({
   args: { requestId: v.id("requests") },
   handler: async (ctx, args) => {
@@ -187,37 +280,87 @@ export const acceptRequest = mutation({
     if (req.toUserId !== userId) throw new Error("Not allowed");
     if (req.status !== "pending") throw new Error("Request is no longer pending");
 
-    const target = await getListingOrThrow(ctx, req.targetListingId);
-    const offering = await getListingOrThrow(ctx, req.offeringListingId);
-    if (target.status !== "active" || offering.status !== "active") {
-      throw new Error("Listings are no longer active.");
-    }
-
-    await ctx.db.patch(req._id, { status: "accepted" });
-    await ctx.db.patch(req.targetListingId, { status: "confirmed" });
-    await ctx.db.patch(req.offeringListingId, { status: "confirmed" });
-
-    const pendingForTarget = await ctx.db
-      .query("requests")
-      .withIndex("by_targetListingId_and_status", (q) =>
-        q.eq("targetListingId", req.targetListingId).eq("status", "pending"),
-      )
-      .take(200);
-    const pendingForOffering = await ctx.db
-      .query("requests")
-      .withIndex("by_offeringListingId_and_status", (q) =>
-        q.eq("offeringListingId", req.offeringListingId).eq("status", "pending"),
-      )
-      .take(200);
-
-    const touched = new Set<Id<"requests">>();
-    for (const pending of [...pendingForTarget, ...pendingForOffering]) {
-      if (pending._id === req._id) continue;
-      if (touched.has(pending._id)) continue;
-      touched.add(pending._id);
-      await ctx.db.patch(pending._id, { status: "declined" });
-    }
+    await performAccept(ctx, req);
 
     return req._id;
+  },
+});
+
+export const leaveGroup = mutation({
+  args: { listingId: v.id("listings") },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    const listing = await getListingOrThrow(ctx, args.listingId);
+
+    if (listing.ownerUserId === userId) {
+      throw new Error("The owner cannot leave their own group.");
+    }
+    if (!listing.members.includes(userId)) {
+      throw new Error("You are not a member of this group.");
+    }
+
+    const newMembers = listing.members.filter((m) => m !== userId);
+    const newSeats = listing.seatsAvailable + 1;
+    const reopened = listing.status === "closed" && newSeats > 0;
+    await ctx.db.patch(args.listingId, {
+      members: newMembers,
+      seatsAvailable: newSeats,
+      ...(reopened ? { status: "active" as const } : {}),
+    });
+
+    const acceptedRequests = await ctx.db
+      .query("requests")
+      .withIndex("by_targetListingId_and_status", (q) =>
+        q.eq("targetListingId", args.listingId).eq("status", "accepted"),
+      )
+      .take(200);
+    for (const req of acceptedRequests) {
+      if (req.fromUserId === userId) {
+        await ctx.db.patch(req._id, { status: "declined" });
+      }
+    }
+
+    return args.listingId;
+  },
+});
+
+export const removeMember = mutation({
+  args: { listingId: v.id("listings"), memberId: v.id("users") },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    const listing = await getListingOrThrow(ctx, args.listingId);
+
+    if (listing.ownerUserId !== userId) {
+      throw new Error("Only the owner can remove members.");
+    }
+    if (args.memberId === userId) {
+      throw new Error("The owner cannot remove themselves.");
+    }
+    if (!listing.members.includes(args.memberId)) {
+      throw new Error("User is not a member of this group.");
+    }
+
+    const newMembers = listing.members.filter((m) => m !== args.memberId);
+    const newSeats = listing.seatsAvailable + 1;
+    const reopened = listing.status === "closed" && newSeats > 0;
+    await ctx.db.patch(args.listingId, {
+      members: newMembers,
+      seatsAvailable: newSeats,
+      ...(reopened ? { status: "active" as const } : {}),
+    });
+
+    const acceptedRequests = await ctx.db
+      .query("requests")
+      .withIndex("by_targetListingId_and_status", (q) =>
+        q.eq("targetListingId", args.listingId).eq("status", "accepted"),
+      )
+      .take(200);
+    for (const req of acceptedRequests) {
+      if (req.fromUserId === args.memberId) {
+        await ctx.db.patch(req._id, { status: "declined" });
+      }
+    }
+
+    return args.listingId;
   },
 });

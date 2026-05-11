@@ -13,7 +13,7 @@ export function RequestsTab() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { requests, listings, createListing } = useData();
+  const { requests, listings, createListing, getUser } = useData();
 
   const myListings = useMemo(
     () => (user ? listings.filter((l) => l.ownerUserId === user.id) : []),
@@ -70,15 +70,21 @@ export function RequestsTab() {
           </p>
         ) : (
           <div className="mt-4 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
-            {myActiveListings.map((listing) => (
-              <MyListingCard
-                key={listing.id}
-                listing={listing}
-                pendingRequestCount={pendingCountByListing.get(listing.id) ?? 0}
-                profile={{ year: user.year, role: user.role }}
-                onViewRequests={() => router.push(`/requests/${listing.id}`)}
-              />
-            ))}
+            {myActiveListings.map((listing) => {
+              const members = listing.members
+                .map(getUser)
+                .filter((u): u is NonNullable<typeof u> => !!u);
+              return (
+                <MyListingCard
+                  key={listing.id}
+                  listing={listing}
+                  pendingRequestCount={pendingCountByListing.get(listing.id) ?? 0}
+                  profile={{ year: user.year, role: user.role }}
+                  memberUsers={members}
+                  onViewRequests={() => router.push(`/requests/${listing.id}`)}
+                />
+              );
+            })}
           </div>
         )}
       </section>

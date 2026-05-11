@@ -26,6 +26,7 @@ export default defineSchema({
     instagramHandle: v.optional(v.string()),
     whatsappPhone: v.optional(v.string()),
     wishlistColleges: v.optional(v.array(v.string())),
+    agreedToRules: v.optional(v.boolean()),
     avatar,
   })
     .index("email", ["email"])
@@ -34,7 +35,9 @@ export default defineSchema({
     ownerUserId: v.id("users"),
     college: v.string(),
     dateTime: v.string(),
-    seats: v.union(v.literal(1), v.literal(2), v.literal(3)),
+    groupSize: v.union(v.literal(2), v.literal(3), v.literal(4)),
+    seatsAvailable: v.number(),
+    members: v.array(v.id("users")),
     year: v.string(),
     role: v.string(),
     message: v.string(),

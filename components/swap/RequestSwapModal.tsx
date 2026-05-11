@@ -51,8 +51,8 @@ export function RequestSwapModal({
     >
       {targetListing && (
         <p className="mb-4 text-[var(--ink-muted)]">
-          {formatListingDate(targetListing.dateTime)} · {targetListing.seats}{" "}
-          {targetListing.seats === 1 ? "seat" : "seats"}
+          {formatListingDate(targetListing.dateTime)} · Group of {targetListing.groupSize} · {targetListing.seatsAvailable}{" "}
+          {targetListing.seatsAvailable === 1 ? "seat" : "seats"} left
         </p>
       )}
 

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
 import type { User } from "@/lib/auth/types";
@@ -38,9 +39,13 @@ export function IncomingRequestRow({
         {statusLabel}
       </span>
       <div className="flex items-start gap-4">
-        <Avatar name={fromUser.name} source={fromUser.avatar} />
+        <Link href={`/profile/${fromUser.id}`}>
+          <Avatar name={fromUser.name} source={fromUser.avatar} />
+        </Link>
         <div className="min-w-0 flex-1 space-y-1.5 pt-1">
-          <div className="text-lg leading-tight">{fromUser.name}</div>
+          <Link href={`/profile/${fromUser.id}`} className="text-lg leading-tight hover:underline">
+            {fromUser.name}
+          </Link>
           {offeringListing ? (
             <div className="text-sm leading-snug text-[var(--ink-muted)]">
               {offeringListing.college} · {formatListingDate(offeringListing.dateTime)}
@@ -52,7 +57,7 @@ export function IncomingRequestRow({
           )}
           {request.message && (
             <p className="truncate text-sm italic leading-relaxed text-[var(--ink-soft)]">
-              “{request.message}”
+              &ldquo;{request.message}&rdquo;
             </p>
           )}
           <p className="text-xs leading-relaxed text-[var(--ink-soft)]">

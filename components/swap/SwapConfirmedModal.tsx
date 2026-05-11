@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Modal } from "@/components/ui/Modal";
 import type { User } from "@/lib/auth/types";
 import { formatListingDate } from "@/lib/data/format";
@@ -37,7 +38,10 @@ export function SwapConfirmedModal({
         )}
         {myListing && otherUser && (
           <p className="mt-1 text-[var(--ink-muted)]">
-            {otherUser.name.split(" ")[0]} is coming to{" "}
+            <Link href={`/profile/${otherUser.id}`} className="text-[var(--ink)] hover:underline">
+              {otherUser.name.split(" ")[0]}
+            </Link>{" "}
+            has joined your group at{" "}
             <span className="text-[var(--ink)]">{myListing.college}</span> ·{" "}
             {formatListingDate(myListing.dateTime)}
           </p>
@@ -79,6 +83,12 @@ export function SwapConfirmedModal({
                 )}
               </p>
             </div>
+            <Link
+              href={`/profile/${otherUser.id}`}
+              className="mt-3 inline-flex text-sm text-[var(--ink)] underline underline-offset-2"
+            >
+              View profile
+            </Link>
           </div>
         )}
         <button

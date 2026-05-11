@@ -6,6 +6,7 @@ import { ConvexClientProvider } from "@/app/ConvexClientProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { DataProvider } from "@/components/data/DataProvider";
 import { Nav } from "@/components/Nav";
+import { OnboardingOverlay } from "@/components/onboarding/OnboardingOverlay";
 
 const schoolbell = Schoolbell({
   variable: "--font-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({
               <DataProvider>
                 <Nav />
                 <div className="flex-1 flex flex-col">{children}</div>
+                <OnboardingOverlay />
               </DataProvider>
             </AuthProvider>
           </ConvexClientProvider>

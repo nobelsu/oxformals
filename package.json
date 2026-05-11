@@ -13,7 +13,7 @@
     "@auth/core": "^0.37.4",
     "@convex-dev/auth": "^0.0.92",
     "@oslojs/crypto": "^1.0.1",
-    "convex": "^1.30.0",
+    "convex": "^1.38.0",
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",

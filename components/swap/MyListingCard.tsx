@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useState } from "react";
+import { Avatar } from "@/components/ui/Avatar";
 import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
+import type { User } from "@/lib/auth/types";
 import { formatListingDate, formatYearLabel } from "@/lib/data/format";
 import type { Listing } from "@/lib/data/types";
 
@@ -12,6 +15,7 @@ type Props = {
     year?: string;
     role?: string;
   };
+  memberUsers?: User[];
   onViewRequests?: () => void;
 };
 
@@ -19,13 +23,14 @@ export function MyListingCard({
   listing,
   pendingRequestCount,
   profile,
+  memberUsers = [],
   onViewRequests,
 }: Props) {
   const [opening, setOpening] = useState(false);
   const statusMap: Record<Listing["status"], string> = {
     active: "Active",
     confirmed: "Swap confirmed",
-    closed: "Closed",
+    closed: listing.seatsAvailable === 0 ? "Group full" : "Closed",
   };
 
   const handleViewRequests = useCallback(() => {
@@ -41,6 +46,11 @@ export function MyListingCard({
     .filter(Boolean)
     .join(" · ");
 
+  const seatsLabel =
+    listing.seatsAvailable === 0
+      ? "Group full"
+      : `${listing.seatsAvailable} ${listing.seatsAvailable === 1 ? "seat" : "seats"} left`;
+
   const cardContent = (
     <>
       <header className="flex min-w-0 shrink-0 items-start justify-between gap-3">
@@ -53,13 +63,30 @@ export function MyListingCard({
       </header>
 
       <div className="shrink-0 truncate text-[var(--ink-muted)]">
-        {formatListingDate(listing.dateTime)} · {listing.seats}{" "}
-        {listing.seats === 1 ? "seat" : "seats"}
+        {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} · {seatsLabel}
       </div>
 
       <div className="shrink-0 truncate text-sm text-[var(--ink-soft)]">
         {profileLine}
       </div>
+
+      {memberUsers.length > 0 && (
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="text-xs text-[var(--ink-soft)]">Group:</span>
+          <div className="flex -space-x-1.5">
+            {memberUsers.map((m) => (
+              <Link
+                key={m.id}
+                href={`/profile/${m.id}`}
+                title={m.name}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Avatar name={m.name} size="sm" source={m.avatar} />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {pendingRequestCount > 0 ? (
         <div className="mt-auto min-h-0 w-full shrink-0">

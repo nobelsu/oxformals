@@ -14,6 +14,7 @@ export type User = {
   instagramHandle?: string;
   whatsappPhone?: string;
   avatar?: AvatarSource;
+  agreedToRules?: boolean;
 };
 
 export type Session = {
@@ -34,4 +35,6 @@ export type SignupInput = {
   year: string;
   role: string;
   interests?: string[];
+  instagramHandle?: string;
+  whatsappPhone?: string;
 };

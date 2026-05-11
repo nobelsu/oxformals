@@ -41,10 +41,12 @@ export type DataContextValue = {
     targetListingId: string;
     offeringListingId: string;
     message: string;
-  }) => SwapRequest | null;
+  }) => Promise<SwapRequest | null>;
   acceptRequest: (requestId: string) => SwapRequest | null;
   declineRequest: (requestId: string) => void;
   withdrawRequest: (requestId: string) => boolean;
+  leaveGroup: (listingId: string) => void;
+  removeMember: (listingId: string, memberId: string) => void;
   sendMessage: (conversationId: string, body: string) => void;
   openConversationWith: (otherUserId: string, listingId?: string) => Conversation | null;
   saveWishlist: (colleges: string[]) => Promise<void>;
@@ -61,6 +63,8 @@ function mapUser(doc: Doc<"users">): User {
     year: doc.year ?? "",
     role: doc.role ?? "",
     interests: doc.interests ?? [],
+    ...(doc.instagramHandle ? { instagramHandle: doc.instagramHandle } : {}),
+    ...(doc.whatsappPhone ? { whatsappPhone: doc.whatsappPhone } : {}),
     ...(doc.avatar ? { avatar: doc.avatar } : {}),
   };
 }
@@ -71,7 +75,9 @@ function mapListing(doc: Doc<"listings">): Listing {
     ownerUserId: doc.ownerUserId,
     college: doc.college,
     dateTime: doc.dateTime,
-    seats: doc.seats,
+    groupSize: doc.groupSize,
+    seatsAvailable: doc.seatsAvailable,
+    members: doc.members,
     year: doc.year,
     role: doc.role,
     message: doc.message,
@@ -117,6 +123,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const acceptRequestMut = useMutation(api.listings.acceptRequest);
   const declineRequestMut = useMutation(api.listings.declineRequest);
   const withdrawRequestMut = useMutation(api.listings.withdrawRequest);
+  const leaveGroupMut = useMutation(api.listings.leaveGroup);
+  const removeMemberMut = useMutation(api.listings.removeMember);
   const saveWishlistMut = useMutation(api.users.saveWishlistColleges);
 
   const users = useMemo<User[]>(() => {
@@ -182,7 +190,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       void role;
       void createListingMut({
         dateTime: input.dateTime,
-        seats: input.seats,
+        groupSize: input.groupSize,
         message: input.message,
       });
       return {
@@ -190,7 +198,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ownerUserId: user.id,
         college,
         dateTime: input.dateTime,
-        seats: input.seats,
+        groupSize: input.groupSize,
+        seatsAvailable: input.groupSize - 1,
+        members: [user.id],
         year,
         role,
         message: input.message,
@@ -202,15 +212,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
   );
 
   const requestSwap = useCallback(
-    (args: {
+    async (args: {
       targetListingId: string;
       offeringListingId: string;
       message: string;
-    }): SwapRequest | null => {
+    }): Promise<SwapRequest | null> => {
       if (!user) return null;
       const target = listings.find((l) => l.id === args.targetListingId);
       if (!target) return null;
-      void createRequestMut({
+      const result = await createRequestMut({
         targetListingId: args.targetListingId as Id<"listings">,
         offeringListingId: args.offeringListingId as Id<"listings">,
         message: args.message,
@@ -225,13 +235,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
       refresh();
       return {
-        id: "pending",
+        id: result.requestId,
         fromUserId: user.id,
         toUserId: target.ownerUserId,
         targetListingId: args.targetListingId,
         offeringListingId: args.offeringListingId,
         message: args.message,
-        status: "pending",
+        status: result.autoAccepted ? "accepted" : "pending",
         createdAt: Date.now(),
       };
     },
@@ -272,6 +282,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return true;
     },
     [user, requests, withdrawRequestMut],
+  );
+
+  const leaveGroup = useCallback(
+    (listingId: string) => {
+      if (!user) return;
+      void leaveGroupMut({ listingId: listingId as Id<"listings"> });
+    },
+    [user, leaveGroupMut],
+  );
+
+  const removeMember = useCallback(
+    (listingId: string, memberId: string) => {
+      if (!user) return;
+      void removeMemberMut({
+        listingId: listingId as Id<"listings">,
+        memberId: memberId as Id<"users">,
+      });
+    },
+    [user, removeMemberMut],
   );
 
   const sendMessage = useCallback(
@@ -317,6 +346,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       acceptRequest,
       declineRequest,
       withdrawRequest,
+      leaveGroup,
+      removeMember,
       sendMessage,
       openConversationWith,
       saveWishlist,
@@ -336,6 +367,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       acceptRequest,
       declineRequest,
       withdrawRequest,
+      leaveGroup,
+      removeMember,
       sendMessage,
       openConversationWith,
       saveWishlist,

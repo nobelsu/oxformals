@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
@@ -10,6 +11,7 @@ import type { Listing } from "@/lib/data/types";
 type Props = {
   listing: Listing;
   owner: User;
+  memberUsers?: User[];
   onRequest?: () => void;
   disabled?: boolean;
   disabledLabel?: string;
@@ -18,6 +20,7 @@ type Props = {
 export function ListingCard({
   listing,
   owner,
+  memberUsers = [],
   onRequest,
   disabled,
   disabledLabel,
@@ -29,6 +32,11 @@ export function ListingCard({
     .filter(Boolean)
     .join(" · ");
 
+  const seatsLabel =
+    listing.seatsAvailable === 0
+      ? "Group full"
+      : `${listing.seatsAvailable} ${listing.seatsAvailable === 1 ? "seat" : "seats"} left`;
+
   return (
     <SketchCard
       seed={seedFrom(listing.id)}
@@ -39,17 +47,18 @@ export function ListingCard({
           {listing.college}
         </h3>
         <div className="mt-2 truncate text-[0.924rem] text-[var(--ink-muted)]">
-          {formatListingDate(listing.dateTime)} · {listing.seats}{" "}
-          {listing.seats === 1 ? "seat" : "seats"}
+          {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} · {seatsLabel}
         </div>
       </header>
 
       <div className="flex shrink-0 items-center gap-4">
-        <Avatar name={owner.name} size="xl" source={owner.avatar} />
+        <Link href={`/profile/${owner.id}`}>
+          <Avatar name={owner.name} size="xl" source={owner.avatar} />
+        </Link>
         <div className="min-w-0">
-          <div className="truncate text-[1.386rem] leading-tight">
+          <Link href={`/profile/${owner.id}`} className="block truncate text-[1.386rem] leading-tight hover:underline">
             {owner.name.split(" ")[0]}
-          </div>
+          </Link>
           <div className="truncate text-[0.924rem] text-[var(--ink-soft)]">
             {profileLine ||
               [owner.college, formatYearLabel(owner.year) || owner.year]
@@ -58,6 +67,19 @@ export function ListingCard({
           </div>
         </div>
       </div>
+
+      {memberUsers.length > 0 && (
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="text-[0.77rem] text-[var(--ink-soft)]">Group:</span>
+          <div className="flex -space-x-1.5">
+            {memberUsers.map((m) => (
+              <Link key={m.id} href={`/profile/${m.id}`} title={m.name}>
+                <Avatar name={m.name} size="sm" source={m.avatar} />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex min-h-0 flex-1 w-full min-w-0 flex-col gap-4 overflow-x-hidden overflow-y-auto overscroll-contain py-3">
         {owner.interests.length > 0 && (
@@ -77,15 +99,15 @@ export function ListingCard({
 
         {listing.message ? (
           <p className="line-clamp-6 break-words text-pretty text-[0.924rem] italic text-[var(--ink-muted)]">
-            “{listing.message}”
+            &ldquo;{listing.message}&rdquo;
           </p>
         ) : null}
       </div>
 
       <div className="flex shrink-0 justify-center pt-2">
-        {listing.status === "confirmed" ? (
+        {listing.status === "confirmed" || listing.status === "closed" ? (
           <span className="rounded-full bg-[var(--paper)] border-[2px] border-[var(--ink)] px-5 py-2 text-[0.77rem] text-[var(--ink)]">
-            Swap confirmed
+            {listing.seatsAvailable === 0 ? "Group full" : "Swap confirmed"}
           </span>
         ) : disabled ? (
           <button

@@ -5,7 +5,9 @@ export type Listing = {
   ownerUserId: string;
   college: string;
   dateTime: string; // ISO
-  seats: 1 | 2 | 3;
+  groupSize: 2 | 3 | 4;
+  seatsAvailable: number;
+  members: string[];
   /** Snapshot from the poster's profile when the listing was created. */
   year: string;
   /** Snapshot from the poster's profile when the listing was created. */
