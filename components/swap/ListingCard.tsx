@@ -35,10 +35,10 @@ export function ListingCard({
       className="flex h-full min-h-[16.8rem] flex-col gap-4 overflow-hidden p-6 sm:min-h-[20.4rem]"
     >
       <header className="shrink-0 min-w-0">
-        <h3 className="line-clamp-3 break-words font-display text-[2.8875rem] uppercase leading-tight tracking-wide">
+        <h3 className="line-clamp-3 break-words font-display text-[2.31rem] uppercase leading-tight tracking-wide">
           {listing.college}
         </h3>
-        <div className="mt-2 truncate text-[1.155rem] text-[var(--ink-muted)]">
+        <div className="mt-2 truncate text-[0.924rem] text-[var(--ink-muted)]">
           {formatListingDate(listing.dateTime)} · {listing.seats}{" "}
           {listing.seats === 1 ? "seat" : "seats"}
         </div>
@@ -47,10 +47,10 @@ export function ListingCard({
       <div className="flex shrink-0 items-center gap-4">
         <Avatar name={owner.name} size="xl" source={owner.avatar} />
         <div className="min-w-0">
-          <div className="truncate text-[1.7325rem] leading-tight">
+          <div className="truncate text-[1.386rem] leading-tight">
             {owner.name.split(" ")[0]}
           </div>
-          <div className="truncate text-[1.155rem] text-[var(--ink-soft)]">
+          <div className="truncate text-[0.924rem] text-[var(--ink-soft)]">
             {profileLine ||
               [owner.college, formatYearLabel(owner.year) || owner.year]
                 .filter(Boolean)
@@ -67,7 +67,7 @@ export function ListingCard({
                 key={tag}
                 size="md"
                 as="span"
-                className="!text-[0.67375rem]"
+                className="!text-[0.539rem]"
               >
                 {tag}
               </Chip>
@@ -76,7 +76,7 @@ export function ListingCard({
         )}
 
         {listing.message ? (
-          <p className="line-clamp-6 break-words text-pretty text-[1.155rem] italic text-[var(--ink-muted)]">
+          <p className="line-clamp-6 break-words text-pretty text-[0.924rem] italic text-[var(--ink-muted)]">
             “{listing.message}”
           </p>
         ) : null}
@@ -84,14 +84,14 @@ export function ListingCard({
 
       <div className="flex shrink-0 justify-center pt-2">
         {listing.status === "confirmed" ? (
-          <span className="rounded-full bg-[var(--paper)] border-[2px] border-[var(--ink)] px-5 py-2 text-[0.9625rem] text-[var(--ink)]">
+          <span className="rounded-full bg-[var(--paper)] border-[2px] border-[var(--ink)] px-5 py-2 text-[0.77rem] text-[var(--ink)]">
             Swap confirmed
           </span>
         ) : disabled ? (
           <button
             type="button"
             disabled
-            className="cursor-not-allowed rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-8 py-3 text-[0.9625rem] text-white opacity-70"
+            className="cursor-not-allowed rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-8 py-3 text-[0.77rem] text-white opacity-70"
           >
             {disabledLabel ?? "Send request!"}
           </button>
@@ -99,7 +99,7 @@ export function ListingCard({
           <button
             type="button"
             onClick={onRequest}
-            className="rounded-full bg-[var(--accent)] px-8 py-3 text-[0.9625rem] text-white transition-colors hover:bg-[var(--accent-hover)]"
+            className="rounded-full bg-[var(--accent)] px-8 py-3 text-[0.77rem] text-white transition-colors hover:bg-[var(--accent-hover)]"
           >
             Send request!
           </button>

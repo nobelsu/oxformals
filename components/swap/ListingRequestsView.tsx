@@ -137,21 +137,13 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
         <Link
           href="/?tab=requests"
           className="rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
         >
           Back to active listings
         </Link>
-        <button
-          type="button"
-          onClick={() => setPickerOpen(true)}
-          className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm text-white transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={listing.status !== "active"}
-        >
-          Request another swap
-        </button>
       </div>
 
       <SketchCard seed={listing.id.length} className="p-6">

@@ -20,6 +20,10 @@ export function SwapConfirmedModal({
   theirListing,
   otherUser,
 }: Props) {
+  const instagramHandle = otherUser?.instagramHandle?.trim() ?? "";
+  const whatsappPhone = otherUser?.whatsappPhone?.trim() ?? "";
+  const normalizedInstagram = instagramHandle.replace(/^@+/, "");
+
   return (
     <Modal open={open} onClose={onClose}>
       <div className="text-center">
@@ -37,6 +41,45 @@ export function SwapConfirmedModal({
             <span className="text-[var(--ink)]">{myListing.college}</span> ·{" "}
             {formatListingDate(myListing.dateTime)}
           </p>
+        )}
+        {otherUser && (
+          <div className="mt-5 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--paper)] p-4 text-left">
+            <p className="text-sm text-[var(--ink)]">
+              Please reach out to this person to process the rest of your formal.
+            </p>
+            <div className="mt-3 flex flex-col gap-2 text-sm">
+              <p className="text-[var(--ink-muted)]">
+                <span className="text-[var(--ink)]">Instagram:</span>{" "}
+                {normalizedInstagram ? (
+                  <a
+                    href={`https://instagram.com/${normalizedInstagram}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[var(--ink)] underline underline-offset-2"
+                  >
+                    @{normalizedInstagram}
+                  </a>
+                ) : (
+                  "Not provided"
+                )}
+              </p>
+              <p className="text-[var(--ink-muted)]">
+                <span className="text-[var(--ink)]">WhatsApp:</span>{" "}
+                {whatsappPhone ? (
+                  <a
+                    href={`https://wa.me/${whatsappPhone.replace(/[^\d+]/g, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[var(--ink)] underline underline-offset-2"
+                  >
+                    {whatsappPhone}
+                  </a>
+                ) : (
+                  "Not provided"
+                )}
+              </p>
+            </div>
+          </div>
         )}
         <button
           type="button"
