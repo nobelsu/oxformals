@@ -14,27 +14,49 @@ export type ListingProfileFields = {
   role: string;
 };
 
+export type ListingFormValues = {
+  dateTime: string;
+  groupSize: 2 | 3 | 4;
+  message: string;
+};
+
 type Props = {
   /** Current profile values used to validate before post (same source as createListing). */
   profile: ListingProfileFields;
   /** When true, render only the form (no outer SketchCard) for use inside a modal. */
   embedded?: boolean;
+  /** Pre-fill the form for editing an existing listing. */
+  initialValues?: ListingFormValues;
   onSubmit: (input: NewListingInput) => void;
 };
+
+function isoToLocalInput(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export function ListFormalForm({
   profile,
   embedded = false,
+  initialValues,
   onSubmit,
 }: Props) {
+  const editMode = !!initialValues;
+
   const resolvedCollege = useMemo(
     () => normalizeCollegeName(profile.college),
     [profile.college],
   );
 
-  const [dateTime, setDateTime] = useState("");
-  const [groupSize, setGroupSize] = useState<2 | 3 | 4>(2);
-  const [message, setMessage] = useState("");
+  const [dateTime, setDateTime] = useState(
+    initialValues ? isoToLocalInput(initialValues.dateTime) : "",
+  );
+  const [groupSize, setGroupSize] = useState<2 | 3 | 4>(
+    initialValues?.groupSize ?? 2,
+  );
+  const [message, setMessage] = useState(initialValues?.message ?? "");
   const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -58,8 +80,10 @@ export function ListFormalForm({
       groupSize,
       message: message.trim(),
     });
-    setDateTime("");
-    setMessage("");
+    if (!editMode) {
+      setDateTime("");
+      setMessage("");
+    }
   }
 
   const fieldCls =
@@ -68,7 +92,7 @@ export function ListFormalForm({
   const formInner = (
     <>
         <h3 className="font-display text-3xl uppercase tracking-wide">
-          + List a formal
+          {editMode ? "Edit listing" : "+ List a formal"}
         </h3>
 
         <label className="flex flex-col gap-2">
@@ -117,7 +141,7 @@ export function ListFormalForm({
           type="submit"
           className="self-start rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-5 py-2 text-base transition-colors"
         >
-          Post listing
+          {editMode ? "Save changes" : "Post listing"}
         </button>
     </>
   );

@@ -45,6 +45,11 @@ export type DataContextValue = {
   acceptRequest: (requestId: string) => SwapRequest | null;
   declineRequest: (requestId: string) => void;
   withdrawRequest: (requestId: string) => boolean;
+  updateListing: (
+    listingId: string,
+    patch: { dateTime?: string; groupSize?: 2 | 3 | 4; message?: string },
+  ) => void;
+  deleteListing: (listingId: string) => void;
   leaveGroup: (listingId: string) => void;
   removeMember: (listingId: string, memberId: string) => void;
   sendMessage: (conversationId: string, body: string) => void;
@@ -123,6 +128,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const acceptRequestMut = useMutation(api.listings.acceptRequest);
   const declineRequestMut = useMutation(api.listings.declineRequest);
   const withdrawRequestMut = useMutation(api.listings.withdrawRequest);
+  const updateListingMut = useMutation(api.listings.updateListing);
+  const deleteListingMut = useMutation(api.listings.deleteListing);
   const leaveGroupMut = useMutation(api.listings.leaveGroup);
   const removeMemberMut = useMutation(api.listings.removeMember);
   const saveWishlistMut = useMutation(api.users.saveWishlistColleges);
@@ -284,6 +291,30 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [user, requests, withdrawRequestMut],
   );
 
+  const updateListing = useCallback(
+    (
+      listingId: string,
+      patch: { dateTime?: string; groupSize?: 2 | 3 | 4; message?: string },
+    ) => {
+      if (!user) return;
+      void updateListingMut({
+        listingId: listingId as Id<"listings">,
+        ...(patch.dateTime !== undefined ? { dateTime: patch.dateTime } : {}),
+        ...(patch.groupSize !== undefined ? { groupSize: patch.groupSize } : {}),
+        ...(patch.message !== undefined ? { message: patch.message } : {}),
+      });
+    },
+    [user, updateListingMut],
+  );
+
+  const deleteListing = useCallback(
+    (listingId: string) => {
+      if (!user) return;
+      void deleteListingMut({ listingId: listingId as Id<"listings"> });
+    },
+    [user, deleteListingMut],
+  );
+
   const leaveGroup = useCallback(
     (listingId: string) => {
       if (!user) return;
@@ -346,6 +377,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       acceptRequest,
       declineRequest,
       withdrawRequest,
+      updateListing,
+      deleteListing,
       leaveGroup,
       removeMember,
       sendMessage,
@@ -367,6 +400,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       acceptRequest,
       declineRequest,
       withdrawRequest,
+      updateListing,
+      deleteListing,
       leaveGroup,
       removeMember,
       sendMessage,

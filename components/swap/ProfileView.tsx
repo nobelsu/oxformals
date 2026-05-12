@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -10,6 +11,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { ListingCard } from "@/components/swap/ListingCard";
+import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
 import { formatYearLabel } from "@/lib/data/format";
 import type { AvatarSource } from "@/lib/auth/types";
 import type { Listing } from "@/lib/data/types";
@@ -47,6 +49,7 @@ function mapProfileListing(doc: {
 export function ProfileView({ userId }: { userId: string }) {
   const { user: currentUser } = useAuth();
   const { getUser } = useData();
+  const [detailListing, setDetailListing] = useState<Listing | null>(null);
 
   const profile = useQuery(api.users.getPublicProfile, {
     userId: userId as Id<"users">,
@@ -218,6 +221,7 @@ export function ProfileView({ userId }: { userId: string }) {
                   listing={l}
                   owner={ownerAsUser}
                   memberUsers={members}
+                  onPress={() => setDetailListing(l)}
                   disabled={isOwnProfile || !currentUser}
                   disabledLabel={
                     isOwnProfile
@@ -232,6 +236,29 @@ export function ProfileView({ userId }: { userId: string }) {
           </div>
         )}
       </section>
+
+      <ListingDetailModal
+        open={!!detailListing}
+        onClose={() => setDetailListing(null)}
+        listing={detailListing}
+        owner={detailListing ? ownerAsUser : null}
+        memberUsers={
+          detailListing
+            ? detailListing.members
+                .filter((mid) => mid !== detailListing.ownerUserId)
+                .map(getUser)
+                .filter((u): u is NonNullable<typeof u> => !!u)
+            : []
+        }
+        disabled={isOwnProfile || !currentUser}
+        disabledLabel={
+          isOwnProfile
+            ? "Your listing"
+            : !currentUser
+              ? "Sign in to request"
+              : undefined
+        }
+      />
     </main>
   );
 }

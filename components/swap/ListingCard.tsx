@@ -13,6 +13,7 @@ type Props = {
   owner: User;
   memberUsers?: User[];
   onRequest?: () => void;
+  onPress?: () => void;
   disabled?: boolean;
   disabledLabel?: string;
 };
@@ -22,6 +23,7 @@ export function ListingCard({
   owner,
   memberUsers = [],
   onRequest,
+  onPress,
   disabled,
   disabledLabel,
 }: Props) {
@@ -40,7 +42,8 @@ export function ListingCard({
   return (
     <SketchCard
       seed={seedFrom(listing.id)}
-      className="flex h-full min-h-[16.8rem] flex-col gap-4 overflow-hidden p-6 sm:min-h-[20.4rem]"
+      className={`flex h-full min-h-[16.8rem] flex-col gap-4 overflow-hidden p-6 sm:min-h-[20.4rem]${onPress ? " cursor-pointer transition-transform hover:scale-[1.01]" : ""}`}
+      onClick={onPress}
     >
       <header className="shrink-0 min-w-0">
         <h3 className="line-clamp-3 break-words font-display text-[2.31rem] uppercase leading-tight tracking-wide">
@@ -52,11 +55,11 @@ export function ListingCard({
       </header>
 
       <div className="flex shrink-0 items-center gap-4">
-        <Link href={`/profile/${owner.id}`}>
+        <Link href={`/profile/${owner.id}`} onClick={(e) => e.stopPropagation()}>
           <Avatar name={owner.name} size="xl" source={owner.avatar} />
         </Link>
         <div className="min-w-0">
-          <Link href={`/profile/${owner.id}`} className="block truncate text-[1.386rem] leading-tight hover:underline">
+          <Link href={`/profile/${owner.id}`} onClick={(e) => e.stopPropagation()} className="block truncate text-[1.386rem] leading-tight hover:underline">
             {owner.name.split(" ")[0]}
           </Link>
           <div className="truncate text-[0.924rem] text-[var(--ink-soft)]">
@@ -73,7 +76,7 @@ export function ListingCard({
           <span className="text-[0.77rem] text-[var(--ink-soft)]">Group:</span>
           <div className="flex -space-x-1.5">
             {memberUsers.map((m) => (
-              <Link key={m.id} href={`/profile/${m.id}`} title={m.name}>
+              <Link key={m.id} href={`/profile/${m.id}`} title={m.name} onClick={(e) => e.stopPropagation()}>
                 <Avatar name={m.name} size="sm" source={m.avatar} />
               </Link>
             ))}
@@ -104,7 +107,7 @@ export function ListingCard({
         ) : null}
       </div>
 
-      <div className="flex shrink-0 justify-center pt-2">
+      <div className="flex shrink-0 justify-center pt-2" onClick={(e) => e.stopPropagation()}>
         {listing.status === "confirmed" || listing.status === "closed" ? (
           <span className="rounded-full bg-[var(--paper)] border-[2px] border-[var(--ink)] px-5 py-2 text-[0.77rem] text-[var(--ink)]">
             {listing.seatsAvailable === 0 ? "Group full" : "Swap confirmed"}

@@ -364,3 +364,90 @@ export const removeMember = mutation({
     return args.listingId;
   },
 });
+
+export const updateListing = mutation({
+  args: {
+    listingId: v.id("listings"),
+    dateTime: v.optional(v.string()),
+    groupSize: v.optional(v.union(v.literal(2), v.literal(3), v.literal(4))),
+    message: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    const listing = await getListingOrThrow(ctx, args.listingId);
+
+    if (listing.ownerUserId !== userId) {
+      throw new Error("Only the owner can edit a listing.");
+    }
+    if (listing.status !== "active") {
+      throw new Error("Only active listings can be edited.");
+    }
+    if (listing.members.length > 1) {
+      throw new Error("Cannot edit a listing that already has other members.");
+    }
+
+    const patch: Partial<Doc<"listings">> = {};
+
+    if (args.dateTime !== undefined) {
+      const timestamp = Date.parse(args.dateTime);
+      if (Number.isNaN(timestamp)) {
+        throw new Error("Invalid listing date.");
+      }
+      patch.dateTime = new Date(timestamp).toISOString();
+    }
+
+    if (args.groupSize !== undefined) {
+      patch.groupSize = args.groupSize;
+      patch.seatsAvailable = args.groupSize - listing.members.length;
+    }
+
+    if (args.message !== undefined) {
+      patch.message = args.message.trim();
+    }
+
+    if (Object.keys(patch).length === 0) {
+      return args.listingId;
+    }
+
+    await ctx.db.patch(args.listingId, patch);
+    return args.listingId;
+  },
+});
+
+export const deleteListing = mutation({
+  args: { listingId: v.id("listings") },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    const listing = await getListingOrThrow(ctx, args.listingId);
+
+    if (listing.ownerUserId !== userId) {
+      throw new Error("Only the owner can delete a listing.");
+    }
+    if (listing.status !== "active") {
+      throw new Error("Only active listings can be deleted.");
+    }
+
+    const pendingAsTarget = await ctx.db
+      .query("requests")
+      .withIndex("by_targetListingId_and_status", (q) =>
+        q.eq("targetListingId", args.listingId).eq("status", "pending"),
+      )
+      .take(200);
+    for (const req of pendingAsTarget) {
+      await ctx.db.patch(req._id, { status: "declined" });
+    }
+
+    const pendingAsOffering = await ctx.db
+      .query("requests")
+      .withIndex("by_offeringListingId_and_status", (q) =>
+        q.eq("offeringListingId", args.listingId).eq("status", "pending"),
+      )
+      .take(200);
+    for (const req of pendingAsOffering) {
+      await ctx.db.patch(req._id, { status: "declined" });
+    }
+
+    await ctx.db.delete(args.listingId);
+    return args.listingId;
+  },
+});

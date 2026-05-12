@@ -22,7 +22,7 @@ function normalizeEmail(raw: string): string {
 }
 
 function isOxfordEmail(email: string): boolean {
-  return email.endsWith("@ox.ac.uk");
+  return email.endsWith("@ox.ac.uk") || email.endsWith("@oxford.said.edu");
 }
 
 function normalizeInterest(raw: string): string {

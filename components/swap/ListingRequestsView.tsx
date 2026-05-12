@@ -1,22 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Avatar } from "@/components/ui/Avatar";
 import { IncomingRequestRow } from "@/components/swap/IncomingRequestRow";
+import { ListFormalForm } from "@/components/swap/ListFormalForm";
 import { NewRequestPicker } from "@/components/swap/NewRequestPicker";
 import { RequestSwapModal } from "@/components/swap/RequestSwapModal";
 import { SentRequestRow } from "@/components/swap/SentRequestRow";
 import { SignInGate } from "@/components/swap/SignInGate";
 import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { formatListingDate, formatYearLabel } from "@/lib/data/format";
 import type { Listing } from "@/lib/data/types";
 
 export function ListingRequestsView({ listingId }: { listingId: string }) {
+  const router = useRouter();
   const { isAuthenticated, user } = useAuth();
   const {
     listings,
@@ -29,6 +33,8 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     leaveGroup,
     removeMember,
     requestSwap,
+    updateListing,
+    deleteListing,
   } = useData();
 
   const listing = useMemo(
@@ -92,6 +98,8 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     [listing, getUser],
   );
 
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
   const [confirmed, setConfirmed] = useState<{
@@ -180,9 +188,40 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
               <h1 className="font-display text-3xl uppercase tracking-wide">
                 {listing.college}
               </h1>
-              <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
-                {statusMap[listing.status]}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
+                  {statusMap[listing.status]}
+                </span>
+                {listing.status === "active" && (
+                  <>
+                    {listing.members.length <= 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setEditModalOpen(true)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                        aria-label="Edit listing"
+                      >
+                        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                          <path d="m15 5 4 4" />
+                        </svg>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setDeleteDialogOpen(true)}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-red-600 text-red-600 transition-colors hover:bg-red-600 hover:text-white"
+                      aria-label="Delete listing"
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18" />
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
             <p className="mt-2 text-[var(--ink-muted)]">
               {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} · {seatsLabel}
@@ -377,6 +416,51 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
         confirmLabel={confirmDialog?.confirmLabel}
         onConfirm={() => confirmDialog?.onConfirm()}
         onCancel={() => setConfirmDialog(null)}
+      />
+
+      <Modal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        panelClassName="!max-w-3xl"
+      >
+        {listing && user && (
+          <ListFormalForm
+            embedded
+            profile={{
+              college: user.college,
+              year: user.year,
+              role: user.role,
+            }}
+            initialValues={{
+              dateTime: listing.dateTime,
+              groupSize: listing.groupSize,
+              message: listing.message,
+            }}
+            onSubmit={(input) => {
+              updateListing(listing.id, {
+                dateTime: input.dateTime,
+                groupSize: input.groupSize,
+                message: input.message,
+              });
+              setEditModalOpen(false);
+            }}
+          />
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        message="Delete this listing? All pending requests will be declined."
+        variant="destructive"
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (listing) {
+            deleteListing(listing.id);
+            router.push("/?tab=requests");
+          }
+          setDeleteDialogOpen(false);
+        }}
+        onCancel={() => setDeleteDialogOpen(false)}
       />
     </main>
   );

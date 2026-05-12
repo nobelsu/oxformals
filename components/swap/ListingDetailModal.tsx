@@ -1,0 +1,176 @@
+"use client";
+
+import Link from "next/link";
+import { Avatar } from "@/components/ui/Avatar";
+import { Chip } from "@/components/ui/Chip";
+import { Modal } from "@/components/ui/Modal";
+import { formatListingDate, formatYearLabel } from "@/lib/data/format";
+import type { User } from "@/lib/auth/types";
+import type { Listing } from "@/lib/data/types";
+
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  listing: Listing | null;
+  owner: User | null;
+  memberUsers?: User[];
+  onRequest?: () => void;
+  disabled?: boolean;
+  disabledLabel?: string;
+};
+
+export function ListingDetailModal({
+  open,
+  onClose,
+  listing,
+  owner,
+  memberUsers = [],
+  onRequest,
+  disabled,
+  disabledLabel,
+}: Props) {
+  if (!listing || !owner) return null;
+
+  const profileLine = [
+    owner.college,
+    formatYearLabel(owner.year) || owner.year,
+    owner.role || listing.role,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const seatsLabel =
+    listing.seatsAvailable === 0
+      ? "Group full"
+      : `${listing.seatsAvailable} ${listing.seatsAvailable === 1 ? "seat" : "seats"} left`;
+
+  const allMembers = [owner, ...memberUsers.filter((m) => m.id !== owner.id)];
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      panelClassName="max-w-lg max-h-[85vh]"
+    >
+      <div className="flex flex-col gap-5">
+        <header>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <h2 className="font-display text-3xl uppercase tracking-wide">
+              {listing.college}
+            </h2>
+            {(listing.status === "confirmed" || listing.status === "closed") && (
+              <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
+                {listing.seatsAvailable === 0 ? "Group full" : "Swap confirmed"}
+              </span>
+            )}
+          </div>
+          <p className="mt-1.5 text-sm text-[var(--ink-muted)]">
+            {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} · {seatsLabel}
+          </p>
+          <p className="mt-0.5 text-sm text-[var(--ink-soft)]">
+            {[formatYearLabel(listing.year) || listing.year, listing.role]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        </header>
+
+        <div className="flex items-center gap-4">
+          <Link href={`/profile/${owner.id}`} onClick={onClose}>
+            <Avatar name={owner.name} size="xl" source={owner.avatar} />
+          </Link>
+          <div className="min-w-0">
+            <Link
+              href={`/profile/${owner.id}`}
+              onClick={onClose}
+              className="block truncate text-lg leading-tight hover:underline"
+            >
+              {owner.name}
+            </Link>
+            {profileLine && (
+              <div className="truncate text-sm text-[var(--ink-soft)]">
+                {profileLine}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {allMembers.length > 0 && (
+          <section>
+            <h3 className="font-display text-lg uppercase tracking-wide">
+              Group members
+            </h3>
+            <div className="mt-2.5 flex flex-col gap-2">
+              {allMembers.map((m) => {
+                const isOwner = m.id === listing.ownerUserId;
+                return (
+                  <div key={m.id} className="flex items-center gap-2.5">
+                    <Link href={`/profile/${m.id}`} onClick={onClose}>
+                      <Avatar name={m.name} size="sm" source={m.avatar} />
+                    </Link>
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/profile/${m.id}`}
+                        onClick={onClose}
+                        className="text-sm leading-tight hover:underline"
+                      >
+                        {m.name}
+                      </Link>
+                      {isOwner && (
+                        <span className="ml-1 text-[0.65rem] text-[var(--ink-soft)]">
+                          (host)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {owner.interests.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {owner.interests.map((tag) => (
+              <Chip key={tag} size="md" as="span">
+                {tag}
+              </Chip>
+            ))}
+          </div>
+        )}
+
+        {listing.message && (
+          <p className="text-sm italic text-[var(--ink-muted)]">
+            &ldquo;{listing.message}&rdquo;
+          </p>
+        )}
+
+        <div className="flex justify-center pt-2">
+          {listing.status === "confirmed" || listing.status === "closed" ? (
+            <span className="rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-5 py-2 text-sm text-[var(--ink)]">
+              {listing.seatsAvailable === 0 ? "Group full" : "Swap confirmed"}
+            </span>
+          ) : disabled ? (
+            <button
+              type="button"
+              disabled
+              className="cursor-not-allowed rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-8 py-3 text-sm text-white opacity-70"
+            >
+              {disabledLabel ?? "Send request!"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                onRequest?.();
+                onClose();
+              }}
+              className="rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+            >
+              Send request!
+            </button>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}

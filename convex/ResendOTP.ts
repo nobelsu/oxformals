@@ -7,7 +7,7 @@ function normalizeEmail(raw: string): string {
 }
 
 function isOxfordEmail(email: string): boolean {
-  return email.endsWith("@ox.ac.uk");
+  return email.endsWith("@ox.ac.uk") || email.endsWith("@oxford.said.edu");
 }
 
 function buildOtpEmailHtml({
@@ -110,7 +110,7 @@ const emailProvider = Email({
     const normalizedEmail = normalizeEmail(email);
     if (!isOxfordEmail(normalizedEmail)) {
       throw new Error(
-        "Only Oxford email addresses ending in @ox.ac.uk are allowed",
+        "Only Oxford email addresses ending in @ox.ac.uk or @oxford.said.edu are allowed",
       );
     }
 

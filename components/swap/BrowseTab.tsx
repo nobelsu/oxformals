@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
+import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { CollegeFilter, MY_FORMALS_SENTINEL } from "./CollegeFilter";
 import { Hero } from "./Hero";
 import { ListingCard } from "./ListingCard";
+import { ListingDetailModal } from "./ListingDetailModal";
 import { RequestSwapModal } from "./RequestSwapModal";
 import { StatsStrip } from "./StatsStrip";
 import { SwapConfirmedModal } from "./SwapConfirmedModal";
@@ -41,7 +43,7 @@ const BROWSE_TAB_FONT_CSS = `
 .browse-tab-root > section:nth-of-type(2) .text-sm {
   font-size: 0.796875rem;
 }
-.browse-tab-root > div.flex-wrap button {
+.browse-tab-root > div.flex-col .flex-wrap button {
   font-size: 0.796875rem;
 }
 `;
@@ -62,7 +64,9 @@ export function BrowseTab({
 
   const [collegeFilter, setCollegeFilter] = useState<string | null>(null);
   const [defaultApplied, setDefaultApplied] = useState(false);
+  const [detailListing, setDetailListing] = useState<Listing | null>(null);
   const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
+  const [showNoListingPrompt, setShowNoListingPrompt] = useState(false);
   const [confirmed, setConfirmed] = useState<{
     mine: Listing | null;
     theirs: Listing | null;
@@ -143,7 +147,7 @@ export function BrowseTab({
       return;
     }
     if (myActiveListings.length === 0) {
-      onNavigateToMine();
+      setShowNoListingPrompt(true);
       return;
     }
     setRequestTarget(listing);
@@ -162,7 +166,7 @@ export function BrowseTab({
             + List my formal
           </button>
         </div>
-        <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center gap-3">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-2">
           <CollegeFilter
             active={collegeFilter}
             onChange={setCollegeFilter}
@@ -171,9 +175,7 @@ export function BrowseTab({
             isAuthenticated={isAuthenticated}
             className="justify-center"
           />
-          <div className="lg:absolute lg:right-0 lg:top-1/2 lg:-translate-y-1/2">
-            <StatsStrip openSwaps={openSwaps} />
-          </div>
+          <StatsStrip openSwaps={openSwaps} />
         </div>
 
         {browseListings.length === 0 ? (
@@ -199,6 +201,7 @@ export function BrowseTab({
                   listing={l}
                   owner={owner}
                   memberUsers={members}
+                  onPress={() => setDetailListing(l)}
                   onRequest={() => handleRequestClick(l)}
                   disabled={!isAuthenticated}
                   disabledLabel={isAuthenticated ? undefined : "Sign in to request"}
@@ -209,6 +212,26 @@ export function BrowseTab({
           </div>
         )}
       </div>
+
+      <ListingDetailModal
+        open={!!detailListing}
+        onClose={() => setDetailListing(null)}
+        listing={detailListing}
+        owner={detailListing ? getUser(detailListing.ownerUserId) ?? null : null}
+        memberUsers={
+          detailListing
+            ? (detailListing.members ?? [])
+                .filter((mid) => mid !== detailListing.ownerUserId)
+                .map(getUser)
+                .filter((u): u is NonNullable<typeof u> => !!u)
+            : []
+        }
+        onRequest={() => {
+          if (detailListing) handleRequestClick(detailListing);
+        }}
+        disabled={!isAuthenticated}
+        disabledLabel={isAuthenticated ? undefined : "Sign in to request"}
+      />
 
       <RequestSwapModal
         open={!!requestTarget}
@@ -242,6 +265,27 @@ export function BrowseTab({
           confirmed?.otherUserId ? (getUser(confirmed.otherUserId) ?? null) : null
         }
       />
+
+      <Modal
+        open={showNoListingPrompt}
+        onClose={() => setShowNoListingPrompt(false)}
+        title="List your formal first"
+        panelClassName="max-w-sm"
+      >
+        <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">
+          You need to list your own formal before you can request a swap.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setShowNoListingPrompt(false);
+            onNavigateToRequests();
+          }}
+          className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+        >
+          + List my formal
+        </button>
+      </Modal>
     </>
   );
 }

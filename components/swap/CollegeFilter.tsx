@@ -39,7 +39,7 @@ export function CollegeFilter({
   const chips = [...highlighted, ...others];
 
   return (
-    <div className={`flex flex-wrap gap-2 justify-center ${className}`.trim()}>
+    <div className={`flex flex-wrap gap-2 ${className}`.trim()}>
       {showMyFormals && (
         <Chip
           variant={active === MY_FORMALS_SENTINEL ? "filled" : "outline"}
