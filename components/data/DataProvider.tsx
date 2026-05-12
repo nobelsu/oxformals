@@ -47,7 +47,7 @@ export type DataContextValue = {
   withdrawRequest: (requestId: string) => boolean;
   updateListing: (
     listingId: string,
-    patch: { dateTime?: string; groupSize?: 2 | 3 | 4; message?: string },
+    patch: { dateTime?: string; groupSize?: 2 | 3 | 4; message?: string; menu?: string },
   ) => void;
   deleteListing: (listingId: string) => void;
   leaveGroup: (listingId: string) => void;

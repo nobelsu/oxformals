@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -418,6 +418,21 @@ export const updateListing = mutation({
 
     await ctx.db.patch(args.listingId, patch);
     return args.listingId;
+  },
+});
+
+export const backfillMenu = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const listings = await ctx.db.query("listings").take(1000);
+    let patched = 0;
+    for (const listing of listings) {
+      if (listing.menu === undefined) {
+        await ctx.db.patch(listing._id, { menu: "" });
+        patched++;
+      }
+    }
+    return { patched, total: listings.length };
   },
 });
 

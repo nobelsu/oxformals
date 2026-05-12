@@ -15,6 +15,9 @@ const schoolbell = Schoolbell({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://oxformals.com",
+  ),
   title: "Oxformals",
   description: "Find your next formal.",
   icons: {
