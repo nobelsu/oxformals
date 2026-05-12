@@ -9,7 +9,7 @@ export function Hero({}: Props) {
       <h1 className="font-display text-7xl sm:text-8xl uppercase tracking-wider leading-none">
         oxformals
       </h1>
-      <p className="max-w-[20ch] sm:max-w-full text-center text-lg text-[var(--ink-muted)] text-balance">
+      <p className="px-4 text-center text-lg text-[var(--ink-muted)] text-balance">
         Browse formals, request a seat, and go somewhere new.
       </p>
     </section>
