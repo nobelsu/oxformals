@@ -70,45 +70,47 @@ export function MyListingCard({
         {profileLine}
       </div>
 
-      {memberUsers.length > 0 && (
-        <div className="flex shrink-0 items-center gap-1.5">
-          <span className="text-xs text-[var(--ink-soft)]">Group:</span>
-          <div className="flex -space-x-1.5">
-            {memberUsers.map((m) => (
-              <Link
-                key={m.id}
-                href={`/profile/${m.id}`}
-                title={m.name}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Avatar name={m.name} size="sm" source={m.avatar} />
-              </Link>
-            ))}
+      <div className="mt-auto flex shrink-0 flex-col gap-3">
+        {memberUsers.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-[var(--ink-soft)]">Dining with:</span>
+            <div className="flex flex-wrap -space-x-1.5">
+              {memberUsers.map((m) => (
+                <Link
+                  key={m.id}
+                  href={`/profile/${m.id}`}
+                  title={m.name}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Avatar name={m.name} size="sm" source={m.avatar} />
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {pendingRequestCount > 0 ? (
-        <div className="mt-auto min-h-0 w-full shrink-0">
-          <div className="inline-flex items-center gap-2 text-left text-sm leading-snug text-[var(--ink)]">
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="h-4 w-4 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M10.268 21a2 2 0 0 0 3.464 0" />
-              <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .738-1.674C19.41 13.855 18 12.148 18 8a6 6 0 1 0-12 0c0 4.148-1.41 5.855-2.738 7.326" />
-            </svg>
-            <span>
-              {pendingRequestCount}{" "}
-              {pendingRequestCount === 1 ? "update" : "updates"}
-            </span>
+        {pendingRequestCount > 0 && (
+          <div className="min-h-0 w-full shrink-0">
+            <div className="inline-flex items-center gap-2 text-left text-sm leading-snug text-[var(--ink)]">
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="h-4 w-4 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+                <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .738-1.674C19.41 13.855 18 12.148 18 8a6 6 0 1 0-12 0c0 4.148-1.41 5.855-2.738 7.326" />
+              </svg>
+              <span>
+                {pendingRequestCount}{" "}
+                {pendingRequestCount === 1 ? "update" : "updates"}
+              </span>
+            </div>
           </div>
-        </div>
-      ) : null}
+        )}
+      </div>
     </>
   );
 

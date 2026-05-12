@@ -86,6 +86,7 @@ function mapListing(doc: Doc<"listings">): Listing {
     year: doc.year,
     role: doc.role,
     message: doc.message,
+    menu: doc.menu ?? "",
     status: doc.status,
     createdAt: doc._creationTime,
   };
@@ -199,6 +200,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         dateTime: input.dateTime,
         groupSize: input.groupSize,
         message: input.message,
+        menu: input.menu,
       });
       return {
         id: "pending",
@@ -211,6 +213,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         year,
         role,
         message: input.message,
+        menu: input.menu,
         status: "active",
         createdAt: Date.now(),
       };
@@ -294,7 +297,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const updateListing = useCallback(
     (
       listingId: string,
-      patch: { dateTime?: string; groupSize?: 2 | 3 | 4; message?: string },
+      patch: { dateTime?: string; groupSize?: 2 | 3 | 4; message?: string; menu?: string },
     ) => {
       if (!user) return;
       void updateListingMut({
@@ -302,6 +305,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ...(patch.dateTime !== undefined ? { dateTime: patch.dateTime } : {}),
         ...(patch.groupSize !== undefined ? { groupSize: patch.groupSize } : {}),
         ...(patch.message !== undefined ? { message: patch.message } : {}),
+        ...(patch.menu !== undefined ? { menu: patch.menu } : {}),
       });
     },
     [user, updateListingMut],

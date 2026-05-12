@@ -72,6 +72,7 @@ export const createListing = mutation({
     dateTime: v.string(),
     groupSize: v.union(v.literal(2), v.literal(3), v.literal(4)),
     message: v.string(),
+    menu: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
@@ -100,6 +101,7 @@ export const createListing = mutation({
       year,
       role,
       message: args.message.trim(),
+      menu: (args.menu ?? "").trim(),
       status: "active",
     });
   },
@@ -371,6 +373,7 @@ export const updateListing = mutation({
     dateTime: v.optional(v.string()),
     groupSize: v.optional(v.union(v.literal(2), v.literal(3), v.literal(4))),
     message: v.optional(v.string()),
+    menu: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
@@ -403,6 +406,10 @@ export const updateListing = mutation({
 
     if (args.message !== undefined) {
       patch.message = args.message.trim();
+    }
+
+    if (args.menu !== undefined) {
+      patch.menu = args.menu.trim();
     }
 
     if (Object.keys(patch).length === 0) {

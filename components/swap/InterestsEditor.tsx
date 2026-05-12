@@ -5,10 +5,12 @@ import { useAuth } from "@/components/auth/useAuth";
 import { Chip } from "@/components/ui/Chip";
 import { SketchCard } from "@/components/ui/SketchCard";
 
+const MAX_INTEREST_LENGTH = 40;
+
 function parse(raw: string): string[] {
   return raw
     .split(",")
-    .map((s) => s.trim())
+    .map((s) => s.trim().slice(0, MAX_INTEREST_LENGTH))
     .filter(Boolean);
 }
 

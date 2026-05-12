@@ -47,14 +47,16 @@ export function Modal({
       />
       <SketchCard
         seed={2}
-        className={["relative w-full max-w-md overflow-y-auto p-6", panelClassName]
+        className={["relative w-full max-w-md overflow-hidden p-6", panelClassName]
           .filter(Boolean)
           .join(" ")}
       >
         {title && (
-          <h2 className="mb-4 font-display text-3xl uppercase tracking-wide">{title}</h2>
+          <h2 className="mb-4 shrink-0 font-display text-3xl uppercase tracking-wide">{title}</h2>
         )}
-        {children}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {children}
+        </div>
       </SketchCard>
     </div>
   );

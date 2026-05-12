@@ -39,15 +39,19 @@ export function Chip({
     : "";
 
   const base =
-    "inline-flex items-center rounded-full whitespace-nowrap leading-none";
+    "inline-flex items-center rounded-full leading-normal max-w-full";
   const cls = `${base} ${sizing} ${mode === "filled" ? filled : outline} ${activeFilled} ${hover} ${className}`.trim();
 
+  const inner = (
+    <span className="overflow-hidden text-ellipsis whitespace-nowrap">{children}</span>
+  );
+
   if (as === "span") {
-    return <span className={cls}>{children}</span>;
+    return <span className={cls}>{inner}</span>;
   }
   return (
     <button type="button" onClick={onClick} className={cls}>
-      {children}
+      {inner}
     </button>
   );
 }

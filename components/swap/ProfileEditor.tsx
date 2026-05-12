@@ -20,8 +20,10 @@ const MAX_DATA_URL_BYTES = 250 * 1024;
 const COLLEGE_LIST = OXFORD_COLLEGES as readonly string[];
 const ROLE_OPTIONS = ["Undergrad", "Masters", "DPhil"] as const;
 
+const MAX_INTEREST_LENGTH = 40;
+
 function normalizeInterest(raw: string): string {
-  return raw.trim().replace(/\s+/g, " ");
+  return raw.trim().replace(/\s+/g, " ").slice(0, MAX_INTEREST_LENGTH);
 }
 
 function renderHighlightedMatch(label: string, query: string) {
@@ -89,6 +91,7 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
   const collegePickerRef = useRef<HTMLDivElement | null>(null);
   const rolePickerRef = useRef<HTMLDivElement | null>(null);
 
+  const [nameDraft, setNameDraft] = useState(user?.name ?? "");
   const [collegeDraft, setCollegeDraft] = useState(user?.college ?? "");
   const [collegeSearch, setCollegeSearch] = useState("");
   const [collegePickerOpen, setCollegePickerOpen] = useState(false);
@@ -99,6 +102,9 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
   );
   const [whatsappPhoneDraft, setWhatsappPhoneDraft] = useState(
     user?.whatsappPhone ?? "",
+  );
+  const [dietaryRequirementsDraft, setDietaryRequirementsDraft] = useState(
+    user?.dietaryRequirements ?? "",
   );
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [interestsDraft, setInterestsDraft] = useState<string[]>(
@@ -114,6 +120,7 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
 
   useEffect(() => {
     if (!user) return;
+    setNameDraft(user.name);
     const normalizedCollege =
       normalizeCollegeName(user.college) || user.college.trim();
     setCollegeDraft(normalizedCollege);
@@ -122,6 +129,7 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
     setRoleDraft(user.role);
     setInstagramHandleDraft(user.instagramHandle ?? "");
     setWhatsappPhoneDraft(user.whatsappPhone ?? "");
+    setDietaryRequirementsDraft(user.dietaryRequirements ?? "");
     setInterestsDraft(user.interests);
     setAvatarDraft(user.avatar);
   }, [user]);
@@ -171,9 +179,11 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
     return [...ROLE_OPTIONS];
   }, [roleDraft]);
 
+  const normalizedName = nameDraft.trim();
   const normalizedCollege = normalizeCollegeName(collegeDraft);
   const normalizedYear = yearDraft.trim();
   const normalizedRole = roleDraft.trim();
+  const initialName = user?.name.trim() ?? "";
   const initialCollege = user
     ? normalizeCollegeName(user.college) || user.college.trim()
     : "";
@@ -181,15 +191,18 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
   const initialRole = user?.role.trim() ?? "";
   const initialInstagramHandle = user?.instagramHandle?.trim() ?? "";
   const initialWhatsappPhone = user?.whatsappPhone?.trim() ?? "";
+  const initialDietaryRequirements = user?.dietaryRequirements?.trim() ?? "";
   const initialInterests = user?.interests ?? [];
   const initialAvatar = user?.avatar;
 
   const profileDirty =
+    normalizedName !== initialName ||
     normalizedCollege !== initialCollege ||
     normalizedYear !== initialYear ||
     normalizedRole !== initialRole ||
     instagramHandleDraft.trim() !== initialInstagramHandle ||
     whatsappPhoneDraft.trim() !== initialWhatsappPhone ||
+    dietaryRequirementsDraft.trim() !== initialDietaryRequirements ||
     JSON.stringify(interestsDraft) !== JSON.stringify(initialInterests) ||
     JSON.stringify(avatarDraft ?? null) !== JSON.stringify(initialAvatar ?? null);
 
@@ -226,17 +239,24 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
     setError(null);
     setBusy(true);
     try {
+      const trimmedName = nameDraft.trim();
+      if (!trimmedName) {
+        setError("Name cannot be empty.");
+        return;
+      }
       const normalizedYear = yearDraft.trim();
       if (!/^\d+$/.test(normalizedYear)) {
         setError("Year must be a number, e.g. 2.");
         return;
       }
       await updateProfile({
+        name: trimmedName,
         college: normalizeCollegeName(collegeDraft),
         year: normalizedYear,
         role: roleDraft.trim(),
         instagramHandle: instagramHandleDraft.trim(),
         whatsappPhone: whatsappPhoneDraft.trim(),
+        dietaryRequirements: dietaryRequirementsDraft.trim(),
         avatar: avatarDraft,
         interests: interestsDraft,
       });
@@ -249,12 +269,14 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
     }
   }, [
     user,
+    nameDraft,
     yearDraft,
     updateProfile,
     collegeDraft,
     roleDraft,
     instagramHandleDraft,
     whatsappPhoneDraft,
+    dietaryRequirementsDraft,
     avatarDraft,
     interestsDraft,
   ]);
@@ -311,165 +333,180 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex-1 space-y-4">
             <label className="flex flex-col gap-2">
-              <span className="text-sm text-[var(--ink-muted)]">College</span>
-              <div ref={collegePickerRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCollegePickerOpen((open) => !open);
-                    setRolePickerOpen(false);
-                    setCollegeSearch(collegeDraft);
-                  }}
-                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 pr-12 text-left text-base text-[var(--ink)] focus:outline-none"
-                >
-                  {collegeDraft || "Choose college"}
-                </button>
-                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]">
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 12 8"
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                  >
-                    <path
-                      d="M1 1.5 6 6.5 11 1.5"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-                {collegePickerOpen ? (
-                  <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--bg)] p-2 shadow-sm">
-                    <input
-                      type="text"
-                      value={collegeSearch}
-                      onChange={(e) => setCollegeSearch(e.target.value)}
-                      placeholder="Search college"
-                      className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-                    />
-                    <div className="mt-2 max-h-48 overflow-y-auto">
-                      {filteredCollegeOptions.length > 0 ? (
-                        <div className="flex flex-col gap-1">
-                          {filteredCollegeOptions.map((college) => {
-                            const selected = college === collegeDraft;
-                            return (
-                              <button
-                                key={college}
-                                type="button"
-                                onClick={() => {
-                                  setCollegeDraft(college);
-                                  setCollegeSearch(college);
-                                  setCollegePickerOpen(false);
-                                }}
-                                className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                                  selected
-                                    ? "bg-[var(--ink)] text-[var(--bg)]"
-                                    : "text-[var(--ink)] hover:bg-[var(--paper)]"
-                                }`}
-                              >
-                                {renderHighlightedMatch(college, collegeSearch)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p className="px-2 py-2 text-sm text-[var(--ink-muted)]">
-                          No colleges match that search.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </label>
-
-            <label className="flex flex-col gap-2">
-              <span className="text-sm text-[var(--ink-muted)]">Year</span>
+              <span className="text-sm text-[var(--ink-muted)]">Name</span>
               <input
                 type="text"
-                inputMode="numeric"
-                pattern="\d+"
-                value={yearDraft}
-                onChange={(e) =>
-                  setYearDraft(e.target.value.replace(/\D/g, "").slice(0, 2))
-                }
-                placeholder="2"
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                placeholder="Your full name"
                 className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
               />
             </label>
 
-            <label className="flex flex-col gap-2">
-              <span className="text-sm text-[var(--ink-muted)]">Role</span>
-              <div ref={rolePickerRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRolePickerOpen((open) => !open);
-                    setCollegePickerOpen(false);
-                  }}
-                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 pr-12 text-left text-base text-[var(--ink)] focus:outline-none"
-                >
-                  {roleDraft || "Choose role"}
-                </button>
-                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]">
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 12 8"
-                    className="h-3.5 w-3.5"
-                    fill="none"
+            <div className="flex gap-4">
+              <label className="flex flex-[2] flex-col gap-2">
+                <span className="text-sm text-[var(--ink-muted)]">College</span>
+                <div ref={collegePickerRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCollegePickerOpen((open) => !open);
+                      setRolePickerOpen(false);
+                      setCollegeSearch(collegeDraft);
+                    }}
+                    className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 pr-12 text-left text-base text-[var(--ink)] focus:outline-none"
                   >
-                    <path
-                      d="M1 1.5 6 6.5 11 1.5"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-                {rolePickerOpen ? (
-                  <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--bg)] p-2 shadow-sm">
-                    <div className="flex flex-col gap-1">
-                      {roleSelectOptions.map((option) => {
-                        const selected = option === roleDraft;
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => {
-                              setRoleDraft(option);
-                              setRolePickerOpen(false);
-                            }}
-                            className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                              selected
-                                ? "bg-[var(--ink)] text-[var(--bg)]"
-                                : "text-[var(--ink)] hover:bg-[var(--paper)]"
-                            }`}
-                          >
-                            {option}
-                          </button>
-                        );
-                      })}
+                    {collegeDraft || "Choose college"}
+                  </button>
+                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]">
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 12 8"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                    >
+                      <path
+                        d="M1 1.5 6 6.5 11 1.5"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  {collegePickerOpen ? (
+                    <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--bg)] p-2 shadow-sm">
+                      <input
+                        type="text"
+                        value={collegeSearch}
+                        onChange={(e) => setCollegeSearch(e.target.value)}
+                        placeholder="Search college"
+                        className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+                      />
+                      <div className="mt-2 max-h-48 overflow-y-auto">
+                        {filteredCollegeOptions.length > 0 ? (
+                          <div className="flex flex-col gap-1">
+                            {filteredCollegeOptions.map((college) => {
+                              const selected = college === collegeDraft;
+                              return (
+                                <button
+                                  key={college}
+                                  type="button"
+                                  onClick={() => {
+                                    setCollegeDraft(college);
+                                    setCollegeSearch(college);
+                                    setCollegePickerOpen(false);
+                                  }}
+                                  className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                                    selected
+                                      ? "bg-[var(--ink)] text-[var(--bg)]"
+                                      : "text-[var(--ink)] hover:bg-[var(--paper)]"
+                                  }`}
+                                >
+                                  {renderHighlightedMatch(college, collegeSearch)}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="px-2 py-2 text-sm text-[var(--ink-muted)]">
+                            No colleges match that search.
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ) : null}
-              </div>
-            </label>
+                  ) : null}
+                </div>
+              </label>
 
-            <label className="flex flex-col gap-2">
-              <span className="text-sm text-[var(--ink-muted)]">
-                Instagram handle
-              </span>
-              <input
-                type="text"
-                value={instagramHandleDraft}
-                onChange={(e) => setInstagramHandleDraft(e.target.value)}
-                placeholder="@yourhandle"
-                className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-              />
-            </label>
+              <label className="flex flex-1 flex-col gap-2">
+                <span className="text-sm text-[var(--ink-muted)]">Year</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d+"
+                  value={yearDraft}
+                  onChange={(e) =>
+                    setYearDraft(e.target.value.replace(/\D/g, "").slice(0, 2))
+                  }
+                  placeholder="2"
+                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+                />
+              </label>
+            </div>
+
+            <div className="flex gap-4">
+              <label className="flex flex-1 flex-col gap-2">
+                <span className="text-sm text-[var(--ink-muted)]">Role</span>
+                <div ref={rolePickerRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRolePickerOpen((open) => !open);
+                      setCollegePickerOpen(false);
+                    }}
+                    className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 pr-12 text-left text-base text-[var(--ink)] focus:outline-none"
+                  >
+                    {roleDraft || "Choose role"}
+                  </button>
+                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]">
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 12 8"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                    >
+                      <path
+                        d="M1 1.5 6 6.5 11 1.5"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  {rolePickerOpen ? (
+                    <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--bg)] p-2 shadow-sm">
+                      <div className="flex flex-col gap-1">
+                        {roleSelectOptions.map((option) => {
+                          const selected = option === roleDraft;
+                          return (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => {
+                                setRoleDraft(option);
+                                setRolePickerOpen(false);
+                              }}
+                              className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                                selected
+                                  ? "bg-[var(--ink)] text-[var(--bg)]"
+                                  : "text-[var(--ink)] hover:bg-[var(--paper)]"
+                              }`}
+                            >
+                              {option}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </label>
+
+              <label className="flex flex-1 flex-col gap-2">
+                <span className="text-sm text-[var(--ink-muted)]">
+                  Instagram handle
+                </span>
+                <input
+                  type="text"
+                  value={instagramHandleDraft}
+                  onChange={(e) => setInstagramHandleDraft(e.target.value)}
+                  placeholder="@yourhandle"
+                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+                />
+              </label>
+            </div>
 
             <label className="flex flex-col gap-2">
               <span className="text-sm text-[var(--ink-muted)]">
@@ -481,6 +518,19 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
                 value={whatsappPhoneDraft}
                 onChange={(e) => setWhatsappPhoneDraft(e.target.value)}
                 placeholder="+44 7..."
+                className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+              />
+            </label>
+
+            <label className="flex flex-col gap-2">
+              <span className="text-sm text-[var(--ink-muted)]">
+                Allergens / Dietary requirements
+              </span>
+              <input
+                type="text"
+                value={dietaryRequirementsDraft}
+                onChange={(e) => setDietaryRequirementsDraft(e.target.value)}
+                placeholder="e.g. Vegetarian, nut allergy"
                 className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
               />
             </label>
@@ -555,9 +605,9 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
                 {interestsDraft.map((interest, index) => (
                   <span
                     key={`${interest}-${index}`}
-                    className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--ink)] bg-[var(--paper)] px-3.5 py-1 text-sm text-[var(--ink)]"
+                    className="inline-flex max-w-full min-h-9 items-center gap-2 rounded-full border border-[var(--ink)] bg-[var(--paper)] px-3.5 py-1 text-sm text-[var(--ink)]"
                   >
-                    {interest}
+                    <span className="truncate">{interest}</span>
                     <button
                       type="button"
                       onClick={() => removeInterest(index)}
@@ -573,8 +623,9 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
             <input
               type="text"
               value={interestInput}
-              onChange={(e) => setInterestInput(e.target.value)}
+              onChange={(e) => setInterestInput(e.target.value.slice(0, MAX_INTEREST_LENGTH))}
               onKeyDown={onInterestKeyDown}
+              maxLength={MAX_INTEREST_LENGTH}
               placeholder="Type an interest and press Enter"
               className="w-full border-0 bg-transparent px-1 py-1 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
             />

@@ -13,6 +13,7 @@ export type Listing = {
   /** Snapshot from the poster's profile when the listing was created. */
   role: string;
   message: string;
+  menu: string;
   status: ListingStatus;
   createdAt: number;
 };

@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { internalMutation, mutation, query } from "./_generated/server";
 
 const avatarValue = v.union(
   v.object({ kind: v.literal("preset"), id: v.string() }),
@@ -46,6 +47,7 @@ export const completeOnboarding = mutation({
     interests: v.optional(v.array(v.string())),
     instagramHandle: v.optional(v.string()),
     whatsappPhone: v.optional(v.string()),
+    dietaryRequirements: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -67,6 +69,7 @@ export const completeOnboarding = mutation({
       interests: args.interests ?? [],
       instagramHandle: args.instagramHandle?.trim() || undefined,
       whatsappPhone: args.whatsappPhone?.trim() || undefined,
+      dietaryRequirements: args.dietaryRequirements?.trim() ?? "",
     });
 
     return userId;
@@ -91,6 +94,7 @@ export const patchProfile = mutation({
     interests: v.optional(v.array(v.string())),
     instagramHandle: v.optional(v.string()),
     whatsappPhone: v.optional(v.string()),
+    dietaryRequirements: v.optional(v.string()),
     avatar: avatarOrClear,
   },
   handler: async (ctx, args) => {
@@ -107,6 +111,7 @@ export const patchProfile = mutation({
         | "interests"
         | "instagramHandle"
         | "whatsappPhone"
+        | "dietaryRequirements"
         | "avatar"
       >
     >;
@@ -133,6 +138,9 @@ export const patchProfile = mutation({
     }
     if (args.whatsappPhone !== undefined) {
       patch.whatsappPhone = args.whatsappPhone.trim() || undefined;
+    }
+    if (args.dietaryRequirements !== undefined) {
+      patch.dietaryRequirements = args.dietaryRequirements.trim();
     }
     if (args.avatar !== undefined) {
       patch.avatar =
@@ -174,6 +182,7 @@ export const getPublicProfile = query({
         interests: user.interests,
         instagramHandle: user.instagramHandle,
         whatsappPhone: user.whatsappPhone,
+        dietaryRequirements: user.dietaryRequirements,
         avatar: user.avatar,
       },
       listings: activeListings.filter((l) => l.status === "active"),
@@ -217,5 +226,23 @@ export const saveWishlistColleges = mutation({
     );
     await ctx.db.patch(userId, { wishlistColleges: cleaned });
     return cleaned;
+  },
+});
+
+export const backfillDietaryRequirements = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").take(100);
+    let patched = 0;
+    for (const user of users) {
+      if (user.dietaryRequirements === undefined) {
+        await ctx.db.patch(user._id, { dietaryRequirements: "" });
+        patched++;
+      }
+    }
+    if (patched === 100) {
+      await ctx.scheduler.runAfter(0, internal.users.backfillDietaryRequirements, {});
+    }
+    return { patched };
   },
 });

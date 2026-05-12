@@ -25,6 +25,14 @@ export function RequestsTab() {
     [myListings],
   );
 
+  const myBookedListings = useMemo(
+    () =>
+      myListings
+        .filter((l) => l.status === "confirmed" || l.status === "closed")
+        .sort((a, b) => b.createdAt - a.createdAt),
+    [myListings],
+  );
+
   const [listFormalOpen, setListFormalOpen] = useState(false);
   const shouldOpenListModal = searchParams.get("openList") === "1";
 
@@ -88,6 +96,30 @@ export function RequestsTab() {
           </div>
         )}
       </section>
+
+      {myBookedListings.length > 0 && (
+        <section>
+          <h2 className="font-display text-3xl uppercase tracking-wide">
+            Past listings
+          </h2>
+          <div className="mt-4 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
+            {myBookedListings.map((listing) => {
+              const members = listing.members
+                .map(getUser)
+                .filter((u): u is NonNullable<typeof u> => !!u);
+              return (
+                <MyListingCard
+                  key={listing.id}
+                  listing={listing}
+                  pendingRequestCount={0}
+                  profile={{ year: user.year, role: user.role }}
+                  memberUsers={members}
+                />
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <Modal
         open={listFormalOpen}

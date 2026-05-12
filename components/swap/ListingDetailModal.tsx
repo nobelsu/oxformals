@@ -17,6 +17,7 @@ type Props = {
   onRequest?: () => void;
   disabled?: boolean;
   disabledLabel?: string;
+  hideInterests?: boolean;
 };
 
 export function ListingDetailModal({
@@ -28,6 +29,7 @@ export function ListingDetailModal({
   onRequest,
   disabled,
   disabledLabel,
+  hideInterests,
 }: Props) {
   if (!listing || !owner) return null;
 
@@ -53,7 +55,7 @@ export function ListingDetailModal({
       panelClassName="max-w-lg max-h-[85vh]"
     >
       <div className="flex flex-col gap-5">
-        <header>
+        <header className="shrink-0">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <h2 className="font-display text-3xl uppercase tracking-wide">
               {listing.college}
@@ -74,7 +76,7 @@ export function ListingDetailModal({
           </p>
         </header>
 
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center gap-4">
           <Link href={`/profile/${owner.id}`} onClick={onClose}>
             <Avatar name={owner.name} size="xl" source={owner.avatar} />
           </Link>
@@ -95,7 +97,7 @@ export function ListingDetailModal({
         </div>
 
         {allMembers.length > 0 && (
-          <section>
+          <section className="shrink-0">
             <h3 className="font-display text-lg uppercase tracking-wide">
               Group members
             </h3>
@@ -128,8 +130,8 @@ export function ListingDetailModal({
           </section>
         )}
 
-        {owner.interests.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+        {!hideInterests && owner.interests.length > 0 && (
+          <div className="flex min-w-0 flex-wrap gap-2">
             {owner.interests.map((tag) => (
               <Chip key={tag} size="md" as="span">
                 {tag}
@@ -139,12 +141,18 @@ export function ListingDetailModal({
         )}
 
         {listing.message && (
-          <p className="text-sm italic text-[var(--ink-muted)]">
+          <p className="min-h-0 overflow-y-auto text-sm italic text-[var(--ink-muted)]">
             &ldquo;{listing.message}&rdquo;
           </p>
         )}
 
-        <div className="flex justify-center pt-2">
+        {listing.menu && (
+          <p className="text-sm text-[var(--ink-muted)]">
+            <span className="font-semibold">Menu:</span> {listing.menu}
+          </p>
+        )}
+
+        <div className="flex shrink-0 justify-center pt-2">
           {listing.status === "confirmed" || listing.status === "closed" ? (
             <span className="rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-5 py-2 text-sm text-[var(--ink)]">
               {listing.seatsAvailable === 0 ? "Group full" : "Swap confirmed"}

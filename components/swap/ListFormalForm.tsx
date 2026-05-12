@@ -18,6 +18,7 @@ export type ListingFormValues = {
   dateTime: string;
   groupSize: 2 | 3 | 4;
   message: string;
+  menu: string;
 };
 
 type Props = {
@@ -30,11 +31,17 @@ type Props = {
   onSubmit: (input: NewListingInput) => void;
 };
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
 function isoToLocalInput(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function defaultDateTime(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T19:00`;
 }
 
 export function ListFormalForm({
@@ -51,12 +58,13 @@ export function ListFormalForm({
   );
 
   const [dateTime, setDateTime] = useState(
-    initialValues ? isoToLocalInput(initialValues.dateTime) : "",
+    initialValues ? isoToLocalInput(initialValues.dateTime) : defaultDateTime(),
   );
   const [groupSize, setGroupSize] = useState<2 | 3 | 4>(
     initialValues?.groupSize ?? 2,
   );
   const [message, setMessage] = useState(initialValues?.message ?? "");
+  const [menu, setMenu] = useState(initialValues?.menu ?? "");
   const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -79,10 +87,12 @@ export function ListFormalForm({
       dateTime: iso,
       groupSize,
       message: message.trim(),
+      menu: menu.trim(),
     });
     if (!editMode) {
       setDateTime("");
       setMessage("");
+      setMenu("");
     }
   }
 
@@ -119,6 +129,19 @@ export function ListFormalForm({
             ))}
           </div>
         </div>
+
+        <label className="flex flex-col gap-2">
+          <span className="text-sm text-[var(--ink-muted)]">
+            Menu (optional)
+          </span>
+          <textarea
+            value={menu}
+            onChange={(e) => setMenu(e.target.value)}
+            rows={3}
+            placeholder="What's on the menu?"
+            className="w-full rounded-[20px] border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base focus:outline-none"
+          />
+        </label>
 
         <label className="flex flex-col gap-2">
           <span className="text-sm text-[var(--ink-muted)]">

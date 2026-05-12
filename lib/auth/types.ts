@@ -13,6 +13,7 @@ export type User = {
   interests: string[];
   instagramHandle?: string;
   whatsappPhone?: string;
+  dietaryRequirements?: string;
   avatar?: AvatarSource;
   agreedToRules?: boolean;
 };

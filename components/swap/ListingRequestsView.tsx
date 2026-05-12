@@ -234,6 +234,11 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             {listing.message ? (
               <p className="mt-4 text-sm italic text-[var(--ink-soft)]">&ldquo;{listing.message}&rdquo;</p>
             ) : null}
+            {listing.menu ? (
+              <p className="mt-2 text-sm text-[var(--ink-soft)]">
+                <span className="font-semibold">Menu:</span> {listing.menu}
+              </p>
+            ) : null}
           </div>
 
           {memberUsers.length > 0 && (
@@ -435,12 +440,14 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
               dateTime: listing.dateTime,
               groupSize: listing.groupSize,
               message: listing.message,
+              menu: listing.menu,
             }}
             onSubmit={(input) => {
               updateListing(listing.id, {
                 dateTime: input.dateTime,
                 groupSize: input.groupSize,
                 message: input.message,
+                menu: input.menu,
               });
               setEditModalOpen(false);
             }}

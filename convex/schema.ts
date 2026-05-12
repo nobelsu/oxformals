@@ -25,6 +25,7 @@ export default defineSchema({
     interests: v.optional(v.array(v.string())),
     instagramHandle: v.optional(v.string()),
     whatsappPhone: v.optional(v.string()),
+    dietaryRequirements: v.optional(v.string()),
     wishlistColleges: v.optional(v.array(v.string())),
     agreedToRules: v.optional(v.boolean()),
     avatar,
@@ -41,6 +42,7 @@ export default defineSchema({
     year: v.string(),
     role: v.string(),
     message: v.string(),
+    menu: v.optional(v.string()),
     status: v.union(
       v.literal("active"),
       v.literal("confirmed"),

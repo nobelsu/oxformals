@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
-import { Avatar } from "@/components/ui/Avatar";
+import { Avatar, PRESET_AVATARS, PresetAvatarIcon, initialsFor } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { ListingCard } from "@/components/swap/ListingCard";
@@ -46,10 +47,68 @@ function mapProfileListing(doc: {
   };
 }
 
+function AvatarLightbox({
+  source,
+  name,
+  onClose,
+}: {
+  source?: AvatarSource;
+  name: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  const largeCls =
+    "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--ink)_18%,var(--bg))] text-[var(--ink-muted)] border-[3px] border-[var(--ink)] h-56 w-56 text-5xl";
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-[var(--ink)]/30 backdrop-blur-sm" />
+      <div
+        className={largeCls}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {source?.kind === "image" ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={source.dataUrl}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : source?.kind === "preset" &&
+          PRESET_AVATARS.some((p) => p.id === source.id) ? (
+          <PresetAvatarIcon id={source.id} className="h-[1em] w-[1em] text-7xl" />
+        ) : (
+          <span className="select-none">{initialsFor(name)}</span>
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 export function ProfileView({ userId }: { userId: string }) {
   const { user: currentUser } = useAuth();
   const { getUser } = useData();
   const [detailListing, setDetailListing] = useState<Listing | null>(null);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const closeAvatar = useCallback(() => setAvatarOpen(false), []);
 
   const profile = useQuery(api.users.getPublicProfile, {
     userId: userId as Id<"users">,
@@ -98,6 +157,7 @@ export function ProfileView({ userId }: { userId: string }) {
   const interests = profileUser.interests ?? [];
   const instagramHandle = (profileUser.instagramHandle ?? "").replace(/^@+/, "");
   const whatsappPhone = (profileUser.whatsappPhone ?? "").trim();
+  const dietaryRequirements = (profileUser.dietaryRequirements ?? "").trim();
   const avatar = profileUser.avatar as AvatarSource | undefined;
 
   const profileLine = [
@@ -135,7 +195,24 @@ export function ProfileView({ userId }: { userId: string }) {
 
       <SketchCard seed={userId.length} className="p-6">
         <div className="flex items-center gap-5">
-          <Avatar name={name} size="xl" source={avatar} />
+          <div
+            role="button"
+            tabIndex={0}
+            className="cursor-pointer transition-transform hover:scale-105"
+            onClick={() => setAvatarOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setAvatarOpen(true);
+              }
+            }}
+            aria-label={`View ${name}'s avatar`}
+          >
+            <Avatar name={name} size="xl" source={avatar} />
+          </div>
+          {avatarOpen && (
+            <AvatarLightbox source={avatar} name={name} onClose={closeAvatar} />
+          )}
           <div className="min-w-0 flex-1">
             <h1 className="font-display text-3xl uppercase tracking-wide">
               {name}
@@ -188,6 +265,13 @@ export function ProfileView({ userId }: { userId: string }) {
           </div>
         )}
 
+        {dietaryRequirements && (
+          <p className="mt-3 text-sm text-[var(--ink-muted)]">
+            <span className="font-medium text-[var(--ink)]">Allergens / Dietary requirements:</span>{" "}
+            {dietaryRequirements}
+          </p>
+        )}
+
         {isOwnProfile && (
           <Link
             href="/?tab=mine"
@@ -223,6 +307,7 @@ export function ProfileView({ userId }: { userId: string }) {
                   memberUsers={members}
                   onPress={() => setDetailListing(l)}
                   disabled={isOwnProfile || !currentUser}
+                  hideInterests
                   disabledLabel={
                     isOwnProfile
                       ? "Your listing"
@@ -251,6 +336,7 @@ export function ProfileView({ userId }: { userId: string }) {
             : []
         }
         disabled={isOwnProfile || !currentUser}
+        hideInterests
         disabledLabel={
           isOwnProfile
             ? "Your listing"

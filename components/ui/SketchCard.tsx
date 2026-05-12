@@ -83,7 +83,7 @@ export function SketchCard({
   return (
     <div
       ref={hostRef}
-      className={`relative bg-[var(--paper)] text-[var(--ink)] ${padded ? "p-5" : ""} ${className}`}
+      className={`relative flex flex-col bg-[var(--paper)] text-[var(--ink)] ${padded ? "p-5" : ""} ${className}`}
       style={style}
       {...rest}
     >
@@ -92,7 +92,7 @@ export function SketchCard({
         className="pointer-events-none absolute inset-0 overflow-visible"
         aria-hidden
       />
-      <div className="relative flex h-full min-h-0 min-w-0 flex-col">
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         {children}
       </div>
     </div>
