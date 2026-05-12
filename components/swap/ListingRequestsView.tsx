@@ -166,7 +166,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
 
   const statusMap: Record<Listing["status"], string> = {
     active: "Active",
-    confirmed: "Swap confirmed",
+    confirmed: "Listing full",
     closed: listing.seatsAvailable === 0 ? "Group full" : "Closed",
   };
 
@@ -192,21 +192,19 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                 <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
                   {statusMap[listing.status]}
                 </span>
-                {listing.status === "active" && (
+                {(listing.status === "active" || listing.status === "confirmed") && (
                   <>
-                    {listing.members.length <= 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setEditModalOpen(true)}
-                        className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-                        aria-label="Edit listing"
-                      >
-                        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                          <path d="m15 5 4 4" />
-                        </svg>
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setEditModalOpen(true)}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                      aria-label="Edit listing"
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        <path d="m15 5 4 4" />
+                      </svg>
+                    </button>
                     <button
                       type="button"
                       onClick={() => setDeleteDialogOpen(true)}
@@ -442,6 +440,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
               message: listing.message,
               menu: listing.menu,
             }}
+            minGroupSize={listing.members.length}
             onSubmit={(input) => {
               updateListing(listing.id, {
                 dateTime: input.dateTime,

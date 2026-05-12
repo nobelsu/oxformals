@@ -62,7 +62,7 @@ export function ListingDetailModal({
             </h2>
             {(listing.status === "confirmed" || listing.status === "closed") && (
               <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
-                {listing.seatsAvailable === 0 ? "Group full" : "Swap confirmed"}
+                {listing.seatsAvailable === 0 ? "Group full" : "Listing full"}
               </span>
             )}
           </div>
@@ -155,7 +155,7 @@ export function ListingDetailModal({
         <div className="flex shrink-0 justify-center pt-2">
           {listing.status === "confirmed" || listing.status === "closed" ? (
             <span className="rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-5 py-2 text-sm text-[var(--ink)]">
-              {listing.seatsAvailable === 0 ? "Group full" : "Swap confirmed"}
+              {listing.seatsAvailable === 0 ? "Group full" : "Listing full"}
             </span>
           ) : disabled ? (
             <button

@@ -28,6 +28,8 @@ type Props = {
   embedded?: boolean;
   /** Pre-fill the form for editing an existing listing. */
   initialValues?: ListingFormValues;
+  /** Minimum allowed group size (e.g. current member count). Sizes below this are disabled. */
+  minGroupSize?: number;
   onSubmit: (input: NewListingInput) => void;
 };
 
@@ -48,6 +50,7 @@ export function ListFormalForm({
   profile,
   embedded = false,
   initialValues,
+  minGroupSize = 1,
   onSubmit,
 }: Props) {
   const editMode = !!initialValues;
@@ -122,6 +125,7 @@ export function ListFormalForm({
               <Chip
                 key={s}
                 variant={groupSize === s ? "filled" : "outline"}
+                disabled={s < minGroupSize}
                 onClick={() => setGroupSize(s)}
               >
                 {s}

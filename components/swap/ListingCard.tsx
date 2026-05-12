@@ -118,7 +118,7 @@ export function ListingCard({
       <div className="flex shrink-0 justify-center pt-4" onClick={(e) => e.stopPropagation()}>
         {listing.status === "confirmed" || listing.status === "closed" ? (
           <span className="rounded-full bg-[var(--paper)] border-[2px] border-[var(--ink)] px-5 py-2 text-[0.77rem] text-[var(--ink)]">
-            {listing.seatsAvailable === 0 ? "Group full" : "Swap confirmed"}
+            {listing.seatsAvailable === 0 ? "Group full" : "Listing full"}
           </span>
         ) : disabled ? (
           <button

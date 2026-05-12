@@ -551,8 +551,7 @@ export function LoginForm() {
 
             <div className="flex flex-col gap-2">
               <label htmlFor="interest-input" className="text-sm text-[var(--ink-muted)]">
-                Interests{" "}
-                <span className="text-[var(--ink-soft)]">(press Enter to add)</span>
+                Interests
               </label>
               <div className="rounded-3xl border-[2px] border-[var(--ink)] bg-[var(--paper)] px-3 py-3">
                 {interests.length > 0 ? (
@@ -575,15 +574,32 @@ export function LoginForm() {
                     ))}
                   </div>
                 ) : null}
-                <input
-                  id="interest-input"
-                  type="text"
-                  value={interestInput}
-                  onChange={(e) => setInterestInput(e.target.value)}
-                  onKeyDown={onInterestKeyDown}
-                  placeholder="Type an interest and press Enter"
-                  className="w-full border-0 bg-transparent px-1 py-1 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    id="interest-input"
+                    type="text"
+                    enterKeyHint="done"
+                    value={interestInput}
+                    onChange={(e) => setInterestInput(e.target.value)}
+                    onKeyDown={onInterestKeyDown}
+                    placeholder="Type an interest…"
+                    className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      addInterest(interestInput);
+                      setInterestInput("");
+                    }}
+                    disabled={!normalizeInterest(interestInput)}
+                    aria-label="Add interest"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-30 disabled:pointer-events-none"
+                  >
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                      <path d="M10 3a1 1 0 0 1 1 1v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H4a1 1 0 1 1 0-2h5V4a1 1 0 0 1 1-1Z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
 

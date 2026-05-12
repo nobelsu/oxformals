@@ -98,11 +98,11 @@ export function RequestsTab() {
       </section>
 
       {myBookedListings.length > 0 && (
-        <section>
+        <section className="mt-10">
           <h2 className="font-display text-3xl uppercase tracking-wide">
             Past listings
           </h2>
-          <div className="mt-4 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {myBookedListings.map((listing) => {
               const members = listing.members
                 .map(getUser)
@@ -114,6 +114,8 @@ export function RequestsTab() {
                   pendingRequestCount={0}
                   profile={{ year: user.year, role: user.role }}
                   memberUsers={members}
+                  onViewRequests={() => router.push(`/requests/${listing.id}`)}
+                  compact
                 />
               );
             })}

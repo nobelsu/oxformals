@@ -17,6 +17,7 @@ type Props = {
   };
   memberUsers?: User[];
   onViewRequests?: () => void;
+  compact?: boolean;
 };
 
 export function MyListingCard({
@@ -25,11 +26,12 @@ export function MyListingCard({
   profile,
   memberUsers = [],
   onViewRequests,
+  compact = false,
 }: Props) {
   const [opening, setOpening] = useState(false);
   const statusMap: Record<Listing["status"], string> = {
     active: "Active",
-    confirmed: "Swap confirmed",
+    confirmed: "Listing full",
     closed: listing.seatsAvailable === 0 ? "Group full" : "Closed",
   };
 
@@ -70,7 +72,7 @@ export function MyListingCard({
         {profileLine}
       </div>
 
-      <div className="mt-auto flex shrink-0 flex-col gap-3">
+      <div className={`${compact ? "mt-3" : "mt-auto"} flex shrink-0 flex-col gap-3`}>
         {memberUsers.length > 0 && (
           <div className="flex items-center gap-1.5">
             <span className="text-xs text-[var(--ink-soft)]">Dining with:</span>
@@ -138,7 +140,7 @@ export function MyListingCard({
         >
           <SketchCard
             seed={seedFrom(listing.id)}
-            className="flex h-full min-h-[13.2rem] flex-col gap-3 overflow-hidden p-5 transition-[transform,box-shadow] duration-200 ease-out group-hover:translate-x-3 group-hover:-translate-y-3 group-hover:shadow-[0_12px_26px_rgba(0,0,0,0.16)] group-focus-visible:translate-x-3 group-focus-visible:-translate-y-3 group-focus-visible:shadow-[0_12px_26px_rgba(0,0,0,0.16)] sm:min-h-[15.6rem]"
+            className={`flex flex-col gap-3 overflow-hidden p-5 transition-[transform,box-shadow] duration-200 ease-out group-hover:translate-x-3 group-hover:-translate-y-3 group-hover:shadow-[0_12px_26px_rgba(0,0,0,0.16)] group-focus-visible:translate-x-3 group-focus-visible:-translate-y-3 group-focus-visible:shadow-[0_12px_26px_rgba(0,0,0,0.16)] ${compact ? "" : "h-full min-h-[13.2rem] sm:min-h-[15.6rem]"}`}
           >
             {cardContent}
           </SketchCard>
@@ -152,7 +154,7 @@ export function MyListingCard({
     <>
       <SketchCard
         seed={seedFrom(listing.id)}
-        className="flex h-full min-h-[13.2rem] flex-col gap-3 overflow-hidden p-5 sm:min-h-[15.6rem]"
+        className={`flex flex-col gap-3 overflow-hidden p-5 ${compact ? "" : "h-full min-h-[13.2rem] sm:min-h-[15.6rem]"}`}
       >
         {cardContent}
       </SketchCard>

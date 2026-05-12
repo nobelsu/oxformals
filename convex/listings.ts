@@ -382,11 +382,8 @@ export const updateListing = mutation({
     if (listing.ownerUserId !== userId) {
       throw new Error("Only the owner can edit a listing.");
     }
-    if (listing.status !== "active") {
-      throw new Error("Only active listings can be edited.");
-    }
-    if (listing.members.length > 1) {
-      throw new Error("Cannot edit a listing that already has other members.");
+    if (listing.status === "closed") {
+      throw new Error("Closed listings cannot be edited.");
     }
 
     const patch: Partial<Doc<"listings">> = {};
@@ -400,8 +397,19 @@ export const updateListing = mutation({
     }
 
     if (args.groupSize !== undefined) {
+      if (args.groupSize < listing.members.length) {
+        throw new Error(
+          "Group size cannot be less than the current number of members.",
+        );
+      }
       patch.groupSize = args.groupSize;
-      patch.seatsAvailable = args.groupSize - listing.members.length;
+      const newSeats = args.groupSize - listing.members.length;
+      patch.seatsAvailable = newSeats;
+      if (newSeats === 0 && listing.status === "active") {
+        patch.status = "confirmed";
+      } else if (newSeats > 0 && listing.status === "confirmed") {
+        patch.status = "active";
+      }
     }
 
     if (args.message !== undefined) {
@@ -445,8 +453,8 @@ export const deleteListing = mutation({
     if (listing.ownerUserId !== userId) {
       throw new Error("Only the owner can delete a listing.");
     }
-    if (listing.status !== "active") {
-      throw new Error("Only active listings can be deleted.");
+    if (listing.status === "closed") {
+      throw new Error("Closed listings cannot be deleted.");
     }
 
     const pendingAsTarget = await ctx.db

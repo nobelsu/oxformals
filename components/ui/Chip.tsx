@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 type Props = {
   children: ReactNode;
   active?: boolean;
+  disabled?: boolean;
   onClick?: () => void;
   size?: "sm" | "md";
   as?: "button" | "span";
@@ -15,6 +16,7 @@ type Props = {
 export function Chip({
   children,
   active,
+  disabled,
   onClick,
   size = "md",
   as = "button",
@@ -34,9 +36,11 @@ export function Chip({
     active === true
       ? "bg-[var(--tag)] text-[var(--tag-ink)] border-[var(--tag)]"
       : "";
-  const hover = onClick
-    ? "transition-colors cursor-pointer hover:opacity-90"
-    : "";
+  const hover = disabled
+    ? "opacity-40 cursor-not-allowed"
+    : onClick
+      ? "transition-colors cursor-pointer hover:opacity-90"
+      : "";
 
   const base =
     "inline-flex items-center rounded-full leading-normal max-w-full";
@@ -50,7 +54,7 @@ export function Chip({
     return <span className={cls}>{inner}</span>;
   }
   return (
-    <button type="button" onClick={onClick} className={cls}>
+    <button type="button" onClick={onClick} disabled={disabled} className={cls}>
       {inner}
     </button>
   );
