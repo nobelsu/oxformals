@@ -29,6 +29,7 @@ function mapProfileListing(doc: {
   year: string;
   role: string;
   message: string;
+  menu?: string;
   status: "active" | "confirmed" | "closed";
 }): Listing {
   return {
@@ -42,6 +43,7 @@ function mapProfileListing(doc: {
     year: doc.year,
     role: doc.role,
     message: doc.message,
+    menu: doc.menu ?? "",
     status: doc.status,
     createdAt: doc._creationTime,
   };
