@@ -48,8 +48,16 @@ export function InterestsEditor() {
       <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
         <input
           type="text"
+          enterKeyHint="done"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              save();
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
           placeholder="rowing, punting, drawing"
           className="flex-1 rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base focus:outline-none"
         />
