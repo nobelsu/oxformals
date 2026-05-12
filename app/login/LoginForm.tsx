@@ -549,11 +549,11 @@ export function LoginForm() {
               </label>
             </div>
 
-            <label className="flex flex-col gap-2">
-              <span className="text-sm text-[var(--ink-muted)]">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="interest-input" className="text-sm text-[var(--ink-muted)]">
                 Interests{" "}
                 <span className="text-[var(--ink-soft)]">(press Enter to add)</span>
-              </span>
+              </label>
               <div className="rounded-3xl border-[2px] border-[var(--ink)] bg-[var(--paper)] px-3 py-3">
                 {interests.length > 0 ? (
                   <div className="mb-2 flex flex-wrap gap-2">
@@ -576,6 +576,7 @@ export function LoginForm() {
                   </div>
                 ) : null}
                 <input
+                  id="interest-input"
                   type="text"
                   value={interestInput}
                   onChange={(e) => setInterestInput(e.target.value)}
@@ -584,7 +585,7 @@ export function LoginForm() {
                   className="w-full border-0 bg-transparent px-1 py-1 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
                 />
               </div>
-            </label>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <label className="flex flex-col gap-2">

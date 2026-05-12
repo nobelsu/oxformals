@@ -17,6 +17,15 @@ const schoolbell = Schoolbell({
 export const metadata: Metadata = {
   title: "Oxformals",
   description: "Find your next formal.",
+  icons: {
+    icon: { url: "/logo.JPG", type: "image/jpeg" },
+    apple: { url: "/logo.JPG", type: "image/jpeg" },
+  },
+  openGraph: {
+    title: "Oxformals",
+    description: "Find your next formal.",
+    images: [{ url: "/logo.JPG" }],
+  },
 };
 
 export default function RootLayout({
