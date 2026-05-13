@@ -34,28 +34,3 @@ export const UI_FONT_OPTIONS: { id: UiFontId; label: string }[] = [
   { id: "arial", label: "Clean white" },
   { id: "system_ui", label: "Mint" },
 ];
-
-/** Map legacy experiment ids (or unknown) to a canonical `UiFontId`. */
-export function migrateUiFontValue(raw: unknown): UiFontId {
-  switch (raw) {
-    case "schoolbell":
-    case "inter":
-    case "dm_sans":
-    case "lora":
-    case "georgia":
-    case "arial":
-    case "system_ui":
-      return raw;
-    case "default":
-    case "comic_sans":
-      return "schoolbell";
-    case "helvetica":
-      return "inter";
-    case "garamond":
-      return "lora";
-    case "futura":
-      return "dm_sans";
-    default:
-      return "schoolbell";
-  }
-}

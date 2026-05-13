@@ -4,11 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
-import {
-  DEFAULT_UI_FONT,
-  migrateUiFontValue,
-  uiFontValidator,
-} from "./uiFont";
+import { DEFAULT_UI_FONT, uiFontValidator } from "./uiFont";
 
 const avatarValue = v.union(
   v.object({ kind: v.literal("preset"), id: v.string() }),
@@ -284,7 +280,7 @@ export const getPublicProfile = query({
             }
           : {}),
         dietaryRequirements: user.dietaryRequirements,
-        uiFont: migrateUiFontValue(user.uiFont),
+        uiFont: user.uiFont ?? DEFAULT_UI_FONT,
         avatar: user.avatar,
       },
       listings: activeListings.filter((l) => l.status === "active"),
@@ -367,21 +363,3 @@ export const backfillUiFont = internalMutation({
   },
 });
 
-export const migrateUiFontToV2026 = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const users = await ctx.db.query("users").take(100);
-    let patched = 0;
-    for (const user of users) {
-      const next = migrateUiFontValue(user.uiFont);
-      if (user.uiFont !== next) {
-        await ctx.db.patch(user._id, { uiFont: next });
-        patched++;
-      }
-    }
-    if (users.length === 100) {
-      await ctx.scheduler.runAfter(0, internal.users.migrateUiFontToV2026, {});
-    }
-    return { patched, scanned: users.length };
-  },
-});

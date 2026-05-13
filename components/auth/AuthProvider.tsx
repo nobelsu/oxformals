@@ -12,7 +12,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import type { SignInResult, SignupInput, User } from "@/lib/auth/types";
-import { DEFAULT_UI_FONT, migrateUiFontValue } from "@/convex/uiFont";
+import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 
 type Status = "hydrating" | "ready";
 const ADMIN_EMAIL = "admin@ox.ac.uk";
@@ -39,7 +39,7 @@ function mapDocToUser(doc: Doc<"users">): User {
     instagramHandle: doc.instagramHandle ?? "",
     whatsappPhone: doc.whatsappPhone ?? "",
     dietaryRequirements: doc.dietaryRequirements ?? "",
-    uiFont: migrateUiFontValue(doc.uiFont),
+    uiFont: doc.uiFont ?? DEFAULT_UI_FONT,
     ...(doc.avatar ? { avatar: doc.avatar } : {}),
     agreedToRules: doc.agreedToRules ?? false,
   };
@@ -125,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     document.documentElement.setAttribute(
       "data-ui-font",
-      migrateUiFontValue(convexUserDoc.uiFont),
+      convexUserDoc.uiFont ?? DEFAULT_UI_FONT,
     );
   }, [jwtAuthenticated, convexUserDoc]);
 

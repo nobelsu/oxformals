@@ -12,7 +12,7 @@ import { useAuth } from "@/components/auth/useAuth";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import type { User } from "@/lib/auth/types";
-import { DEFAULT_UI_FONT, migrateUiFontValue } from "@/convex/uiFont";
+import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import {
   dataClient,
   type NewListingInput,
@@ -69,7 +69,7 @@ function mapUser(doc: Doc<"users">): User {
     year: doc.year ?? "",
     role: doc.role ?? "",
     interests: doc.interests ?? [],
-    uiFont: migrateUiFontValue(doc.uiFont),
+    uiFont: doc.uiFont ?? DEFAULT_UI_FONT,
     ...(doc.instagramHandle ? { instagramHandle: doc.instagramHandle } : {}),
     ...(doc.whatsappPhone ? { whatsappPhone: doc.whatsappPhone } : {}),
     ...(doc.avatar ? { avatar: doc.avatar } : {}),
