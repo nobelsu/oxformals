@@ -13,9 +13,10 @@ import { Chip } from "@/components/ui/Chip";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { ListingCard } from "@/components/swap/ListingCard";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
-import { formatYearLabel } from "@/lib/data/format";
+import { migrateUiFontValue } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
 import type { Listing } from "@/lib/data/types";
+import { formatYearLabel } from "@/lib/data/format";
 
 function mapProfileListing(doc: {
   _id: string;
@@ -181,6 +182,7 @@ export function ProfileView({ userId }: { userId: string }) {
     year,
     role,
     interests,
+    uiFont: migrateUiFontValue(profileUser.uiFont),
     avatar,
   };
 

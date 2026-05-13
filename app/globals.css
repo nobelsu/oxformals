@@ -39,27 +39,257 @@
   --color-tag-ink: var(--tag-ink);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
-  --font-hand: var(--font-sans);
-  --font-display: var(--font-sans);
+  --font-hand: var(--font-app);
+  --font-display: var(--font-app);
 }
+
+/* --- Font stacks + paired color themes (light) --- */
 
 html {
   scrollbar-gutter: stable;
+  --font-app: var(--font-schoolbell), "Schoolbell", cursive;
+}
+
+html[data-ui-font="schoolbell"] {
+  --font-app: var(--font-schoolbell), "Schoolbell", cursive;
+  --bg: #f2ead8;
+  --paper: #f6efe0;
+  --ink: #1a140f;
+  --ink-muted: #5a4d40;
+  --ink-soft: #9a8c7a;
+  --tag: #20140d;
+  --tag-ink: #f6efe0;
+  --accent: #edbfba;
+  --accent-hover: #e3a9a2;
+  --accent-ink: #ffffff;
+  --danger: #c96360;
+}
+
+html[data-ui-font="inter"] {
+  --font-app: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --bg: #eef2f7;
+  --paper: #f7f9fc;
+  --ink: #0f172a;
+  --ink-muted: #475569;
+  --ink-soft: #94a3b8;
+  --tag: #1e293b;
+  --tag-ink: #f1f5f9;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-ink: #ffffff;
+  --danger: #dc2626;
+}
+
+html[data-ui-font="dm_sans"] {
+  --font-app: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --bg: #faf5f3;
+  --paper: #fff9f7;
+  --ink: #3d2a26;
+  --ink-muted: #7d5e58;
+  --ink-soft: #b89a94;
+  --tag: #4a322d;
+  --tag-ink: #fdf4f2;
+  --accent: #d4827e;
+  --accent-hover: #c46a66;
+  --accent-ink: #ffffff;
+  --danger: #b91c1c;
+}
+
+html[data-ui-font="lora"] {
+  --font-app: "Lora", Georgia, "Times New Roman", serif;
+  --bg: #f4f1ea;
+  --paper: #faf7f0;
+  --ink: #2c1810;
+  --ink-muted: #6b5344;
+  --ink-soft: #9a8575;
+  --tag: #3d281c;
+  --tag-ink: #f7f2e9;
+  --accent: #b8860b;
+  --accent-hover: #9a7209;
+  --accent-ink: #1a1208;
+  --danger: #8b2942;
+}
+
+html[data-ui-font="georgia"] {
+  --font-app: "Georgia", "Palatino Linotype", "Book Antiqua", "Palatino",
+    "Times New Roman", Times, serif;
+  --bg: #e8e4dc;
+  --paper: #f2efe8;
+  --ink: #111111;
+  --ink-muted: #4a4a4a;
+  --ink-soft: #737373;
+  --tag: #1c1917;
+  --tag-ink: #fafaf9;
+  --accent: #1e40af;
+  --accent-hover: #1d4ed8;
+  --accent-ink: #ffffff;
+  --danger: #b91c1c;
+}
+
+html[data-ui-font="arial"] {
+  --font-app: "Arial", "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
+  --bg: #ffffff;
+  --paper: #f5f5f5;
+  --ink: #171717;
+  --ink-muted: #525252;
+  --ink-soft: #a3a3a3;
+  --tag: #262626;
+  --tag-ink: #fafafa;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-ink: #ffffff;
+  --danger: #dc2626;
+}
+
+html[data-ui-font="system_ui"] {
+  --font-app: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --bg: #ecfdf5;
+  --paper: #f0fdf4;
+  --ink: #064e3b;
+  --ink-muted: #0f766e;
+  --ink-soft: #5eead4;
+  --tag: #134e4a;
+  --tag-ink: #ecfdf5;
+  --accent: #059669;
+  --accent-hover: #047857;
+  --accent-ink: #ffffff;
+  --danger: #be123c;
 }
 
 html,
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-sans), "Schoolbell", cursive;
+  font-family: var(--font-app);
   font-weight: 700;
   letter-spacing: 0.01em;
 }
 
+html[data-ui-font="inter"] body,
+html[data-ui-font="dm_sans"] body,
+html[data-ui-font="lora"] body,
+html[data-ui-font="georgia"] body,
+html[data-ui-font="arial"] body,
+html[data-ui-font="system_ui"] body {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
 .font-display {
-  font-family: var(--font-sans), "Schoolbell", cursive;
+  font-family: var(--font-app);
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+html[data-ui-font="inter"] .font-display,
+html[data-ui-font="dm_sans"] .font-display,
+html[data-ui-font="lora"] .font-display,
+html[data-ui-font="georgia"] .font-display,
+html[data-ui-font="arial"] .font-display,
+html[data-ui-font="system_ui"] .font-display {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-ui-font="schoolbell"] {
+    --bg: #1a140f;
+    --paper: #241b14;
+    --ink: #f2ead8;
+    --ink-muted: #c9bfb1;
+    --ink-soft: #8a7d70;
+    --tag: #f2ead8;
+    --tag-ink: #1a140f;
+    --accent: #edbfba;
+    --accent-hover: #e3a9a2;
+    --accent-ink: #1a140f;
+    --danger: #f87171;
+  }
+
+  html[data-ui-font="inter"] {
+    --bg: #0f172a;
+    --paper: #1e293b;
+    --ink: #e2e8f0;
+    --ink-muted: #94a3b8;
+    --ink-soft: #64748b;
+    --tag: #f1f5f9;
+    --tag-ink: #0f172a;
+    --accent: #60a5fa;
+    --accent-hover: #3b82f6;
+    --accent-ink: #0f172a;
+    --danger: #f87171;
+  }
+
+  html[data-ui-font="dm_sans"] {
+    --bg: #2a1f1d;
+    --paper: #352824;
+    --ink: #fce8e4;
+    --ink-muted: #d4a59a;
+    --ink-soft: #9a7269;
+    --tag: #fde8e4;
+    --tag-ink: #2a1f1d;
+    --accent: #f0a8a3;
+    --accent-hover: #e8928c;
+    --accent-ink: #2a1f1d;
+    --danger: #fca5a5;
+  }
+
+  html[data-ui-font="lora"] {
+    --bg: #1a1410;
+    --paper: #241c16;
+    --ink: #f4ede4;
+    --ink-muted: #c4b5a5;
+    --ink-soft: #8a7a6a;
+    --tag: #f7f0e6;
+    --tag-ink: #1a1410;
+    --accent: #d4a84b;
+    --accent-hover: #c49a3d;
+    --accent-ink: #1a1410;
+    --danger: #fb7185;
+  }
+
+  html[data-ui-font="georgia"] {
+    --bg: #171717;
+    --paper: #262626;
+    --ink: #fafafa;
+    --ink-muted: #a3a3a3;
+    --ink-soft: #737373;
+    --tag: #fafafa;
+    --tag-ink: #171717;
+    --accent: #93c5fd;
+    --accent-hover: #60a5fa;
+    --accent-ink: #171717;
+    --danger: #fca5a5;
+  }
+
+  html[data-ui-font="arial"] {
+    --bg: #0a0a0a;
+    --paper: #171717;
+    --ink: #fafafa;
+    --ink-muted: #a3a3a3;
+    --ink-soft: #737373;
+    --tag: #fafafa;
+    --tag-ink: #0a0a0a;
+    --accent: #60a5fa;
+    --accent-hover: #3b82f6;
+    --accent-ink: #0a0a0a;
+    --danger: #f87171;
+  }
+
+  html[data-ui-font="system_ui"] {
+    --bg: #022c22;
+    --paper: #064e3b;
+    --ink: #ecfdf5;
+    --ink-muted: #99f6e4;
+    --ink-soft: #2dd4bf;
+    --tag: #ecfdf5;
+    --tag-ink: #022c22;
+    --accent: #34d399;
+    --accent-hover: #10b981;
+    --accent-ink: #022c22;
+    --danger: #fda4af;
+  }
 }
 
 ::selection {

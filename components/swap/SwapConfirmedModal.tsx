@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useQuery } from "convex/react";
 import { Modal } from "@/components/ui/Modal";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import type { User } from "@/lib/auth/types";
 import { formatListingDate } from "@/lib/data/format";
 import type { Listing } from "@/lib/data/types";
@@ -12,6 +15,8 @@ type Props = {
   myListing: Listing | null;
   theirListing: Listing | null;
   otherUser: User | null;
+  /** Used to load gated contact via the same query as the public profile. */
+  otherUserId: string | null;
 };
 
 export function SwapConfirmedModal({
@@ -20,10 +25,24 @@ export function SwapConfirmedModal({
   myListing,
   theirListing,
   otherUser,
+  otherUserId,
 }: Props) {
-  const instagramHandle = otherUser?.instagramHandle?.trim() ?? "";
-  const whatsappPhone = otherUser?.whatsappPhone?.trim() ?? "";
+  const gatedProfile = useQuery(
+    api.users.getPublicProfile,
+    open && otherUserId ? { userId: otherUserId as Id<"users"> } : "skip",
+  );
+
+  const instagramHandle =
+    gatedProfile?.user != null
+      ? (gatedProfile.user.instagramHandle ?? "").trim()
+      : "";
+  const whatsappPhone =
+    gatedProfile?.user != null
+      ? (gatedProfile.user.whatsappPhone ?? "").trim()
+      : "";
   const normalizedInstagram = instagramHandle.replace(/^@+/, "");
+  const contactLoading =
+    open && otherUserId !== null && gatedProfile === undefined;
 
   return (
     <Modal open={open} onClose={onClose}>
@@ -54,7 +73,9 @@ export function SwapConfirmedModal({
             <div className="mt-3 flex flex-col gap-2 text-sm">
               <p className="text-[var(--ink-muted)]">
                 <span className="text-[var(--ink)]">Instagram:</span>{" "}
-                {normalizedInstagram ? (
+                {contactLoading ? (
+                  <span className="text-[var(--ink-soft)]">Loading…</span>
+                ) : normalizedInstagram ? (
                   <a
                     href={`https://instagram.com/${normalizedInstagram}`}
                     target="_blank"
@@ -69,7 +90,9 @@ export function SwapConfirmedModal({
               </p>
               <p className="text-[var(--ink-muted)]">
                 <span className="text-[var(--ink)]">WhatsApp:</span>{" "}
-                {whatsappPhone ? (
+                {contactLoading ? (
+                  <span className="text-[var(--ink-soft)]">Loading…</span>
+                ) : whatsappPhone ? (
                   <a
                     href={`https://wa.me/${whatsappPhone.replace(/[^\d+]/g, "")}`}
                     target="_blank"

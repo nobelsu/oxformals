@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
+import { uiFontValidator } from "./uiFont";
 
 const avatar = v.optional(
   v.union(
@@ -28,6 +29,7 @@ export default defineSchema({
     dietaryRequirements: v.optional(v.string()),
     wishlistColleges: v.optional(v.array(v.string())),
     agreedToRules: v.optional(v.boolean()),
+    uiFont: v.optional(uiFontValidator),
     avatar,
   })
     .index("email", ["email"])

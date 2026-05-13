@@ -265,6 +265,7 @@ export function BrowseTab({
         otherUser={
           confirmed?.otherUserId ? (getUser(confirmed.otherUserId) ?? null) : null
         }
+        otherUserId={confirmed?.otherUserId ?? null}
       />
 
       <Modal

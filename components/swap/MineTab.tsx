@@ -14,9 +14,13 @@ export function MineTab() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [profileSave, setProfileSave] = useState<(() => Promise<void>) | null>(null);
+  const [profileCancel, setProfileCancel] = useState<(() => void) | null>(null);
   const [wishlistSave, setWishlistSave] = useState<(() => Promise<void>) | null>(null);
   const registerProfileSave = useCallback((saveFn: () => Promise<void>) => {
     setProfileSave(() => saveFn);
+  }, []);
+  const registerProfileCancel = useCallback((cancelFn: () => void) => {
+    setProfileCancel(() => cancelFn);
   }, []);
   const registerWishlistSave = useCallback((saveFn: () => Promise<void>) => {
     setWishlistSave(() => saveFn);
@@ -47,6 +51,7 @@ export function MineTab() {
       <ProfileEditor
         onDirtyChange={setProfileDirty}
         registerSave={registerProfileSave}
+        registerCancel={registerProfileCancel}
       />
 
       <WishlistChips
@@ -56,7 +61,15 @@ export function MineTab() {
         registerSave={registerWishlistSave}
       />
       {hasUnsavedChanges || saving || saved ? (
-        <div className="fixed bottom-6 right-6 z-50">
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={() => profileCancel?.()}
+            disabled={saving || !profileDirty}
+            className="cursor-pointer rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-6 py-3.5 text-base font-semibold text-[var(--ink)] shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-200 hover:bg-[var(--paper)] disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/80 dark:bg-[var(--bg)] dark:text-[var(--ink)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.45)] dark:hover:bg-white/10"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             onClick={() => void handleSaveAll()}

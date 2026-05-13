@@ -83,9 +83,10 @@ async function fileToSquareDataUrl(file: File): Promise<string | null> {
 type Props = {
   onDirtyChange?: (dirty: boolean) => void;
   registerSave?: (saveFn: () => Promise<void>) => void;
+  registerCancel?: (cancelFn: () => void) => void;
 };
 
-export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
+export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: Props) {
   const { user, updateProfile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const collegePickerRef = useRef<HTMLDivElement | null>(null);
@@ -118,7 +119,7 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
+  const resetDraftsFromUser = useCallback(() => {
     if (!user) return;
     setNameDraft(user.name);
     const normalizedCollege =
@@ -132,7 +133,17 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
     setDietaryRequirementsDraft(user.dietaryRequirements ?? "");
     setInterestsDraft(user.interests);
     setAvatarDraft(user.avatar);
+    setCollegePickerOpen(false);
+    setRolePickerOpen(false);
+    setError(null);
+    setInterestInput("");
   }, [user]);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      resetDraftsFromUser();
+    });
+  }, [user, resetDraftsFromUser]);
 
   useEffect(() => {
     if (!collegePickerOpen && !rolePickerOpen) return;
@@ -291,6 +302,12 @@ export function ProfileEditor({ onDirtyChange, registerSave }: Props) {
       await save();
     });
   }, [registerSave, profileDirty, busy, save]);
+
+  useEffect(() => {
+    registerCancel?.(() => {
+      resetDraftsFromUser();
+    });
+  }, [registerCancel, resetDraftsFromUser]);
 
   if (!user) return null;
 

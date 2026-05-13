@@ -3,6 +3,12 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
+import {
+  DEFAULT_UI_FONT,
+  migrateUiFontValue,
+  uiFontValidator,
+} from "./uiFont";
 
 const avatarValue = v.union(
   v.object({ kind: v.literal("preset"), id: v.string() }),
@@ -10,6 +16,80 @@ const avatarValue = v.union(
 );
 
 const avatarOrClear = v.optional(v.union(avatarValue, v.null()));
+
+async function swapHasUpcomingFormal(
+  ctx: QueryCtx,
+  targetListingId: Id<"listings">,
+  offeringListingId: Id<"listings">,
+  nowMs: number,
+): Promise<boolean> {
+  const target = await ctx.db.get(targetListingId);
+  const offering = await ctx.db.get(offeringListingId);
+  if (!target || !offering) return false;
+  const t = Date.parse(target.dateTime);
+  const o = Date.parse(offering.dateTime);
+  if (Number.isNaN(t) || Number.isNaN(o)) return false;
+  return t > nowMs || o > nowMs;
+}
+
+/** Whether the viewer may see profile contact fields for profileUserId (trusted server time). */
+async function hasRevealableContact(
+  ctx: QueryCtx,
+  viewerId: Id<"users"> | null,
+  profileUserId: Id<"users">,
+  nowMs: number,
+): Promise<boolean> {
+  if (!viewerId) return false;
+  if (viewerId === profileUserId) return true;
+
+  const fromViewer = await ctx.db
+    .query("requests")
+    .withIndex("by_fromUserId", (q) => q.eq("fromUserId", viewerId))
+    .take(200);
+  for (const r of fromViewer) {
+    if (r.status !== "accepted" || r.toUserId !== profileUserId) continue;
+    if (
+      await swapHasUpcomingFormal(
+        ctx,
+        r.targetListingId,
+        r.offeringListingId,
+        nowMs,
+      )
+    ) {
+      return true;
+    }
+  }
+
+  const fromProfile = await ctx.db
+    .query("requests")
+    .withIndex("by_fromUserId", (q) => q.eq("fromUserId", profileUserId))
+    .take(200);
+  for (const r of fromProfile) {
+    if (r.status !== "accepted" || r.toUserId !== viewerId) continue;
+    if (
+      await swapHasUpcomingFormal(
+        ctx,
+        r.targetListingId,
+        r.offeringListingId,
+        nowMs,
+      )
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function userWithoutPublicContact(user: Doc<"users">): Omit<
+  Doc<"users">,
+  "instagramHandle" | "whatsappPhone"
+> {
+  const copy = { ...user };
+  delete copy.instagramHandle;
+  delete copy.whatsappPhone;
+  return copy;
+}
 
 export const current = query({
   args: {},
@@ -23,7 +103,8 @@ export const current = query({
 export const listPublic = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("users").take(200);
+    const users = await ctx.db.query("users").take(200);
+    return users.map(userWithoutPublicContact);
   },
 });
 
@@ -70,6 +151,7 @@ export const completeOnboarding = mutation({
       instagramHandle: args.instagramHandle?.trim() || undefined,
       whatsappPhone: args.whatsappPhone?.trim() || undefined,
       dietaryRequirements: args.dietaryRequirements?.trim() ?? "",
+      uiFont: DEFAULT_UI_FONT,
     });
 
     return userId;
@@ -95,6 +177,7 @@ export const patchProfile = mutation({
     instagramHandle: v.optional(v.string()),
     whatsappPhone: v.optional(v.string()),
     dietaryRequirements: v.optional(v.string()),
+    uiFont: v.optional(uiFontValidator),
     avatar: avatarOrClear,
   },
   handler: async (ctx, args) => {
@@ -112,6 +195,7 @@ export const patchProfile = mutation({
         | "instagramHandle"
         | "whatsappPhone"
         | "dietaryRequirements"
+        | "uiFont"
         | "avatar"
       >
     >;
@@ -142,6 +226,9 @@ export const patchProfile = mutation({
     if (args.dietaryRequirements !== undefined) {
       patch.dietaryRequirements = args.dietaryRequirements.trim();
     }
+    if (args.uiFont !== undefined) {
+      patch.uiFont = args.uiFont;
+    }
     if (args.avatar !== undefined) {
       patch.avatar =
         args.avatar === null ? undefined : (args.avatar as Doc<"users">["avatar"]);
@@ -167,6 +254,16 @@ export const getPublicProfile = query({
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
 
+    const viewerId = await getAuthUserId(ctx);
+    /* Trusted server time for contact privacy; client-supplied `now` would be spoofable. */
+    const nowMs = Date.now();
+    const revealContact = await hasRevealableContact(
+      ctx,
+      viewerId,
+      args.userId,
+      nowMs,
+    );
+
     const activeListings = await ctx.db
       .query("listings")
       .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", args.userId))
@@ -180,9 +277,14 @@ export const getPublicProfile = query({
         year: user.year,
         role: user.role,
         interests: user.interests,
-        instagramHandle: user.instagramHandle,
-        whatsappPhone: user.whatsappPhone,
+        ...(revealContact
+          ? {
+              instagramHandle: user.instagramHandle,
+              whatsappPhone: user.whatsappPhone,
+            }
+          : {}),
         dietaryRequirements: user.dietaryRequirements,
+        uiFont: migrateUiFontValue(user.uiFont),
         avatar: user.avatar,
       },
       listings: activeListings.filter((l) => l.status === "active"),
@@ -244,5 +346,42 @@ export const backfillDietaryRequirements = internalMutation({
       await ctx.scheduler.runAfter(0, internal.users.backfillDietaryRequirements, {});
     }
     return { patched };
+  },
+});
+
+export const backfillUiFont = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").take(100);
+    let patched = 0;
+    for (const user of users) {
+      if (user.uiFont === undefined) {
+        await ctx.db.patch(user._id, { uiFont: DEFAULT_UI_FONT });
+        patched++;
+      }
+    }
+    if (users.length === 100) {
+      await ctx.scheduler.runAfter(0, internal.users.backfillUiFont, {});
+    }
+    return { patched, scanned: users.length };
+  },
+});
+
+export const migrateUiFontToV2026 = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").take(100);
+    let patched = 0;
+    for (const user of users) {
+      const next = migrateUiFontValue(user.uiFont);
+      if (user.uiFont !== next) {
+        await ctx.db.patch(user._id, { uiFont: next });
+        patched++;
+      }
+    }
+    if (users.length === 100) {
+      await ctx.scheduler.runAfter(0, internal.users.migrateUiFontToV2026, {});
+    }
+    return { patched, scanned: users.length };
   },
 });

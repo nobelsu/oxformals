@@ -1,3 +1,5 @@
+import type { UiFontId } from "@/convex/uiFont";
+
 export type AvatarSource =
   | { kind: "image"; dataUrl: string }
   | { kind: "preset"; id: string };
@@ -14,6 +16,8 @@ export type User = {
   instagramHandle?: string;
   whatsappPhone?: string;
   dietaryRequirements?: string;
+  /** App UI font preference; persisted on Convex `users.uiFont`. */
+  uiFont: UiFontId;
   avatar?: AvatarSource;
   agreedToRules?: boolean;
 };

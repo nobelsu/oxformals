@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useAuth } from "./auth/useAuth";
+import { NavSettingsModal } from "./NavSettingsModal";
 
 const TABS = [
   { id: "browse", label: "Browse" },
@@ -32,6 +33,7 @@ function NavShell() {
 
 function NavInner() {
   const { status, isAuthenticated, user, signOut } = useAuth();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -87,6 +89,32 @@ function NavInner() {
               >
                 Sign out
               </button>
+              <button
+                type="button"
+                aria-label="Settings"
+                aria-expanded={settingsOpen}
+                aria-controls="nav-settings-panel"
+                onClick={() => setSettingsOpen(true)}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                </svg>
+              </button>
+              <NavSettingsModal
+                open={settingsOpen}
+                onClose={() => setSettingsOpen(false)}
+              />
             </>
           ) : (
             <Link

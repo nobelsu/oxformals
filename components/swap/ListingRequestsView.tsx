@@ -410,6 +410,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
         otherUser={
           confirmed?.otherUserId ? (getUser(confirmed.otherUserId) ?? null) : null
         }
+        otherUserId={confirmed?.otherUserId ?? null}
       />
 
       <ConfirmDialog

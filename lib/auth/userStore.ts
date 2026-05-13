@@ -1,5 +1,6 @@
 import { readJSON, writeJSON } from "./storage";
 import type { SignupInput, User } from "./types";
+import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 
 const USERS_KEY = "formalpal.users";
 
@@ -14,6 +15,7 @@ function hydrate(raw: Partial<User> & { id: string; email: string }): User {
     year: raw.year ?? "",
     role: raw.role ?? "",
     interests: Array.isArray(raw.interests) ? raw.interests : [],
+    uiFont: raw.uiFont ?? DEFAULT_UI_FONT,
     avatar: raw.avatar,
   };
 }
@@ -68,6 +70,7 @@ export const userStore = {
       year: input.year,
       role: input.role,
       interests: input.interests ?? [],
+      uiFont: DEFAULT_UI_FONT,
       avatar: undefined,
     };
     save([...users, created]);

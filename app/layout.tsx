@@ -9,7 +9,7 @@ import { Nav } from "@/components/Nav";
 import { OnboardingOverlay } from "@/components/onboarding/OnboardingOverlay";
 
 const schoolbell = Schoolbell({
-  variable: "--font-sans",
+  variable: "--font-schoolbell",
   subsets: ["latin"],
   weight: "400",
 });
@@ -31,6 +31,10 @@ export const metadata: Metadata = {
   },
 };
 
+/** Self-hosted Schoolbell; Inter / DM Sans / Lora load via stylesheet so `font-family: "Inter"` etc. always resolve. */
+const googleUiFontsHref =
+  "https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Inter:ital,opsz,wght@0,14..32,400..700;1,14..32,400..700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,10 +42,16 @@ export default function RootLayout({
 }>) {
   return (
     <ConvexAuthNextjsServerProvider>
-      <html
-        lang="en"
-        className={`${schoolbell.variable} h-full antialiased`}
-      >
+      <html lang="en" className={`${schoolbell.variable} h-full antialiased`}>
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin="anonymous"
+          />
+          <link rel="stylesheet" href={googleUiFontsHref} />
+        </head>
         <body className="min-h-full flex flex-col">
           <ConvexClientProvider>
             <AuthProvider>

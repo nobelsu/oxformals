@@ -4,6 +4,7 @@ import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import {
   createContext,
   useCallback,
+  useEffect,
   useMemo,
   type ReactNode,
 } from "react";
@@ -11,6 +12,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import type { SignInResult, SignupInput, User } from "@/lib/auth/types";
+import { DEFAULT_UI_FONT, migrateUiFontValue } from "@/convex/uiFont";
 
 type Status = "hydrating" | "ready";
 const ADMIN_EMAIL = "admin@ox.ac.uk";
@@ -37,6 +39,7 @@ function mapDocToUser(doc: Doc<"users">): User {
     instagramHandle: doc.instagramHandle ?? "",
     whatsappPhone: doc.whatsappPhone ?? "",
     dietaryRequirements: doc.dietaryRequirements ?? "",
+    uiFont: migrateUiFontValue(doc.uiFont),
     ...(doc.avatar ? { avatar: doc.avatar } : {}),
     agreedToRules: doc.agreedToRules ?? false,
   };
@@ -108,6 +111,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ? convexUserDoc.email
       : null;
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (!jwtAuthenticated || convexUserDoc === undefined) {
+      if (!jwtAuthenticated) {
+        document.documentElement.removeAttribute("data-ui-font");
+      }
+      return;
+    }
+    if (convexUserDoc === null) {
+      document.documentElement.removeAttribute("data-ui-font");
+      return;
+    }
+    document.documentElement.setAttribute(
+      "data-ui-font",
+      migrateUiFontValue(convexUserDoc.uiFont),
+    );
+  }, [jwtAuthenticated, convexUserDoc]);
+
   const requestCode = useCallback(
     async (email: string) => {
       const trimmed = email.trim();
@@ -158,6 +179,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         interests: input.interests ?? [],
         instagramHandle: input.instagramHandle?.trim() ?? "",
         whatsappPhone: input.whatsappPhone?.trim() ?? "",
+        dietaryRequirements: "",
+        uiFont: DEFAULT_UI_FONT,
+        agreedToRules: false,
       } satisfies User;
     },
     [completeOnboardingMut, convexUserDoc?.email],
@@ -182,6 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         instagramHandle?: string;
         whatsappPhone?: string;
         dietaryRequirements?: string;
+        uiFont?: User["uiFont"];
         avatar?: User["avatar"] | null;
       } = {};
 
@@ -199,6 +224,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (patch.dietaryRequirements !== undefined) {
         payload.dietaryRequirements = patch.dietaryRequirements;
       }
+      if (patch.uiFont !== undefined) {
+        payload.uiFont = patch.uiFont;
+      }
       if (Object.prototype.hasOwnProperty.call(patch, "avatar")) {
         payload.avatar = patch.avatar ?? null;
       }
@@ -213,6 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...user,
         ...patch,
         interests: patch.interests ?? user.interests,
+        uiFont: patch.uiFont ?? user.uiFont,
         avatar: Object.prototype.hasOwnProperty.call(patch, "avatar")
           ? patch.avatar
           : user.avatar,
