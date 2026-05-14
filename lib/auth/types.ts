@@ -16,6 +16,8 @@ export type User = {
   instagramHandle?: string;
   whatsappPhone?: string;
   dietaryRequirements?: string;
+  /** Degree / course subject (optional). */
+  subject: string;
   /** App UI font preference; persisted on Convex `users.uiFont`. */
   uiFont: UiFontId;
   avatar?: AvatarSource;

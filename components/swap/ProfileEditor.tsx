@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { Avatar, PRESET_AVATARS, PresetAvatarIcon } from "@/components/ui/Avatar";
+import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
 import { SketchCard } from "@/components/ui/SketchCard";
 import type { AvatarSource } from "@/lib/auth/types";
 import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
@@ -24,25 +25,6 @@ const MAX_INTEREST_LENGTH = 40;
 
 function normalizeInterest(raw: string): string {
   return raw.trim().replace(/\s+/g, " ").slice(0, MAX_INTEREST_LENGTH);
-}
-
-function renderHighlightedMatch(label: string, query: string) {
-  const q = query.trim();
-  if (!q) return label;
-  const lowerLabel = label.toLowerCase();
-  const lowerQuery = q.toLowerCase();
-  const start = lowerLabel.indexOf(lowerQuery);
-  if (start < 0) return label;
-  const end = start + q.length;
-  return (
-    <>
-      {label.slice(0, start)}
-      <mark className="rounded bg-[var(--accent)]/25 px-0.5 text-current">
-        {label.slice(start, end)}
-      </mark>
-      {label.slice(end)}
-    </>
-  );
 }
 
 async function fileToSquareDataUrl(file: File): Promise<string | null> {
@@ -89,12 +71,10 @@ type Props = {
 export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: Props) {
   const { user, updateProfile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const collegePickerRef = useRef<HTMLDivElement | null>(null);
   const rolePickerRef = useRef<HTMLDivElement | null>(null);
 
   const [nameDraft, setNameDraft] = useState(user?.name ?? "");
   const [collegeDraft, setCollegeDraft] = useState(user?.college ?? "");
-  const [collegeSearch, setCollegeSearch] = useState("");
   const [collegePickerOpen, setCollegePickerOpen] = useState(false);
   const [yearDraft, setYearDraft] = useState(user?.year ?? "");
   const [roleDraft, setRoleDraft] = useState(user?.role ?? "");
@@ -107,6 +87,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
   const [dietaryRequirementsDraft, setDietaryRequirementsDraft] = useState(
     user?.dietaryRequirements ?? "",
   );
+  const [subjectDraft, setSubjectDraft] = useState(user?.subject ?? "");
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [interestsDraft, setInterestsDraft] = useState<string[]>(
     user?.interests ?? [],
@@ -125,12 +106,12 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     const normalizedCollege =
       normalizeCollegeName(user.college) || user.college.trim();
     setCollegeDraft(normalizedCollege);
-    setCollegeSearch(normalizedCollege);
     setYearDraft(user.year);
     setRoleDraft(user.role);
     setInstagramHandleDraft(user.instagramHandle ?? "");
     setWhatsappPhoneDraft(user.whatsappPhone ?? "");
     setDietaryRequirementsDraft(user.dietaryRequirements ?? "");
+    setSubjectDraft(user.subject ?? "");
     setInterestsDraft(user.interests);
     setAvatarDraft(user.avatar);
     setCollegePickerOpen(false);
@@ -146,25 +127,19 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
   }, [user, resetDraftsFromUser]);
 
   useEffect(() => {
-    if (!collegePickerOpen && !rolePickerOpen) return;
+    if (!rolePickerOpen) return;
     function handlePointerDown(event: MouseEvent) {
       const target = event.target as Node;
-      const clickedOutsideCollege = collegePickerRef.current
-        ? !collegePickerRef.current.contains(target)
-        : true;
       const clickedOutsideRole = rolePickerRef.current
         ? !rolePickerRef.current.contains(target)
         : true;
-      if (clickedOutsideCollege) {
-        setCollegePickerOpen(false);
-      }
       if (clickedOutsideRole) {
         setRolePickerOpen(false);
       }
     }
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [collegePickerOpen, rolePickerOpen]);
+  }, [rolePickerOpen]);
 
   const collegeSelectOptions = useMemo(() => {
     const c = collegeDraft.trim();
@@ -174,13 +149,10 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     return [...OXFORD_COLLEGES];
   }, [collegeDraft]);
 
-  const filteredCollegeOptions = useMemo(() => {
-    const q = collegeSearch.trim().toLowerCase();
-    if (!q) return collegeSelectOptions;
-    return collegeSelectOptions.filter((college) =>
-      college.toLowerCase().includes(q),
-    );
-  }, [collegeSearch, collegeSelectOptions]);
+  const collegeComboboxOptions = useMemo(
+    () => collegeSelectOptions.map((c) => ({ value: c, label: c })),
+    [collegeSelectOptions],
+  );
 
   const roleSelectOptions = useMemo(() => {
     const role = roleDraft.trim();
@@ -203,6 +175,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
   const initialInstagramHandle = user?.instagramHandle?.trim() ?? "";
   const initialWhatsappPhone = user?.whatsappPhone?.trim() ?? "";
   const initialDietaryRequirements = user?.dietaryRequirements?.trim() ?? "";
+  const initialSubject = user?.subject?.trim() ?? "";
   const initialInterests = user?.interests ?? [];
   const initialAvatar = user?.avatar;
 
@@ -214,6 +187,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     instagramHandleDraft.trim() !== initialInstagramHandle ||
     whatsappPhoneDraft.trim() !== initialWhatsappPhone ||
     dietaryRequirementsDraft.trim() !== initialDietaryRequirements ||
+    subjectDraft.trim() !== initialSubject ||
     JSON.stringify(interestsDraft) !== JSON.stringify(initialInterests) ||
     JSON.stringify(avatarDraft ?? null) !== JSON.stringify(initialAvatar ?? null);
 
@@ -268,6 +242,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
         instagramHandle: instagramHandleDraft.trim(),
         whatsappPhone: whatsappPhoneDraft.trim(),
         dietaryRequirements: dietaryRequirementsDraft.trim(),
+        subject: subjectDraft.trim(),
         avatar: avatarDraft,
         interests: interestsDraft,
       });
@@ -288,6 +263,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     instagramHandleDraft,
     whatsappPhoneDraft,
     dietaryRequirementsDraft,
+    subjectDraft,
     avatarDraft,
     interestsDraft,
   ]);
@@ -363,77 +339,20 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
             <div className="flex gap-4">
               <label className="flex flex-[2] flex-col gap-2">
                 <span className="text-sm text-[var(--ink-muted)]">College</span>
-                <div ref={collegePickerRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCollegePickerOpen((open) => !open);
-                      setRolePickerOpen(false);
-                      setCollegeSearch(collegeDraft);
-                    }}
-                    className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 pr-12 text-left text-base text-[var(--ink)] focus:outline-none"
-                  >
-                    {collegeDraft || "Choose college"}
-                  </button>
-                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]">
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 12 8"
-                      className="h-3.5 w-3.5"
-                      fill="none"
-                    >
-                      <path
-                        d="M1 1.5 6 6.5 11 1.5"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </span>
-                  {collegePickerOpen ? (
-                    <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--bg)] p-2 shadow-sm">
-                      <input
-                        type="text"
-                        value={collegeSearch}
-                        onChange={(e) => setCollegeSearch(e.target.value)}
-                        placeholder="Search college"
-                        className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-                      />
-                      <div className="mt-2 max-h-48 overflow-y-auto">
-                        {filteredCollegeOptions.length > 0 ? (
-                          <div className="flex flex-col gap-1">
-                            {filteredCollegeOptions.map((college) => {
-                              const selected = college === collegeDraft;
-                              return (
-                                <button
-                                  key={college}
-                                  type="button"
-                                  onClick={() => {
-                                    setCollegeDraft(college);
-                                    setCollegeSearch(college);
-                                    setCollegePickerOpen(false);
-                                  }}
-                                  className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                                    selected
-                                      ? "bg-[var(--ink)] text-[var(--bg)]"
-                                      : "text-[var(--ink)] hover:bg-[var(--paper)]"
-                                  }`}
-                                >
-                                  {renderHighlightedMatch(college, collegeSearch)}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <p className="px-2 py-2 text-sm text-[var(--ink-muted)]">
-                            No colleges match that search.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
+                <OutlineCombobox
+                  open={collegePickerOpen}
+                  onOpenChange={(next) => {
+                    setCollegePickerOpen(next);
+                    if (next) setRolePickerOpen(false);
+                  }}
+                  value={collegeDraft}
+                  options={collegeComboboxOptions}
+                  onChange={(v) => {
+                    setCollegeDraft(v);
+                    setCollegePickerOpen(false);
+                  }}
+                  placeholder="Choose college"
+                />
               </label>
 
               <label className="flex flex-1 flex-col gap-2">
@@ -539,18 +458,31 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
               />
             </label>
 
-            <label className="flex flex-col gap-2">
-              <span className="text-sm text-[var(--ink-muted)]">
-                Allergens / Dietary requirements
-              </span>
-              <input
-                type="text"
-                value={dietaryRequirementsDraft}
-                onChange={(e) => setDietaryRequirementsDraft(e.target.value)}
-                placeholder="e.g. Vegetarian, nut allergy"
-                className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-              />
-            </label>
+            <div className="flex gap-4">
+              <label className="flex min-w-0 flex-1 flex-col gap-2">
+                <span className="text-sm text-[var(--ink-muted)]">
+                  Allergens / Dietary requirements
+                </span>
+                <input
+                  type="text"
+                  value={dietaryRequirementsDraft}
+                  onChange={(e) => setDietaryRequirementsDraft(e.target.value)}
+                  placeholder="e.g. Vegetarian, nut allergy"
+                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+                />
+              </label>
+
+              <label className="flex min-w-0 flex-1 flex-col gap-2">
+                <span className="text-sm text-[var(--ink-muted)]">Subject</span>
+                <input
+                  type="text"
+                  value={subjectDraft}
+                  onChange={(e) => setSubjectDraft(e.target.value)}
+                  placeholder="e.g. PPE, Engineering"
+                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+                />
+              </label>
+            </div>
           </div>
 
           <div className="flex w-full max-w-[22rem] flex-col items-center gap-4 self-center lg:w-[22rem] lg:shrink-0">

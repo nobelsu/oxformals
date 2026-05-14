@@ -23,6 +23,15 @@ export function formatShortDate(iso: string): string {
   }).format(d);
 }
 
+/** `YYYY-MM-DD` in the user's local timezone (for `<input type="date">` comparison). */
+export function isoToLocalDateKey(iso: string): string {
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export function formatRelativeTime(ts: number): string {
   const diff = Date.now() - ts;
   const mins = Math.round(diff / 60000);

@@ -147,6 +147,7 @@ export const completeOnboarding = mutation({
       instagramHandle: args.instagramHandle?.trim() || undefined,
       whatsappPhone: args.whatsappPhone?.trim() || undefined,
       dietaryRequirements: args.dietaryRequirements?.trim() ?? "",
+      subject: "",
       uiFont: DEFAULT_UI_FONT,
     });
 
@@ -173,6 +174,7 @@ export const patchProfile = mutation({
     instagramHandle: v.optional(v.string()),
     whatsappPhone: v.optional(v.string()),
     dietaryRequirements: v.optional(v.string()),
+    subject: v.optional(v.string()),
     uiFont: v.optional(uiFontValidator),
     avatar: avatarOrClear,
   },
@@ -191,6 +193,7 @@ export const patchProfile = mutation({
         | "instagramHandle"
         | "whatsappPhone"
         | "dietaryRequirements"
+        | "subject"
         | "uiFont"
         | "avatar"
       >
@@ -221,6 +224,9 @@ export const patchProfile = mutation({
     }
     if (args.dietaryRequirements !== undefined) {
       patch.dietaryRequirements = args.dietaryRequirements.trim();
+    }
+    if (args.subject !== undefined) {
+      patch.subject = args.subject.trim();
     }
     if (args.uiFont !== undefined) {
       patch.uiFont = args.uiFont;
@@ -280,6 +286,7 @@ export const getPublicProfile = query({
             }
           : {}),
         dietaryRequirements: user.dietaryRequirements,
+        subject: user.subject ?? "",
         uiFont: user.uiFont ?? DEFAULT_UI_FONT,
         avatar: user.avatar,
       },
@@ -358,6 +365,24 @@ export const backfillUiFont = internalMutation({
     }
     if (users.length === 100) {
       await ctx.scheduler.runAfter(0, internal.users.backfillUiFont, {});
+    }
+    return { patched, scanned: users.length };
+  },
+});
+
+export const backfillSubject = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").take(100);
+    let patched = 0;
+    for (const user of users) {
+      if (user.subject === undefined) {
+        await ctx.db.patch(user._id, { subject: "" });
+        patched++;
+      }
+    }
+    if (users.length === 100) {
+      await ctx.scheduler.runAfter(0, internal.users.backfillSubject, {});
     }
     return { patched, scanned: users.length };
   },

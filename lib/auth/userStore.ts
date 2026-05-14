@@ -15,6 +15,7 @@ function hydrate(raw: Partial<User> & { id: string; email: string }): User {
     year: raw.year ?? "",
     role: raw.role ?? "",
     interests: Array.isArray(raw.interests) ? raw.interests : [],
+    subject: raw.subject ?? "",
     uiFont: raw.uiFont ?? DEFAULT_UI_FONT,
     avatar: raw.avatar,
   };
@@ -70,6 +71,7 @@ export const userStore = {
       year: input.year,
       role: input.role,
       interests: input.interests ?? [],
+      subject: "",
       uiFont: DEFAULT_UI_FONT,
       avatar: undefined,
     };

@@ -161,6 +161,7 @@ export function ProfileView({ userId }: { userId: string }) {
   const instagramHandle = (profileUser.instagramHandle ?? "").replace(/^@+/, "");
   const whatsappPhone = (profileUser.whatsappPhone ?? "").trim();
   const dietaryRequirements = (profileUser.dietaryRequirements ?? "").trim();
+  const subject = (profileUser.subject ?? "").trim();
   const avatar = profileUser.avatar as AvatarSource | undefined;
 
   const profileLine = [
@@ -182,6 +183,7 @@ export function ProfileView({ userId }: { userId: string }) {
     year,
     role,
     interests,
+    subject,
     uiFont: profileUser.uiFont ?? DEFAULT_UI_FONT,
     avatar,
   };
@@ -273,6 +275,13 @@ export function ProfileView({ userId }: { userId: string }) {
           <p className="mt-3 text-sm text-[var(--ink-muted)]">
             <span className="font-medium text-[var(--ink)]">Allergens / Dietary requirements:</span>{" "}
             {dietaryRequirements}
+          </p>
+        )}
+
+        {subject && (
+          <p className="mt-3 text-sm text-[var(--ink-muted)]">
+            <span className="font-medium text-[var(--ink)]">Subject:</span>{" "}
+            {subject}
           </p>
         )}
 

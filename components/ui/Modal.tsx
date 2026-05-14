@@ -7,6 +7,8 @@ type Props = {
   open: boolean;
   onClose: () => void;
   title?: string;
+  /** Tighter title + card padding (e.g. dense filter panels). */
+  compact?: boolean;
   /** Merged onto the inner SketchCard (e.g. max width / scroll). */
   panelClassName?: string;
   /**
@@ -22,6 +24,7 @@ export function Modal({
   open,
   onClose,
   title,
+  compact = false,
   panelClassName = "",
   bodyScrollable = true,
   children,
@@ -54,12 +57,24 @@ export function Modal({
       />
       <SketchCard
         seed={2}
-        className={["relative w-full min-w-0 max-w-md overflow-visible p-6", panelClassName]
+        className={[
+          "relative w-full min-w-0 max-w-md overflow-visible",
+          compact ? "p-4" : "p-6",
+          panelClassName,
+        ]
           .filter(Boolean)
           .join(" ")}
       >
         {title && (
-          <h2 className="mb-4 shrink-0 font-display text-3xl uppercase tracking-wide">{title}</h2>
+          <h2
+            className={
+              compact
+                ? "mb-2 shrink-0 font-display text-2xl uppercase tracking-wide"
+                : "mb-4 shrink-0 font-display text-3xl uppercase tracking-wide"
+            }
+          >
+            {title}
+          </h2>
         )}
         <div
           className={

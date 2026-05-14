@@ -69,6 +69,7 @@ function mapUser(doc: Doc<"users">): User {
     year: doc.year ?? "",
     role: doc.role ?? "",
     interests: doc.interests ?? [],
+    subject: doc.subject ?? "",
     uiFont: doc.uiFont ?? DEFAULT_UI_FONT,
     ...(doc.instagramHandle ? { instagramHandle: doc.instagramHandle } : {}),
     ...(doc.whatsappPhone ? { whatsappPhone: doc.whatsappPhone } : {}),

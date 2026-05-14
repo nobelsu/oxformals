@@ -39,6 +39,7 @@ function mapDocToUser(doc: Doc<"users">): User {
     instagramHandle: doc.instagramHandle ?? "",
     whatsappPhone: doc.whatsappPhone ?? "",
     dietaryRequirements: doc.dietaryRequirements ?? "",
+    subject: doc.subject ?? "",
     uiFont: doc.uiFont ?? DEFAULT_UI_FONT,
     ...(doc.avatar ? { avatar: doc.avatar } : {}),
     agreedToRules: doc.agreedToRules ?? false,
@@ -180,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         instagramHandle: input.instagramHandle?.trim() ?? "",
         whatsappPhone: input.whatsappPhone?.trim() ?? "",
         dietaryRequirements: "",
+        subject: "",
         uiFont: DEFAULT_UI_FONT,
         agreedToRules: false,
       } satisfies User;
@@ -206,6 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         instagramHandle?: string;
         whatsappPhone?: string;
         dietaryRequirements?: string;
+        subject?: string;
         uiFont?: User["uiFont"];
         avatar?: User["avatar"] | null;
       } = {};
@@ -223,6 +226,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (patch.dietaryRequirements !== undefined) {
         payload.dietaryRequirements = patch.dietaryRequirements;
+      }
+      if (patch.subject !== undefined) {
+        payload.subject = patch.subject;
       }
       if (patch.uiFont !== undefined) {
         payload.uiFont = patch.uiFont;

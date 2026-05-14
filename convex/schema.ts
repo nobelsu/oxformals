@@ -27,6 +27,7 @@ export default defineSchema({
     instagramHandle: v.optional(v.string()),
     whatsappPhone: v.optional(v.string()),
     dietaryRequirements: v.optional(v.string()),
+    subject: v.optional(v.string()),
     wishlistColleges: v.optional(v.array(v.string())),
     agreedToRules: v.optional(v.boolean()),
     uiFont: v.optional(uiFontValidator),
