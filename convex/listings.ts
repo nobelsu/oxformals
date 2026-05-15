@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { groupSizeValidator } from "./groupSize";
@@ -591,6 +592,28 @@ export const backfillMenu = internalMutation({
   },
 });
 
+export const backfillListingTypeBoth = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const listings = await ctx.db.query("listings").take(100);
+    let patched = 0;
+    for (const listing of listings) {
+      if (listing.listingType !== "both") {
+        await ctx.db.patch(listing._id, { listingType: "both" });
+        patched++;
+      }
+    }
+    if (listings.length === 100) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.listings.backfillListingTypeBoth,
+        {},
+      );
+    }
+    return { patched, scanned: listings.length };
+  },
+});
+
 export const backfillListingAndRequestTypes = internalMutation({
   args: {},
   handler: async (ctx) => {
@@ -598,7 +621,7 @@ export const backfillListingAndRequestTypes = internalMutation({
     let listingsPatched = 0;
     for (const listing of listings) {
       if (listing.listingType === undefined) {
-        await ctx.db.patch(listing._id, { listingType: "swap" });
+        await ctx.db.patch(listing._id, { listingType: "both" });
         listingsPatched++;
       }
     }

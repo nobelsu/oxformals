@@ -6,9 +6,7 @@ import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { normalizeCollegeName } from "@/lib/data/colleges";
 import type { NewListingInput } from "@/lib/data/dataClient";
-import type { ListingType } from "@/lib/data/types";
-
-const GROUP_SIZES: Array<2 | 3 | 4> = [2, 3, 4];
+import { GROUP_SIZES, type GroupSize, type ListingType } from "@/lib/data/types";
 const LISTING_TYPE_OPTIONS: { value: ListingType; label: string }[] = [
   { value: "swap", label: "Swap" },
   { value: "pay", label: "Pay" },
@@ -23,7 +21,7 @@ export type ListingProfileFields = {
 
 export type ListingFormValues = {
   dateTime: string;
-  groupSize: 2 | 3 | 4;
+  groupSize: GroupSize;
   message: string;
   menu: string;
   listingType: ListingType;
@@ -72,7 +70,7 @@ export function ListFormalForm({
   const [dateTime, setDateTime] = useState(
     initialValues ? isoToLocalInput(initialValues.dateTime) : defaultDateTime(),
   );
-  const [groupSize, setGroupSize] = useState<2 | 3 | 4>(
+  const [groupSize, setGroupSize] = useState<GroupSize>(
     initialValues?.groupSize ?? 2,
   );
   const [message, setMessage] = useState(initialValues?.message ?? "");
