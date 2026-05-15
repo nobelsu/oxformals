@@ -46,6 +46,8 @@ export type DataContextValue = {
     targetListingId: string;
     offeringListingId?: string;
     message: string;
+    /** When the target listing is not in the cached global listings slice (e.g. profile-only view). */
+    targetOwnerUserId?: string;
   }) => Promise<SwapRequest | null>;
   /** @deprecated Use sendRequest */
   requestSwap: (args: {
@@ -288,10 +290,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       targetListingId: string;
       offeringListingId?: string;
       message: string;
+      targetOwnerUserId?: string;
     }): Promise<SwapRequest | null> => {
       if (!user) return null;
-      const target = listings.find((l) => l.id === args.targetListingId);
-      if (!target) return null;
+      const targetFromCache = listings.find((l) => l.id === args.targetListingId);
+      const toUserId =
+        targetFromCache?.ownerUserId ?? args.targetOwnerUserId;
+      if (!toUserId) return null;
       const result = await createRequestMut({
         requestType: args.requestType,
         targetListingId: args.targetListingId as Id<"listings">,
@@ -302,7 +307,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       });
       const convo = dataClient.ensureConversation(
         user.id,
-        target.ownerUserId,
+        toUserId,
         args.targetListingId,
       );
       if (args.message.trim()) {
@@ -312,7 +317,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return {
         id: result.requestId,
         fromUserId: user.id,
-        toUserId: target.ownerUserId,
+        toUserId,
         targetListingId: args.targetListingId,
         requestType: args.requestType,
         ...(args.offeringListingId !== undefined

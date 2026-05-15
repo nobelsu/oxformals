@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -10,12 +11,18 @@ import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Avatar, PRESET_AVATARS, PresetAvatarIcon, initialsFor } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
+import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { ListingCard } from "@/components/swap/ListingCard";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
+import { RequestPayModal } from "@/components/swap/RequestPayModal";
+import { RequestSwapModal } from "@/components/swap/RequestSwapModal";
+import { RequestTypeChooserModal } from "@/components/swap/RequestTypeChooserModal";
+import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
-import type { GroupSize, Listing } from "@/lib/data/types";
+import { listingSupportsSwap } from "@/lib/data/listingType";
+import type { GroupSize, Listing, RequestType } from "@/lib/data/types";
 import { formatYearLabel } from "@/lib/data/format";
 
 function mapProfileListing(doc: {
@@ -111,15 +118,85 @@ function AvatarLightbox({
 }
 
 export function ProfileView({ userId }: { userId: string }) {
-  const { user: currentUser } = useAuth();
-  const { getUser } = useData();
+  const router = useRouter();
+  const { user: currentUser, isAuthenticated } = useAuth();
+  const { getUser, listings, sendRequest, getListing } = useData();
   const [detailListing, setDetailListing] = useState<Listing | null>(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
+  const [pendingRequestType, setPendingRequestType] =
+    useState<RequestType | null>(null);
+  const [typeChooserTarget, setTypeChooserTarget] = useState<Listing | null>(
+    null,
+  );
+  const [showNoListingPrompt, setShowNoListingPrompt] = useState(false);
+  const [confirmed, setConfirmed] = useState<{
+    requestType: RequestType;
+    mine: Listing | null;
+    theirs: Listing | null;
+    otherUserId: string | null;
+  } | null>(null);
   const closeAvatar = useCallback(() => setAvatarOpen(false), []);
 
   const profile = useQuery(api.users.getPublicProfile, {
     userId: userId as Id<"users">,
   });
+
+  const myActiveListings = useMemo(
+    () =>
+      currentUser
+        ? listings.filter(
+            (l) =>
+              l.ownerUserId === currentUser.id &&
+              l.status === "active" &&
+              listingSupportsSwap(l.listingType),
+          )
+        : [],
+    [listings, currentUser],
+  );
+
+  const openRequestFlow = useCallback(
+    (listing: Listing, requestType: RequestType) => {
+      if (requestType === "swap" && myActiveListings.length === 0) {
+        setShowNoListingPrompt(true);
+        return;
+      }
+      setPendingRequestType(requestType);
+      setRequestTarget(listing);
+    },
+    [myActiveListings.length],
+  );
+
+  const handleRequestClick = useCallback(
+    (listing: Listing) => {
+      if (!isAuthenticated) {
+        router.push(
+          `/login?next=${encodeURIComponent(`/profile/${userId}`)}`,
+        );
+        return;
+      }
+      if (listing.listingType === "both") {
+        setTypeChooserTarget(listing);
+        return;
+      }
+      if (listing.listingType === "pay") {
+        openRequestFlow(listing, "pay");
+        return;
+      }
+      openRequestFlow(listing, "swap");
+    },
+    [isAuthenticated, router, userId, openRequestFlow],
+  );
+
+  const handleRequestTypeChosen = useCallback(
+    (requestType: RequestType) => {
+      if (!typeChooserTarget) return;
+      const target = typeChooserTarget;
+      setTypeChooserTarget(null);
+      openRequestFlow(target, requestType);
+    },
+    [typeChooserTarget, openRequestFlow],
+  );
 
   if (profile === undefined) {
     return (
@@ -178,6 +255,7 @@ export function ProfileView({ userId }: { userId: string }) {
 
   const isOwnProfile = currentUser?.id === userId;
   const activeListings = rawListings.map(mapProfileListing);
+  const listingDisabled = isOwnProfile || !isAuthenticated;
 
   const ownerAsUser = {
     id: profileUser._id,
@@ -323,12 +401,15 @@ export function ProfileView({ userId }: { userId: string }) {
                   owner={ownerAsUser}
                   memberUsers={members}
                   onPress={() => setDetailListing(l)}
-                  disabled={isOwnProfile || !currentUser}
+                  onRequest={
+                    isOwnProfile ? undefined : () => handleRequestClick(l)
+                  }
+                  disabled={listingDisabled}
                   hideInterests
                   disabledLabel={
                     isOwnProfile
                       ? "Your listing"
-                      : !currentUser
+                      : !isAuthenticated
                         ? "Sign in to request"
                         : undefined
                   }
@@ -352,16 +433,117 @@ export function ProfileView({ userId }: { userId: string }) {
                 .filter((u): u is NonNullable<typeof u> => !!u)
             : []
         }
-        disabled={isOwnProfile || !currentUser}
+        onRequest={() => {
+          if (detailListing) handleRequestClick(detailListing);
+        }}
+        disabled={listingDisabled}
         hideInterests
         disabledLabel={
           isOwnProfile
             ? "Your listing"
-            : !currentUser
+            : !isAuthenticated
               ? "Sign in to request"
               : undefined
         }
       />
+
+      <RequestTypeChooserModal
+        open={!!typeChooserTarget}
+        onClose={() => setTypeChooserTarget(null)}
+        college={typeChooserTarget?.college ?? ""}
+        onChoose={handleRequestTypeChosen}
+      />
+
+      <RequestSwapModal
+        open={!!requestTarget && pendingRequestType === "swap"}
+        onClose={() => {
+          setRequestTarget(null);
+          setPendingRequestType(null);
+        }}
+        targetListing={requestTarget}
+        myListings={myActiveListings}
+        onSubmit={async ({ offeringListingId, message }) => {
+          if (!requestTarget) return;
+          const result = await sendRequest({
+            requestType: "swap",
+            targetListingId: requestTarget.id,
+            offeringListingId,
+            message,
+            targetOwnerUserId: requestTarget.ownerUserId,
+          });
+          setRequestTarget(null);
+          setPendingRequestType(null);
+          if (result?.status === "accepted") {
+            setConfirmed({
+              requestType: "swap",
+              mine: getListing(offeringListingId) ?? null,
+              theirs:
+                getListing(requestTarget.id) ?? requestTarget,
+              otherUserId: requestTarget.ownerUserId,
+            });
+          }
+        }}
+      />
+
+      <RequestPayModal
+        open={!!requestTarget && pendingRequestType === "pay"}
+        onClose={() => {
+          setRequestTarget(null);
+          setPendingRequestType(null);
+        }}
+        targetListing={requestTarget}
+        onSubmit={async ({ message }) => {
+          if (!requestTarget) return;
+          const result = await sendRequest({
+            requestType: "pay",
+            targetListingId: requestTarget.id,
+            message,
+            targetOwnerUserId: requestTarget.ownerUserId,
+          });
+          setRequestTarget(null);
+          setPendingRequestType(null);
+          if (result?.status === "accepted") {
+            setConfirmed({
+              requestType: "pay",
+              mine: null,
+              theirs:
+                getListing(requestTarget.id) ?? requestTarget,
+              otherUserId: requestTarget.ownerUserId,
+            });
+          }
+        }}
+      />
+
+      <SwapConfirmedModal
+        open={!!confirmed}
+        onClose={() => setConfirmed(null)}
+        requestType={confirmed?.requestType ?? "swap"}
+        myListing={confirmed?.mine ?? null}
+        theirListing={confirmed?.theirs ?? null}
+        otherUser={
+          confirmed?.otherUserId ? (getUser(confirmed.otherUserId) ?? null) : null
+        }
+        otherUserId={confirmed?.otherUserId ?? null}
+      />
+
+      <Modal
+        open={showNoListingPrompt}
+        onClose={() => setShowNoListingPrompt(false)}
+        title="List your formal first"
+        panelClassName="max-w-sm"
+      >
+        <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">
+          You need an active swap listing before you can request a swap.
+          Pay-only listings cannot be used in swaps.
+        </p>
+        <Link
+          href="/?tab=requests&openList=1"
+          className="flex w-full cursor-pointer items-center justify-center rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+          onClick={() => setShowNoListingPrompt(false)}
+        >
+          + List my formal
+        </Link>
+      </Modal>
     </main>
   );
 }
