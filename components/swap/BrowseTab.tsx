@@ -115,8 +115,6 @@ export function BrowseTab({
   } = useData();
 
   const [collegeFilter, setCollegeFilter] = useState<string | null>(null);
-  const [collegeFilterUserTouched, setCollegeFilterUserTouched] =
-    useState(false);
   const [pickedCalendarDates, setPickedCalendarDates] = useState<string[]>(
     [],
   );
@@ -184,17 +182,9 @@ export function BrowseTab({
     if (collegeFilter === MY_FORMALS_SENTINEL) {
       return MY_FORMALS_SENTINEL;
     }
-    if (
-      !collegeFilterUserTouched &&
-      isAuthenticated &&
-      wishlist.length > 0
-    ) {
-      return MY_FORMALS_SENTINEL;
-    }
     return null;
   }, [
     collegeFilter,
-    collegeFilterUserTouched,
     isAuthenticated,
     wishlist.length,
     topBrowseCollegesSet,
@@ -342,16 +332,23 @@ export function BrowseTab({
                   role="group"
                   aria-label="College"
                 >
+                  <button
+                    type="button"
+                    aria-pressed={effectiveCollegeFilter === null}
+                    onClick={() => setCollegeFilter(null)}
+                    className={
+                      effectiveCollegeFilter === null ? CHIP_ON : CHIP_IDLE
+                    }
+                  >
+                    All colleges
+                  </button>
                   {isAuthenticated && wishlist.length > 0 ? (
                     <button
                       type="button"
                       aria-pressed={
                         effectiveCollegeFilter === MY_FORMALS_SENTINEL
                       }
-                      onClick={() => {
-                        setCollegeFilter(MY_FORMALS_SENTINEL);
-                        setCollegeFilterUserTouched(true);
-                      }}
+                      onClick={() => setCollegeFilter(MY_FORMALS_SENTINEL)}
                       className={
                         effectiveCollegeFilter === MY_FORMALS_SENTINEL
                           ? CHIP_ON
@@ -361,28 +358,12 @@ export function BrowseTab({
                       My favourites
                     </button>
                   ) : null}
-                  <button
-                    type="button"
-                    aria-pressed={effectiveCollegeFilter === null}
-                    onClick={() => {
-                      setCollegeFilter(null);
-                      setCollegeFilterUserTouched(true);
-                    }}
-                    className={
-                      effectiveCollegeFilter === null ? CHIP_ON : CHIP_IDLE
-                    }
-                  >
-                    All colleges
-                  </button>
                   {topBrowseColleges.map((name) => (
                     <button
                       key={name}
                       type="button"
                       aria-pressed={effectiveCollegeFilter === name}
-                      onClick={() => {
-                        setCollegeFilter(name);
-                        setCollegeFilterUserTouched(true);
-                      }}
+                      onClick={() => setCollegeFilter(name)}
                       className={
                         effectiveCollegeFilter === name ? CHIP_ON : CHIP_IDLE
                       }
