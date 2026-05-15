@@ -6,14 +6,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Modal } from "@/components/ui/Modal";
+import { outgoingPayRequests } from "@/lib/data/requestFilters";
+import { placeholderUser } from "@/lib/data/users";
 import { ListFormalForm } from "./ListFormalForm";
 import { MyListingCard } from "./MyListingCard";
+import { SentRequestRow } from "./SentRequestRow";
 
 export function RequestsTab() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { requests, listings, createListing, getUser } = useData();
+  const { requests, listings, createListing, getUser, getListing, withdrawRequest } =
+    useData();
 
   const myListings = useMemo(
     () => (user ? listings.filter((l) => l.ownerUserId === user.id) : []),
@@ -49,10 +53,21 @@ export function RequestsTab() {
     const map = new Map<string, number>();
     for (const r of requests) {
       if (r.status !== "pending") continue;
+      if (!user || r.toUserId !== user.id) continue;
       map.set(r.targetListingId, (map.get(r.targetListingId) ?? 0) + 1);
     }
     return map;
-  }, [requests]);
+  }, [requests, user]);
+
+  const myPayRequests = useMemo(
+    () =>
+      user
+        ? outgoingPayRequests(requests, user.id).sort(
+            (a, b) => b.createdAt - a.createdAt,
+          )
+        : [],
+    [requests, user],
+  );
 
   if (!user) return null;
 
@@ -97,6 +112,28 @@ export function RequestsTab() {
         )}
       </section>
 
+      {myPayRequests.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-display text-3xl uppercase tracking-wide">
+            Pay requests sent
+          </h2>
+          <div className="mt-4 flex flex-col gap-3">
+            {myPayRequests.map((r) => {
+              const toUser = getUser(r.toUserId) ?? placeholderUser(r.toUserId);
+              return (
+                <SentRequestRow
+                  key={r.id}
+                  request={r}
+                  toUser={toUser}
+                  targetListing={getListing(r.targetListingId)}
+                  onWithdraw={(requestId) => withdrawRequest(requestId)}
+                />
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {myBookedListings.length > 0 && (
         <section className="mt-10">
           <h2 className="font-display text-3xl uppercase tracking-wide">
@@ -127,6 +164,7 @@ export function RequestsTab() {
         open={listFormalOpen}
         onClose={() => setListFormalOpen(false)}
         panelClassName="!max-w-3xl"
+        bodyScrollable={false}
       >
         <ListFormalForm
           embedded

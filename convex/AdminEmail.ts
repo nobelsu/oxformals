@@ -3,6 +3,7 @@ import {
   createAccount,
   retrieveAccount,
 } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
 
 const ADMIN_EMAIL = "admin@ox.ac.uk";
 const ADMIN_PROVIDER_ID = "admin-email";
@@ -44,19 +45,27 @@ export const AdminEmail = ConvexCredentials({
 
     const secret = getAdminAccountSecret();
 
-    try {
-      const { user } = await retrieveAccount(ctx, {
-        provider: ADMIN_PROVIDER_ID,
-        account: { id: ADMIN_EMAIL, secret },
-      });
-      return { userId: user._id };
-    } catch {
+    const createAdminUser = async () => {
       const { user } = await createAccount(ctx, {
         provider: ADMIN_PROVIDER_ID,
         account: { id: ADMIN_EMAIL, secret },
         profile: { email: ADMIN_EMAIL },
       });
       return { userId: user._id };
+    };
+
+    try {
+      const { user } = await retrieveAccount(ctx, {
+        provider: ADMIN_PROVIDER_ID,
+        account: { id: ADMIN_EMAIL, secret },
+      });
+      if (user) {
+        return { userId: user._id };
+      }
+      await ctx.runMutation(internal.adminReset.resetAdminAuth, {});
+      return await createAdminUser();
+    } catch {
+      return await createAdminUser();
     }
   },
 });

@@ -5,8 +5,10 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
 import type { User } from "@/lib/auth/types";
-import { formatListingDate, formatYearLabel } from "@/lib/data/format";
+import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
 import type { Listing } from "@/lib/data/types";
+import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
+import { listingRequestCta } from "@/lib/data/listingType";
 
 type Props = {
   listing: Listing;
@@ -17,6 +19,7 @@ type Props = {
   disabled?: boolean;
   disabledLabel?: string;
   hideInterests?: boolean;
+  requestLabel?: string;
 };
 
 export function ListingCard({
@@ -28,7 +31,9 @@ export function ListingCard({
   disabled,
   disabledLabel,
   hideInterests,
+  requestLabel,
 }: Props) {
+  const ctaLabel = requestLabel ?? listingRequestCta(listing.listingType);
   const profileLine = [
     formatYearLabel(owner.year) || owner.year || formatYearLabel(listing.year) || listing.year,
     owner.role || listing.role,
@@ -48,11 +53,15 @@ export function ListingCard({
       onClick={onPress}
     >
       <header className="shrink-0 min-w-0">
-        <h3 className="line-clamp-3 break-words font-display text-[2.31rem] uppercase leading-tight tracking-wide">
-          {listing.college}
-        </h3>
+        <div className="flex flex-wrap items-start gap-2">
+          <h3 className="line-clamp-3 min-w-0 flex-1 break-words font-display text-[2.31rem] uppercase leading-tight tracking-wide">
+            {listing.college}
+          </h3>
+          <ListingTypeTag listingType={listing.listingType} />
+        </div>
         <div className="mt-2 truncate text-[0.924rem] text-[var(--ink-muted)]">
           {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} · {seatsLabel}
+          {listing.price !== undefined ? ` · ${formatPrice(listing.price)}` : ""}
         </div>
       </header>
 
@@ -126,7 +135,7 @@ export function ListingCard({
             disabled
             className="cursor-not-allowed rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-8 py-3 text-[0.77rem] text-white opacity-70"
           >
-            {disabledLabel ?? "Send request!"}
+            {disabledLabel ?? ctaLabel}
           </button>
         ) : (
           <button
@@ -134,7 +143,7 @@ export function ListingCard({
             onClick={onRequest}
             className="rounded-full bg-[var(--accent)] px-8 py-3 text-[0.77rem] text-white transition-colors hover:bg-[var(--accent-hover)]"
           >
-            Send request!
+            {ctaLabel}
           </button>
         )}
       </div>

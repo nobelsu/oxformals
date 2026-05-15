@@ -20,8 +20,11 @@ import {
 import { normalizeCollegeName } from "@/lib/data/colleges";
 import type {
   Conversation,
+  GroupSize,
   Listing,
+  ListingType,
   Message,
+  RequestType,
   SwapRequest,
 } from "@/lib/data/types";
 
@@ -38,6 +41,13 @@ export type DataContextValue = {
   messagesFor: (conversationId: string) => Message[];
 
   createListing: (input: NewListingInput) => Listing | null;
+  sendRequest: (args: {
+    requestType: RequestType;
+    targetListingId: string;
+    offeringListingId?: string;
+    message: string;
+  }) => Promise<SwapRequest | null>;
+  /** @deprecated Use sendRequest */
   requestSwap: (args: {
     targetListingId: string;
     offeringListingId: string;
@@ -48,7 +58,14 @@ export type DataContextValue = {
   withdrawRequest: (requestId: string) => boolean;
   updateListing: (
     listingId: string,
-    patch: { dateTime?: string; groupSize?: 2 | 3 | 4; message?: string; menu?: string },
+    patch: {
+      dateTime?: string;
+      groupSize?: GroupSize;
+      message?: string;
+      menu?: string;
+      listingType?: ListingType;
+      price?: number;
+    },
   ) => void;
   deleteListing: (listingId: string) => void;
   leaveGroup: (listingId: string) => void;
@@ -90,18 +107,25 @@ function mapListing(doc: Doc<"listings">): Listing {
     role: doc.role,
     message: doc.message,
     menu: doc.menu ?? "",
+    listingType: doc.listingType ?? "swap",
+    ...(doc.price !== undefined ? { price: doc.price } : {}),
     status: doc.status,
     createdAt: doc._creationTime,
   };
 }
 
 function mapRequest(doc: Doc<"requests">): SwapRequest {
+  const requestType =
+    doc.requestType ?? (doc.offeringListingId !== undefined ? "swap" : "pay");
   return {
     id: doc._id,
     fromUserId: doc.fromUserId,
     toUserId: doc.toUserId,
     targetListingId: doc.targetListingId,
-    offeringListingId: doc.offeringListingId,
+    requestType,
+    ...(doc.offeringListingId !== undefined
+      ? { offeringListingId: doc.offeringListingId }
+      : {}),
     message: doc.message,
     status: doc.status,
     createdAt: doc._creationTime,
@@ -125,6 +149,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
     api.listings.listRequestsFromMe,
     user ? {} : "skip",
   );
+
+  const requestPartyIds = useMemo(() => {
+    if (incomingRequests === undefined && outgoingRequests === undefined) {
+      return [] as Id<"users">[];
+    }
+    const ids = new Set<Id<"users">>();
+    for (const req of incomingRequests ?? []) {
+      ids.add(req.fromUserId);
+      ids.add(req.toUserId);
+    }
+    for (const req of outgoingRequests ?? []) {
+      ids.add(req.fromUserId);
+      ids.add(req.toUserId);
+    }
+    return [...ids];
+  }, [incomingRequests, outgoingRequests]);
+
+  const requestPartyUsers = useQuery(
+    api.users.getPublicByIds,
+    ready && requestPartyIds.length > 0 ? { userIds: requestPartyIds } : "skip",
+  );
   const wishlist = useQuery(api.users.myWishlist, user ? {} : "skip");
 
   const createListingMut = useMutation(api.listings.createListing);
@@ -140,8 +185,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const users = useMemo<User[]>(() => {
     if (!ready || convexUsers === undefined) return [];
-    return convexUsers.map(mapUser);
-  }, [ready, convexUsers]);
+    const byId = new Map<string, User>();
+    for (const doc of convexUsers) {
+      byId.set(doc._id, mapUser(doc));
+    }
+    for (const doc of requestPartyUsers ?? []) {
+      if (!byId.has(doc._id)) {
+        byId.set(doc._id, mapUser(doc));
+      }
+    }
+    return [...byId.values()];
+  }, [ready, convexUsers, requestPartyUsers]);
 
   const listings = useMemo<Listing[]>(() => {
     if (!ready || convexListings === undefined) return [];
@@ -204,6 +258,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         groupSize: input.groupSize,
         message: input.message,
         menu: input.menu,
+        listingType: input.listingType,
+        ...(input.price !== undefined ? { price: input.price } : {}),
       });
       return {
         id: "pending",
@@ -217,6 +273,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         role,
         message: input.message,
         menu: input.menu,
+        listingType: input.listingType,
+        ...(input.price !== undefined ? { price: input.price } : {}),
         status: "active",
         createdAt: Date.now(),
       };
@@ -224,18 +282,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [user, createListingMut],
   );
 
-  const requestSwap = useCallback(
+  const sendRequest = useCallback(
     async (args: {
+      requestType: RequestType;
       targetListingId: string;
-      offeringListingId: string;
+      offeringListingId?: string;
       message: string;
     }): Promise<SwapRequest | null> => {
       if (!user) return null;
       const target = listings.find((l) => l.id === args.targetListingId);
       if (!target) return null;
       const result = await createRequestMut({
+        requestType: args.requestType,
         targetListingId: args.targetListingId as Id<"listings">,
-        offeringListingId: args.offeringListingId as Id<"listings">,
+        ...(args.offeringListingId !== undefined
+          ? { offeringListingId: args.offeringListingId as Id<"listings"> }
+          : {}),
         message: args.message,
       });
       const convo = dataClient.ensureConversation(
@@ -252,13 +314,31 @@ export function DataProvider({ children }: { children: ReactNode }) {
         fromUserId: user.id,
         toUserId: target.ownerUserId,
         targetListingId: args.targetListingId,
-        offeringListingId: args.offeringListingId,
+        requestType: args.requestType,
+        ...(args.offeringListingId !== undefined
+          ? { offeringListingId: args.offeringListingId }
+          : {}),
         message: args.message,
         status: result.autoAccepted ? "accepted" : "pending",
         createdAt: Date.now(),
       };
     },
     [user, listings, createRequestMut, refresh],
+  );
+
+  const requestSwap = useCallback(
+    (args: {
+      targetListingId: string;
+      offeringListingId: string;
+      message: string;
+    }) =>
+      sendRequest({
+        requestType: "swap",
+        targetListingId: args.targetListingId,
+        offeringListingId: args.offeringListingId,
+        message: args.message,
+      }),
+    [sendRequest],
   );
 
   const acceptRequest = useCallback(
@@ -300,7 +380,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const updateListing = useCallback(
     (
       listingId: string,
-      patch: { dateTime?: string; groupSize?: 2 | 3 | 4; message?: string; menu?: string },
+      patch: {
+        dateTime?: string;
+        groupSize?: GroupSize;
+        message?: string;
+        menu?: string;
+        listingType?: ListingType;
+        price?: number;
+      },
     ) => {
       if (!user) return;
       void updateListingMut({
@@ -309,6 +396,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ...(patch.groupSize !== undefined ? { groupSize: patch.groupSize } : {}),
         ...(patch.message !== undefined ? { message: patch.message } : {}),
         ...(patch.menu !== undefined ? { menu: patch.menu } : {}),
+        ...(patch.listingType !== undefined
+          ? { listingType: patch.listingType }
+          : {}),
+        ...(patch.price !== undefined ? { price: patch.price } : {}),
       });
     },
     [user, updateListingMut],
@@ -380,6 +471,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       getListing,
       messagesFor,
       createListing,
+      sendRequest,
       requestSwap,
       acceptRequest,
       declineRequest,
@@ -403,6 +495,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       getListing,
       messagesFor,
       createListing,
+      sendRequest,
       requestSwap,
       acceptRequest,
       declineRequest,

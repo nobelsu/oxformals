@@ -5,7 +5,8 @@ import { useCallback, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
 import type { User } from "@/lib/auth/types";
-import { formatListingDate, formatYearLabel } from "@/lib/data/format";
+import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
+import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
 import type { Listing } from "@/lib/data/types";
 
 type Props = {
@@ -59,13 +60,17 @@ export function MyListingCard({
         <h3 className="line-clamp-3 min-w-0 flex-1 break-words font-display text-3xl uppercase tracking-wide">
           {listing.college}
         </h3>
-        <span className="shrink-0 rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
-          {statusMap[listing.status]}
-        </span>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          <ListingTypeTag listingType={listing.listingType} />
+          <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
+            {statusMap[listing.status]}
+          </span>
+        </div>
       </header>
 
       <div className="shrink-0 truncate text-[var(--ink-muted)]">
         {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} · {seatsLabel}
+        {listing.price !== undefined ? ` · ${formatPrice(listing.price)}` : ""}
       </div>
 
       <div className="shrink-0 truncate text-sm text-[var(--ink-soft)]">

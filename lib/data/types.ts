@@ -1,11 +1,19 @@
+export type GroupSize = 2 | 3 | 4 | 5 | 6;
+
+export const GROUP_SIZES: GroupSize[] = [2, 3, 4, 5, 6];
+
 export type ListingStatus = "active" | "confirmed" | "closed";
+
+export type ListingType = "swap" | "pay" | "both";
+
+export type RequestType = "swap" | "pay";
 
 export type Listing = {
   id: string;
   ownerUserId: string;
   college: string;
   dateTime: string; // ISO
-  groupSize: 2 | 3 | 4;
+  groupSize: GroupSize;
   seatsAvailable: number;
   members: string[];
   /** Snapshot from the poster's profile when the listing was created. */
@@ -14,6 +22,8 @@ export type Listing = {
   role: string;
   message: string;
   menu: string;
+  listingType: ListingType;
+  price?: number;
   status: ListingStatus;
   createdAt: number;
 };
@@ -25,7 +35,8 @@ export type SwapRequest = {
   fromUserId: string;
   toUserId: string;
   targetListingId: string;
-  offeringListingId: string;
+  requestType: RequestType;
+  offeringListingId?: string;
   message: string;
   status: SwapRequestStatus;
   createdAt: number;

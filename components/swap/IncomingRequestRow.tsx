@@ -4,13 +4,16 @@ import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
 import type { User } from "@/lib/auth/types";
-import { formatListingDate, formatRelativeTime } from "@/lib/data/format";
+import { formatListingDate, formatPrice, formatRelativeTime } from "@/lib/data/format";
 import type { Listing, SwapRequest } from "@/lib/data/types";
+import { resolveRequestType } from "@/lib/data/requestFilters";
+import { RequestTypeTag } from "@/components/swap/RequestTypeTag";
 
 type Props = {
   request: SwapRequest;
   fromUser: User;
   offeringListing: Listing | undefined;
+  targetListing?: Listing;
   onAccept: () => void;
   onDecline: () => void;
 };
@@ -19,9 +22,11 @@ export function IncomingRequestRow({
   request,
   fromUser,
   offeringListing,
+  targetListing,
   onAccept,
   onDecline,
 }: Props) {
+  const requestType = resolveRequestType(request);
   const isPending = request.status === "pending";
   const statusLabel =
     request.status === "pending"
@@ -35,9 +40,12 @@ export function IncomingRequestRow({
       padded={false}
       className="relative p-6"
     >
-      <span className="absolute right-4 top-3 rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
-        {statusLabel}
-      </span>
+      <div className="absolute right-4 top-3 flex flex-wrap items-center justify-end gap-1.5">
+        <RequestTypeTag requestType={requestType} />
+        <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
+          {statusLabel}
+        </span>
+      </div>
       <div className="flex items-start gap-4">
         <Link href={`/profile/${fromUser.id}`}>
           <Avatar name={fromUser.name} source={fromUser.avatar} />
@@ -46,7 +54,14 @@ export function IncomingRequestRow({
           <Link href={`/profile/${fromUser.id}`} className="text-lg leading-tight hover:underline">
             {fromUser.name}
           </Link>
-          {offeringListing ? (
+          {requestType === "pay" ? (
+            <div className="text-sm leading-snug text-[var(--ink-muted)]">
+              Pay request
+              {targetListing?.price !== undefined
+                ? ` · ${formatPrice(targetListing.price)}`
+                : ""}
+            </div>
+          ) : offeringListing ? (
             <div className="text-sm leading-snug text-[var(--ink-muted)]">
               {offeringListing.college} · {formatListingDate(offeringListing.dateTime)}
             </div>

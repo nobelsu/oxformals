@@ -9,15 +9,25 @@ import { Avatar } from "@/components/ui/Avatar";
 import { IncomingRequestRow } from "@/components/swap/IncomingRequestRow";
 import { ListFormalForm } from "@/components/swap/ListFormalForm";
 import { NewRequestPicker } from "@/components/swap/NewRequestPicker";
+import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
+import { RequestPayModal } from "@/components/swap/RequestPayModal";
 import { RequestSwapModal } from "@/components/swap/RequestSwapModal";
+import { RequestTypeChooserModal } from "@/components/swap/RequestTypeChooserModal";
 import { SentRequestRow } from "@/components/swap/SentRequestRow";
 import { SignInGate } from "@/components/swap/SignInGate";
 import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
-import { formatListingDate, formatYearLabel } from "@/lib/data/format";
-import type { Listing } from "@/lib/data/types";
+import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
+import { listingSupportsSwap } from "@/lib/data/listingType";
+import {
+  incomingRequestsForListing,
+  resolveRequestType,
+  sentRequestsForListing,
+} from "@/lib/data/requestFilters";
+import { placeholderUser } from "@/lib/data/users";
+import type { Listing, RequestType } from "@/lib/data/types";
 
 export function ListingRequestsView({ listingId }: { listingId: string }) {
   const router = useRouter();
@@ -32,7 +42,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     withdrawRequest,
     leaveGroup,
     removeMember,
-    requestSwap,
+    sendRequest,
     updateListing,
     deleteListing,
   } = useData();
@@ -48,7 +58,10 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     () =>
       user
         ? listings.filter(
-            (item) => item.ownerUserId === user.id && item.status === "active",
+            (item) =>
+              item.ownerUserId === user.id &&
+              item.status === "active" &&
+              listingSupportsSwap(item.listingType),
           )
         : [],
     [listings, user],
@@ -67,11 +80,9 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
   const incoming = useMemo(
     () =>
       user && listing
-        ? [...requests]
-            .filter(
-              (r) => r.toUserId === user.id && r.targetListingId === listing.id,
-            )
-            .sort((a, b) => b.createdAt - a.createdAt)
+        ? incomingRequestsForListing(requests, user.id, listing.id).sort(
+            (a, b) => b.createdAt - a.createdAt,
+          )
         : [],
     [requests, user, listing],
   );
@@ -79,11 +90,9 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
   const sent = useMemo(
     () =>
       user && listing
-        ? [...requests]
-            .filter(
-              (r) => r.fromUserId === user.id && r.offeringListingId === listing.id,
-            )
-            .sort((a, b) => b.createdAt - a.createdAt)
+        ? sentRequestsForListing(requests, user.id, listing.id).sort(
+            (a, b) => b.createdAt - a.createdAt,
+          )
         : [],
     [requests, user, listing],
   );
@@ -102,7 +111,12 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
+  const [pendingRequestType, setPendingRequestType] = useState<RequestType | null>(
+    null,
+  );
+  const [typeChooserTarget, setTypeChooserTarget] = useState<Listing | null>(null);
   const [confirmed, setConfirmed] = useState<{
+    requestType: RequestType;
     mine: Listing | null;
     theirs: Listing | null;
     otherUserId: string | null;
@@ -170,6 +184,24 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     closed: listing.seatsAvailable === 0 ? "Group full" : "Closed",
   };
 
+  function openOutboundRequest(target: Listing, requestType: RequestType) {
+    if (requestType === "swap" && myActiveListings.length === 0) return;
+    setPendingRequestType(requestType);
+    setRequestTarget(target);
+  }
+
+  function handleOutboundPick(target: Listing) {
+    if (target.listingType === "both") {
+      setTypeChooserTarget(target);
+      return;
+    }
+    if (target.listingType === "pay") {
+      openOutboundRequest(target, "pay");
+      return;
+    }
+    openOutboundRequest(target, "swap");
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6">
       <div className="flex items-center gap-3">
@@ -188,7 +220,8 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
               <h1 className="font-display text-3xl uppercase tracking-wide">
                 {listing.college}
               </h1>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <ListingTypeTag listingType={listing.listingType} />
                 <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
                   {statusMap[listing.status]}
                 </span>
@@ -223,6 +256,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             </div>
             <p className="mt-2 text-[var(--ink-muted)]">
               {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} · {seatsLabel}
+              {listing.price !== undefined ? ` · ${formatPrice(listing.price)}` : ""}
             </p>
             <p className="mt-1 text-sm text-[var(--ink-soft)]">
               {[formatYearLabel(listing.year) || listing.year, listing.role]
@@ -298,33 +332,56 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
           ) : (
             <div className="mt-4 flex flex-col gap-3">
               {incoming.map((r) => {
-                const fromUser = getUser(r.fromUserId);
-                if (!fromUser) return null;
+                const fromUser =
+                  getUser(r.fromUserId) ?? placeholderUser(r.fromUserId);
                 return (
                   <IncomingRequestRow
                     key={r.id}
                     request={r}
                     fromUser={fromUser}
-                    offeringListing={getListing(r.offeringListingId)}
+                    offeringListing={
+                      r.offeringListingId
+                        ? getListing(r.offeringListingId)
+                        : undefined
+                    }
+                    targetListing={listing}
                     onAccept={() => {
+                      const isPay = resolveRequestType(r) === "pay";
                       setConfirmDialog({
-                        message: `Accept this swap? ${fromUser.name} will join your group.`,
+                        message: isPay
+                          ? `Accept this pay request? ${fromUser.name} will join your group.`
+                          : `Accept this swap? ${fromUser.name} will join your group.`,
                         confirmLabel: "Accept",
                         onConfirm: () => {
                           setConfirmDialog(null);
                           const updated = acceptRequest(r.id);
                           if (!updated) return;
-                          setConfirmed({
-                            mine: getListing(r.targetListingId) ?? null,
-                            theirs: getListing(r.offeringListingId) ?? null,
-                            otherUserId: r.fromUserId,
-                          });
+                          if (isPay) {
+                            setConfirmed({
+                              requestType: "pay",
+                              mine: listing,
+                              theirs: null,
+                              otherUserId: r.fromUserId,
+                            });
+                          } else {
+                            setConfirmed({
+                              requestType: "swap",
+                              mine: getListing(r.targetListingId) ?? null,
+                              theirs: r.offeringListingId
+                                ? (getListing(r.offeringListingId) ?? null)
+                                : null,
+                              otherUserId: r.fromUserId,
+                            });
+                          }
                         },
                       });
                     }}
                     onDecline={() => {
                       setConfirmDialog({
-                        message: "Decline this swap request?",
+                        message:
+                          resolveRequestType(r) === "pay"
+                            ? "Decline this pay request?"
+                            : "Decline this swap request?",
                         variant: "destructive",
                         confirmLabel: "Decline",
                         onConfirm: () => {
@@ -351,8 +408,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
           ) : (
             <div className="mt-4 flex flex-col gap-3">
               {sent.map((r) => {
-                const toUser = getUser(r.toUserId);
-                if (!toUser) return null;
+                const toUser = getUser(r.toUserId) ?? placeholderUser(r.toUserId);
                 return (
                   <SentRequestRow
                     key={r.id}
@@ -375,27 +431,72 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
         getUser={getUser}
         onSelect={(item) => {
           setPickerOpen(false);
-          setRequestTarget(item);
+          handleOutboundPick(item);
+        }}
+      />
+
+      <RequestTypeChooserModal
+        open={!!typeChooserTarget}
+        onClose={() => setTypeChooserTarget(null)}
+        college={typeChooserTarget?.college ?? ""}
+        onChoose={(requestType) => {
+          if (!typeChooserTarget) return;
+          const target = typeChooserTarget;
+          setTypeChooserTarget(null);
+          openOutboundRequest(target, requestType);
         }}
       />
 
       <RequestSwapModal
-        open={!!requestTarget}
-        onClose={() => setRequestTarget(null)}
+        open={!!requestTarget && pendingRequestType === "swap"}
+        onClose={() => {
+          setRequestTarget(null);
+          setPendingRequestType(null);
+        }}
         targetListing={requestTarget}
-        myListings={myActiveListings}
+        myListings={myActiveListings.filter((l) => l.id !== listing.id)}
         onSubmit={async ({ offeringListingId, message }) => {
           if (!requestTarget) return;
-          const result = await requestSwap({
+          const result = await sendRequest({
+            requestType: "swap",
             targetListingId: requestTarget.id,
             offeringListingId,
             message,
           });
           setRequestTarget(null);
+          setPendingRequestType(null);
           if (result?.status === "accepted") {
             setConfirmed({
+              requestType: "swap",
               mine: getListing(offeringListingId) ?? null,
               theirs: getListing(requestTarget.id) ?? null,
+              otherUserId: requestTarget.ownerUserId,
+            });
+          }
+        }}
+      />
+
+      <RequestPayModal
+        open={!!requestTarget && pendingRequestType === "pay"}
+        onClose={() => {
+          setRequestTarget(null);
+          setPendingRequestType(null);
+        }}
+        targetListing={requestTarget}
+        onSubmit={async ({ message }) => {
+          if (!requestTarget) return;
+          const result = await sendRequest({
+            requestType: "pay",
+            targetListingId: requestTarget.id,
+            message,
+          });
+          setRequestTarget(null);
+          setPendingRequestType(null);
+          if (result?.status === "accepted") {
+            setConfirmed({
+              requestType: "pay",
+              mine: listing,
+              theirs: requestTarget,
               otherUserId: requestTarget.ownerUserId,
             });
           }
@@ -405,6 +506,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
       <SwapConfirmedModal
         open={!!confirmed}
         onClose={() => setConfirmed(null)}
+        requestType={confirmed?.requestType ?? "swap"}
         myListing={confirmed?.mine ?? null}
         theirListing={confirmed?.theirs ?? null}
         otherUser={
@@ -426,6 +528,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
         open={editModalOpen}
         onClose={() => setEditModalOpen(false)}
         panelClassName="!max-w-3xl"
+        bodyScrollable={false}
       >
         {listing && user && (
           <ListFormalForm
@@ -440,6 +543,8 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
               groupSize: listing.groupSize,
               message: listing.message,
               menu: listing.menu,
+              listingType: listing.listingType,
+              price: listing.price,
             }}
             minGroupSize={listing.members.length}
             onSubmit={(input) => {
@@ -448,6 +553,8 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                 groupSize: input.groupSize,
                 message: input.message,
                 menu: input.menu,
+                listingType: input.listingType,
+                ...(input.price !== undefined ? { price: input.price } : {}),
               });
               setEditModalOpen(false);
             }}

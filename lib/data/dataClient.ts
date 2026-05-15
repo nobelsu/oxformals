@@ -41,7 +41,12 @@ function saveMessages(v: Message[]): void {
   writeJSON(K.messages, v);
 }
 /** Fields collected in the list-a-formal form (profile supplies the rest). */
-export type NewListingInput = Pick<Listing, "dateTime" | "groupSize" | "message" | "menu">;
+export type NewListingInput = Pick<
+  Listing,
+  "dateTime" | "groupSize" | "message" | "menu" | "listingType"
+> & {
+  price?: number;
+};
 
 export const dataClient = {
   // Conversations & messages

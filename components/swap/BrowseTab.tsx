@@ -9,9 +9,13 @@ import { MY_FORMALS_SENTINEL } from "./CollegeFilter";
 import { Hero } from "./Hero";
 import { ListingCard } from "./ListingCard";
 import { ListingDetailModal } from "./ListingDetailModal";
+import { RequestPayModal } from "./RequestPayModal";
 import { RequestSwapModal } from "./RequestSwapModal";
+import { RequestTypeChooserModal } from "./RequestTypeChooserModal";
 import { StatsStrip } from "./StatsStrip";
 import { SwapConfirmedModal } from "./SwapConfirmedModal";
+import { listingSupportsSwap } from "@/lib/data/listingType";
+import type { RequestType } from "@/lib/data/types";
 import {
   BrowseDateCalendar,
   BROWSE_DATE_CALENDAR_INSTRUCTIONS,
@@ -109,7 +113,7 @@ export function BrowseTab({
   const {
     listings,
     wishlist,
-    requestSwap,
+    sendRequest,
     getUser,
     getListing,
   } = useData();
@@ -122,8 +126,13 @@ export function BrowseTab({
   const [searchQuery, setSearchQuery] = useState("");
   const [detailListing, setDetailListing] = useState<Listing | null>(null);
   const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
+  const [pendingRequestType, setPendingRequestType] = useState<RequestType | null>(
+    null,
+  );
+  const [typeChooserTarget, setTypeChooserTarget] = useState<Listing | null>(null);
   const [showNoListingPrompt, setShowNoListingPrompt] = useState(false);
   const [confirmed, setConfirmed] = useState<{
+    requestType: RequestType;
     mine: Listing | null;
     theirs: Listing | null;
     otherUserId: string | null;
@@ -240,27 +249,47 @@ export function BrowseTab({
     () =>
       user
         ? listings.filter(
-            (l) => l.ownerUserId === user.id && l.status === "active",
+            (l) =>
+              l.ownerUserId === user.id &&
+              l.status === "active" &&
+              listingSupportsSwap(l.listingType),
           )
         : [],
     [listings, user],
   );
 
-  const openSwaps = useMemo(
-    () => listings.filter((l) => l.status === "active").length,
-    [listings],
-  );
+  const openSwaps = collegeFilteredListings.length;
+
+  function openRequestFlow(listing: Listing, requestType: RequestType) {
+    if (requestType === "swap" && myActiveListings.length === 0) {
+      setShowNoListingPrompt(true);
+      return;
+    }
+    setPendingRequestType(requestType);
+    setRequestTarget(listing);
+  }
 
   function handleRequestClick(listing: Listing) {
     if (!isAuthenticated) {
       onSignInRequired();
       return;
     }
-    if (myActiveListings.length === 0) {
-      setShowNoListingPrompt(true);
+    if (listing.listingType === "both") {
+      setTypeChooserTarget(listing);
       return;
     }
-    setRequestTarget(listing);
+    if (listing.listingType === "pay") {
+      openRequestFlow(listing, "pay");
+      return;
+    }
+    openRequestFlow(listing, "swap");
+  }
+
+  function handleRequestTypeChosen(requestType: RequestType) {
+    if (!typeChooserTarget) return;
+    const target = typeChooserTarget;
+    setTypeChooserTarget(null);
+    openRequestFlow(target, requestType);
   }
 
   function scrollToBrowseListings() {
@@ -481,22 +510,62 @@ export function BrowseTab({
         hideInterests
       />
 
+      <RequestTypeChooserModal
+        open={!!typeChooserTarget}
+        onClose={() => setTypeChooserTarget(null)}
+        college={typeChooserTarget?.college ?? ""}
+        onChoose={handleRequestTypeChosen}
+      />
+
       <RequestSwapModal
-        open={!!requestTarget}
-        onClose={() => setRequestTarget(null)}
+        open={!!requestTarget && pendingRequestType === "swap"}
+        onClose={() => {
+          setRequestTarget(null);
+          setPendingRequestType(null);
+        }}
         targetListing={requestTarget}
         myListings={myActiveListings}
         onSubmit={async ({ offeringListingId, message }) => {
           if (!requestTarget) return;
-          const result = await requestSwap({
+          const result = await sendRequest({
+            requestType: "swap",
             targetListingId: requestTarget.id,
             offeringListingId,
             message,
           });
           setRequestTarget(null);
+          setPendingRequestType(null);
           if (result?.status === "accepted") {
             setConfirmed({
+              requestType: "swap",
               mine: getListing(offeringListingId) ?? null,
+              theirs: getListing(requestTarget.id) ?? null,
+              otherUserId: requestTarget.ownerUserId,
+            });
+          }
+        }}
+      />
+
+      <RequestPayModal
+        open={!!requestTarget && pendingRequestType === "pay"}
+        onClose={() => {
+          setRequestTarget(null);
+          setPendingRequestType(null);
+        }}
+        targetListing={requestTarget}
+        onSubmit={async ({ message }) => {
+          if (!requestTarget) return;
+          const result = await sendRequest({
+            requestType: "pay",
+            targetListingId: requestTarget.id,
+            message,
+          });
+          setRequestTarget(null);
+          setPendingRequestType(null);
+          if (result?.status === "accepted") {
+            setConfirmed({
+              requestType: "pay",
+              mine: null,
               theirs: getListing(requestTarget.id) ?? null,
               otherUserId: requestTarget.ownerUserId,
             });
@@ -507,6 +576,7 @@ export function BrowseTab({
       <SwapConfirmedModal
         open={!!confirmed}
         onClose={() => setConfirmed(null)}
+        requestType={confirmed?.requestType ?? "swap"}
         myListing={confirmed?.mine ?? null}
         theirListing={confirmed?.theirs ?? null}
         otherUser={
@@ -522,7 +592,8 @@ export function BrowseTab({
         panelClassName="max-w-sm"
       >
         <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">
-          You need to list your own formal before you can request a swap.
+          You need an active swap listing before you can request a swap.
+          Pay-only listings cannot be used in swaps.
         </p>
         <button
           type="button"

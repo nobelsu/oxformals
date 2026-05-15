@@ -13,19 +13,28 @@ const avatarValue = v.union(
 
 const avatarOrClear = v.optional(v.union(avatarValue, v.null()));
 
-async function swapHasUpcomingFormal(
+function listingIsUpcoming(listing: Doc<"listings">, nowMs: number): boolean {
+  const t = Date.parse(listing.dateTime);
+  if (Number.isNaN(t)) return false;
+  return t > nowMs;
+}
+
+async function requestHasUpcomingFormal(
   ctx: QueryCtx,
-  targetListingId: Id<"listings">,
-  offeringListingId: Id<"listings">,
+  req: Doc<"requests">,
   nowMs: number,
 ): Promise<boolean> {
-  const target = await ctx.db.get(targetListingId);
-  const offering = await ctx.db.get(offeringListingId);
-  if (!target || !offering) return false;
-  const t = Date.parse(target.dateTime);
-  const o = Date.parse(offering.dateTime);
-  if (Number.isNaN(t) || Number.isNaN(o)) return false;
-  return t > nowMs || o > nowMs;
+  const target = await ctx.db.get(req.targetListingId);
+  if (!target) return false;
+  const requestType =
+    req.requestType ?? (req.offeringListingId !== undefined ? "swap" : "pay");
+  if (requestType === "pay") {
+    return listingIsUpcoming(target, nowMs);
+  }
+  if (!req.offeringListingId) return false;
+  const offering = await ctx.db.get(req.offeringListingId);
+  if (!offering) return false;
+  return listingIsUpcoming(target, nowMs) || listingIsUpcoming(offering, nowMs);
 }
 
 /** Whether the viewer may see profile contact fields for profileUserId (trusted server time). */
@@ -44,14 +53,7 @@ async function hasRevealableContact(
     .take(200);
   for (const r of fromViewer) {
     if (r.status !== "accepted" || r.toUserId !== profileUserId) continue;
-    if (
-      await swapHasUpcomingFormal(
-        ctx,
-        r.targetListingId,
-        r.offeringListingId,
-        nowMs,
-      )
-    ) {
+    if (await requestHasUpcomingFormal(ctx, r, nowMs)) {
       return true;
     }
   }
@@ -62,14 +64,7 @@ async function hasRevealableContact(
     .take(200);
   for (const r of fromProfile) {
     if (r.status !== "accepted" || r.toUserId !== viewerId) continue;
-    if (
-      await swapHasUpcomingFormal(
-        ctx,
-        r.targetListingId,
-        r.offeringListingId,
-        nowMs,
-      )
-    ) {
+    if (await requestHasUpcomingFormal(ctx, r, nowMs)) {
       return true;
     }
   }
@@ -99,8 +94,20 @@ export const current = query({
 export const listPublic = query({
   args: {},
   handler: async (ctx) => {
-    const users = await ctx.db.query("users").take(200);
+    const users = await ctx.db.query("users").order("desc").take(500);
     return users.map(userWithoutPublicContact);
+  },
+});
+
+/** Fetch specific users for request rows and profiles (not limited to listPublic page). */
+export const getPublicByIds = query({
+  args: { userIds: v.array(v.id("users")) },
+  handler: async (ctx, args) => {
+    const unique = [...new Set(args.userIds)].slice(0, 100);
+    const users = await Promise.all(unique.map((id) => ctx.db.get(id)));
+    return users
+      .filter((user): user is Doc<"users"> => user !== null)
+      .map(userWithoutPublicContact);
   },
 });
 

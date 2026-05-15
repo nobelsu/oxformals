@@ -10,7 +10,9 @@
 
 import type * as AdminEmail from "../AdminEmail.js";
 import type * as ResendOTP from "../ResendOTP.js";
+import type * as adminReset from "../adminReset.js";
 import type * as auth from "../auth.js";
+import type * as groupSize from "../groupSize.js";
 import type * as http from "../http.js";
 import type * as listings from "../listings.js";
 import type * as uiFont from "../uiFont.js";
@@ -25,7 +27,9 @@ import type {
 declare const fullApi: ApiFromModules<{
   AdminEmail: typeof AdminEmail;
   ResendOTP: typeof ResendOTP;
+  adminReset: typeof adminReset;
   auth: typeof auth;
+  groupSize: typeof groupSize;
   http: typeof http;
   listings: typeof listings;
   uiFont: typeof uiFont;

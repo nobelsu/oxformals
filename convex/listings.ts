@@ -3,8 +3,56 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { groupSizeValidator } from "./groupSize";
 
 type Ctx = QueryCtx | MutationCtx;
+
+const listingTypeValidator = v.union(
+  v.literal("swap"),
+  v.literal("pay"),
+  v.literal("both"),
+);
+
+const requestTypeValidator = v.union(v.literal("swap"), v.literal("pay"));
+
+function resolveListingType(
+  listing: Doc<"listings">,
+): "swap" | "pay" | "both" {
+  return listing.listingType ?? "swap";
+}
+
+function resolveRequestType(req: Doc<"requests">): "swap" | "pay" {
+  return req.requestType ?? (req.offeringListingId !== undefined ? "swap" : "pay");
+}
+
+function validateListingTypeAndPrice(
+  listingType: "swap" | "pay" | "both",
+  price: number | undefined,
+): void {
+  if (listingType === "swap") {
+    if (price !== undefined) {
+      throw new Error("Swap listings cannot have a price.");
+    }
+    return;
+  }
+  if (price === undefined || !Number.isInteger(price) || price < 1) {
+    throw new Error("Enter a whole number of pounds (at least £1).");
+  }
+}
+
+function listingAllowsRequestType(
+  listingType: "swap" | "pay" | "both",
+  requestType: "swap" | "pay",
+): boolean {
+  if (listingType === "both") return true;
+  return listingType === requestType;
+}
+
+function listingSupportsSwap(
+  listingType: "swap" | "pay" | "both",
+): boolean {
+  return listingType === "swap" || listingType === "both";
+}
 
 async function requireUserId(ctx: Ctx): Promise<Id<"users">> {
   const userId = await getAuthUserId(ctx);
@@ -70,9 +118,11 @@ export const listRequestsFromMe = query({
 export const createListing = mutation({
   args: {
     dateTime: v.string(),
-    groupSize: v.union(v.literal(2), v.literal(3), v.literal(4)),
+    groupSize: groupSizeValidator,
     message: v.string(),
     menu: v.optional(v.string()),
+    listingType: listingTypeValidator,
+    price: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
@@ -91,6 +141,8 @@ export const createListing = mutation({
       throw new Error("Invalid listing date.");
     }
 
+    validateListingTypeAndPrice(args.listingType, args.price);
+
     return await ctx.db.insert("listings", {
       ownerUserId: userId,
       college,
@@ -103,46 +155,94 @@ export const createListing = mutation({
       message: args.message.trim(),
       menu: (args.menu ?? "").trim(),
       status: "active",
+      listingType: args.listingType,
+      ...(args.listingType === "swap"
+        ? {}
+        : { price: args.price }),
     });
   },
 });
 
 export const createRequest = mutation({
   args: {
+    requestType: requestTypeValidator,
     targetListingId: v.id("listings"),
-    offeringListingId: v.id("listings"),
+    offeringListingId: v.optional(v.id("listings")),
     message: v.string(),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-
-    if (args.targetListingId === args.offeringListingId) {
-      throw new Error("You must offer a different listing.");
-    }
-
     const target = await getListingOrThrow(ctx, args.targetListingId);
-    const offering = await getListingOrThrow(ctx, args.offeringListingId);
-    if (target.status !== "active" || offering.status !== "active") {
-      throw new Error("Both listings must be active.");
-    }
-    if (offering.ownerUserId !== userId) {
-      throw new Error("You can only offer your own listing.");
+    const targetType = resolveListingType(target);
+
+    if (target.status !== "active") {
+      throw new Error("This listing is no longer active.");
     }
     if (target.ownerUserId === userId) {
       throw new Error("You cannot request your own listing.");
+    }
+    if (!listingAllowsRequestType(targetType, args.requestType)) {
+      throw new Error("This listing does not accept that type of request.");
     }
 
     const mine = await ctx.db
       .query("requests")
       .withIndex("by_fromUserId", (q) => q.eq("fromUserId", userId))
       .take(200);
-    const existing = mine.find(
+
+    if (args.requestType === "pay") {
+      if (args.offeringListingId !== undefined) {
+        throw new Error("Pay requests cannot include an offering listing.");
+      }
+
+      const existingPay = mine.find(
+        (item) =>
+          item.targetListingId === args.targetListingId &&
+          resolveRequestType(item) === "pay" &&
+          item.status === "pending",
+      );
+      if (existingPay) {
+        throw new Error("You already sent this request.");
+      }
+
+      const requestId = await ctx.db.insert("requests", {
+        fromUserId: userId,
+        toUserId: target.ownerUserId,
+        targetListingId: args.targetListingId,
+        requestType: "pay",
+        message: args.message.trim(),
+        status: "pending",
+      });
+
+      return { requestId, autoAccepted: false as const };
+    }
+
+    if (!args.offeringListingId) {
+      throw new Error("Swap requests must include an offering listing.");
+    }
+    if (args.targetListingId === args.offeringListingId) {
+      throw new Error("You must offer a different listing.");
+    }
+
+    const offering = await getListingOrThrow(ctx, args.offeringListingId);
+    if (offering.status !== "active") {
+      throw new Error("Your offering listing must be active.");
+    }
+    if (offering.ownerUserId !== userId) {
+      throw new Error("You can only offer your own listing.");
+    }
+    if (!listingSupportsSwap(resolveListingType(offering))) {
+      throw new Error("Pay listings cannot be used in a swap.");
+    }
+
+    const existingSwap = mine.find(
       (item) =>
         item.targetListingId === args.targetListingId &&
         item.offeringListingId === args.offeringListingId &&
+        resolveRequestType(item) === "swap" &&
         item.status === "pending",
     );
-    if (existing) {
+    if (existingSwap) {
       throw new Error("You already sent this request.");
     }
 
@@ -151,6 +251,7 @@ export const createRequest = mutation({
       toUserId: target.ownerUserId,
       targetListingId: args.targetListingId,
       offeringListingId: args.offeringListingId,
+      requestType: "swap",
       message: args.message.trim(),
       status: "pending",
     });
@@ -159,13 +260,15 @@ export const createRequest = mutation({
       .query("requests")
       .withIndex("by_targetListingId_and_status", (q) =>
         q
-          .eq("targetListingId", args.offeringListingId)
+          .eq("targetListingId", args.offeringListingId!)
           .eq("status", "pending"),
       )
       .take(200);
     const mirror = mirrorCandidates.find(
       (r) =>
-        r.offeringListingId === args.targetListingId && r._id !== requestId,
+        resolveRequestType(r) === "swap" &&
+        r.offeringListingId === args.targetListingId &&
+        r._id !== requestId,
     );
 
     if (mirror) {
@@ -211,19 +314,14 @@ async function performAccept(
   req: Doc<"requests">,
   skipIds: Id<"requests">[] = [],
 ) {
+  const requestType = resolveRequestType(req);
   const target = await getListingOrThrow(ctx, req.targetListingId);
-  const offering = await getListingOrThrow(ctx, req.offeringListingId);
+
   if (target.status !== "active") {
     throw new Error("Target listing is no longer active.");
   }
-  if (offering.status !== "active") {
-    throw new Error("Offering listing is no longer active.");
-  }
   if (target.seatsAvailable <= 0) {
     throw new Error("No seats available on target listing.");
-  }
-  if (offering.seatsAvailable <= 0) {
-    throw new Error("No seats available on offering listing.");
   }
 
   await ctx.db.patch(req._id, { status: "accepted" });
@@ -234,14 +332,6 @@ async function performAccept(
     seatsAvailable: newSeats,
     members: newMembers,
     ...(newSeats === 0 ? { status: "closed" as const } : {}),
-  });
-
-  const newOfferingSeats = offering.seatsAvailable - 1;
-  const newOfferingMembers = [...offering.members, req.toUserId];
-  await ctx.db.patch(req.offeringListingId, {
-    seatsAvailable: newOfferingSeats,
-    members: newOfferingMembers,
-    ...(newOfferingSeats === 0 ? { status: "confirmed" as const } : {}),
   });
 
   const idsToSkip = new Set([req._id, ...skipIds]);
@@ -259,11 +349,35 @@ async function performAccept(
     }
   }
 
+  if (requestType === "pay") {
+    return;
+  }
+
+  if (!req.offeringListingId) {
+    throw new Error("Swap request is missing an offering listing.");
+  }
+
+  const offering = await getListingOrThrow(ctx, req.offeringListingId);
+  if (offering.status !== "active") {
+    throw new Error("Offering listing is no longer active.");
+  }
+  if (offering.seatsAvailable <= 0) {
+    throw new Error("No seats available on offering listing.");
+  }
+
+  const newOfferingSeats = offering.seatsAvailable - 1;
+  const newOfferingMembers = [...offering.members, req.toUserId];
+  await ctx.db.patch(req.offeringListingId, {
+    seatsAvailable: newOfferingSeats,
+    members: newOfferingMembers,
+    ...(newOfferingSeats === 0 ? { status: "confirmed" as const } : {}),
+  });
+
   if (newOfferingSeats === 0) {
     const pendingForOffering = await ctx.db
       .query("requests")
       .withIndex("by_offeringListingId_and_status", (q) =>
-        q.eq("offeringListingId", req.offeringListingId).eq("status", "pending"),
+        q.eq("offeringListingId", req.offeringListingId!).eq("status", "pending"),
       )
       .take(200);
     for (const pending of pendingForOffering) {
@@ -371,9 +485,11 @@ export const updateListing = mutation({
   args: {
     listingId: v.id("listings"),
     dateTime: v.optional(v.string()),
-    groupSize: v.optional(v.union(v.literal(2), v.literal(3), v.literal(4))),
+    groupSize: v.optional(groupSizeValidator),
     message: v.optional(v.string()),
     menu: v.optional(v.string()),
+    listingType: v.optional(listingTypeValidator),
+    price: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
@@ -384,6 +500,20 @@ export const updateListing = mutation({
     }
     if (listing.status === "closed") {
       throw new Error("Closed listings cannot be edited.");
+    }
+
+    if (args.listingType !== undefined) {
+      const pendingOnListing = await ctx.db
+        .query("requests")
+        .withIndex("by_targetListingId_and_status", (q) =>
+          q.eq("targetListingId", args.listingId).eq("status", "pending"),
+        )
+        .take(1);
+      if (pendingOnListing.length > 0) {
+        throw new Error(
+          "Cannot change listing type while there are pending requests.",
+        );
+      }
     }
 
     const patch: Partial<Doc<"listings">> = {};
@@ -420,6 +550,23 @@ export const updateListing = mutation({
       patch.menu = args.menu.trim();
     }
 
+    if (args.listingType !== undefined || args.price !== undefined) {
+      const nextType = args.listingType ?? resolveListingType(listing);
+      const nextPrice =
+        args.price !== undefined
+          ? args.price
+          : nextType === "swap"
+            ? undefined
+            : listing.price;
+      validateListingTypeAndPrice(nextType, nextPrice);
+      patch.listingType = nextType;
+      if (nextType === "swap") {
+        patch.price = undefined;
+      } else {
+        patch.price = nextPrice;
+      }
+    }
+
     if (Object.keys(patch).length === 0) {
       return args.listingId;
     }
@@ -441,6 +588,38 @@ export const backfillMenu = internalMutation({
       }
     }
     return { patched, total: listings.length };
+  },
+});
+
+export const backfillListingAndRequestTypes = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const listings = await ctx.db.query("listings").take(1000);
+    let listingsPatched = 0;
+    for (const listing of listings) {
+      if (listing.listingType === undefined) {
+        await ctx.db.patch(listing._id, { listingType: "swap" });
+        listingsPatched++;
+      }
+    }
+
+    const requests = await ctx.db.query("requests").take(1000);
+    let requestsPatched = 0;
+    for (const req of requests) {
+      if (req.requestType === undefined) {
+        const requestType =
+          req.offeringListingId !== undefined ? "swap" : "pay";
+        await ctx.db.patch(req._id, { requestType });
+        requestsPatched++;
+      }
+    }
+
+    return {
+      listingsPatched,
+      listingsTotal: listings.length,
+      requestsPatched,
+      requestsTotal: requests.length,
+    };
   },
 });
 

@@ -171,7 +171,10 @@ export function LoginForm() {
     try {
       const signInResult = await requestCode(normalized);
       setEmail(normalized);
-      if (signInResult.status === "code-sent") {
+      if (signInResult.status === "signed-in") {
+        setStep("profile");
+        setCode("");
+      } else if (signInResult.status === "code-sent") {
         setStep("code");
         setCode("");
       }

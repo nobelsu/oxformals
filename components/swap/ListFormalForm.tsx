@@ -2,11 +2,18 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { Chip } from "@/components/ui/Chip";
+import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { normalizeCollegeName } from "@/lib/data/colleges";
 import type { NewListingInput } from "@/lib/data/dataClient";
+import type { ListingType } from "@/lib/data/types";
 
 const GROUP_SIZES: Array<2 | 3 | 4> = [2, 3, 4];
+const LISTING_TYPE_OPTIONS: { value: ListingType; label: string }[] = [
+  { value: "swap", label: "Swap" },
+  { value: "pay", label: "Pay" },
+  { value: "both", label: "Swap or pay" },
+];
 
 export type ListingProfileFields = {
   college: string;
@@ -19,6 +26,8 @@ export type ListingFormValues = {
   groupSize: 2 | 3 | 4;
   message: string;
   menu: string;
+  listingType: ListingType;
+  price?: number;
 };
 
 type Props = {
@@ -68,7 +77,16 @@ export function ListFormalForm({
   );
   const [message, setMessage] = useState(initialValues?.message ?? "");
   const [menu, setMenu] = useState(initialValues?.menu ?? "");
+  const [listingType, setListingType] = useState<ListingType>(
+    initialValues?.listingType ?? "swap",
+  );
+  const [price, setPrice] = useState(
+    initialValues?.price !== undefined ? String(initialValues.price) : "",
+  );
   const [error, setError] = useState<string | null>(null);
+  const [listingTypePickerOpen, setListingTypePickerOpen] = useState(false);
+
+  const needsPrice = listingType === "pay" || listingType === "both";
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -85,17 +103,29 @@ export function ListFormalForm({
       setError("Add a date & time.");
       return;
     }
+    let priceNum: number | undefined;
+    if (needsPrice) {
+      priceNum = Number.parseInt(price.trim(), 10);
+      if (!Number.isFinite(priceNum) || priceNum < 1) {
+        setError("Enter a whole number of pounds (at least £1).");
+        return;
+      }
+    }
     const iso = new Date(dateTime).toISOString();
     onSubmit({
       dateTime: iso,
       groupSize,
       message: message.trim(),
       menu: menu.trim(),
+      listingType,
+      ...(priceNum !== undefined ? { price: priceNum } : {}),
     });
     if (!editMode) {
       setDateTime("");
       setMessage("");
       setMenu("");
+      setListingType("swap");
+      setPrice("");
     }
   }
 
@@ -104,11 +134,12 @@ export function ListFormalForm({
 
   const formInner = (
     <>
-        <h3 className="font-display text-3xl uppercase tracking-wide">
-          {editMode ? "Edit listing" : "+ List a formal"}
-        </h3>
+      <h3 className="font-display text-3xl uppercase tracking-wide">
+        {editMode ? "Edit listing" : "+ List a formal"}
+      </h3>
 
-        <label className="flex flex-col gap-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-4">
+        <label className="flex min-w-0 flex-col gap-2">
           <span className="text-sm text-[var(--ink-muted)]">Date &amp; time</span>
           <input
             type="datetime-local"
@@ -118,7 +149,46 @@ export function ListFormalForm({
           />
         </label>
 
-        <div className="flex flex-col gap-2">
+        <label className="flex min-w-0 flex-col gap-2">
+          <span className="text-sm text-[var(--ink-muted)]">Listing type</span>
+          <OutlineCombobox
+            open={listingTypePickerOpen}
+            onOpenChange={setListingTypePickerOpen}
+            value={listingType}
+            options={LISTING_TYPE_OPTIONS}
+            onChange={(v) => {
+              const next = v as ListingType;
+              setListingType(next);
+              if (next === "swap") setPrice("");
+              setListingTypePickerOpen(false);
+            }}
+            placeholder="Choose listing type"
+          />
+        </label>
+      </div>
+
+      <div
+        className={`grid grid-cols-1 gap-5 sm:gap-4 ${needsPrice ? "sm:grid-cols-2" : ""}`}
+      >
+        {needsPrice ? (
+          <label className="flex min-w-0 flex-col gap-2">
+            <span className="text-sm text-[var(--ink-muted)]">Price (£)</span>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              inputMode="numeric"
+              value={price}
+              onChange={(e) =>
+                setPrice(e.target.value.replace(/\D/g, "").slice(0, 4))
+              }
+              placeholder="25"
+              className={fieldCls}
+            />
+          </label>
+      ) : null}
+
+        <div className="flex min-w-0 flex-col gap-2">
           <span className="text-sm text-[var(--ink-muted)]">Group size</span>
           <div className="flex gap-2">
             {GROUP_SIZES.map((s) => (
@@ -133,21 +203,21 @@ export function ListFormalForm({
             ))}
           </div>
         </div>
+      </div>
 
-        <label className="flex flex-col gap-2">
-          <span className="text-sm text-[var(--ink-muted)]">
-            Menu (optional)
-          </span>
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-4">
+        <label className="flex min-w-0 flex-col gap-2">
+          <span className="text-sm text-[var(--ink-muted)]">Menu (optional)</span>
           <textarea
             value={menu}
             onChange={(e) => setMenu(e.target.value)}
-            rows={3}
+            rows={2}
             placeholder="What's on the menu?"
             className="w-full rounded-[20px] border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base focus:outline-none"
           />
         </label>
 
-        <label className="flex flex-col gap-2">
+        <label className="flex min-w-0 flex-col gap-2">
           <span className="text-sm text-[var(--ink-muted)]">
             Short message (optional)
           </span>
@@ -159,17 +229,16 @@ export function ListFormalForm({
             className="w-full rounded-[20px] border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base focus:outline-none"
           />
         </label>
+      </div>
 
-        {error && (
-          <p className="text-sm text-[var(--danger)]">{error}</p>
-        )}
+      {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
 
-        <button
-          type="submit"
-          className="self-start rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-5 py-2 text-base transition-colors"
-        >
-          {editMode ? "Save changes" : "Post listing"}
-        </button>
+      <button
+        type="submit"
+        className="self-start rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-5 py-2 text-base transition-colors"
+      >
+        {editMode ? "Save changes" : "Post listing"}
+      </button>
     </>
   );
 

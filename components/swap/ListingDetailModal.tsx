@@ -4,7 +4,9 @@ import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
-import { formatListingDate, formatYearLabel } from "@/lib/data/format";
+import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
+import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
+import { listingRequestCta } from "@/lib/data/listingType";
 import type { User } from "@/lib/auth/types";
 import type { Listing } from "@/lib/data/types";
 
@@ -47,6 +49,7 @@ export function ListingDetailModal({
       : `${listing.seatsAvailable} ${listing.seatsAvailable === 1 ? "seat" : "seats"} left`;
 
   const allMembers = [owner, ...memberUsers.filter((m) => m.id !== owner.id)];
+  const ctaLabel = listingRequestCta(listing.listingType);
 
   return (
     <Modal
@@ -60,6 +63,7 @@ export function ListingDetailModal({
             <h2 className="font-display text-3xl uppercase tracking-wide">
               {listing.college}
             </h2>
+            <ListingTypeTag listingType={listing.listingType} />
             {(listing.status === "confirmed" || listing.status === "closed") && (
               <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
                 {listing.seatsAvailable === 0 ? "Group full" : "Listing full"}
@@ -68,6 +72,7 @@ export function ListingDetailModal({
           </div>
           <p className="mt-1.5 text-sm text-[var(--ink-muted)]">
             {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} · {seatsLabel}
+            {listing.price !== undefined ? ` · ${formatPrice(listing.price)}` : ""}
           </p>
           <p className="mt-0.5 text-sm text-[var(--ink-soft)]">
             {[formatYearLabel(listing.year) || listing.year, listing.role]
@@ -163,7 +168,7 @@ export function ListingDetailModal({
               disabled
               className="cursor-not-allowed rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-8 py-3 text-sm text-white opacity-70"
             >
-              {disabledLabel ?? "Send request!"}
+              {disabledLabel ?? ctaLabel}
             </button>
           ) : (
             <button
@@ -174,7 +179,7 @@ export function ListingDetailModal({
               }}
               className="rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
             >
-              Send request!
+              {ctaLabel}
             </button>
           )}
         </div>

@@ -15,7 +15,7 @@ import { ListingCard } from "@/components/swap/ListingCard";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
-import type { Listing } from "@/lib/data/types";
+import type { GroupSize, Listing } from "@/lib/data/types";
 import { formatYearLabel } from "@/lib/data/format";
 
 function mapProfileListing(doc: {
@@ -24,13 +24,15 @@ function mapProfileListing(doc: {
   ownerUserId: string;
   college: string;
   dateTime: string;
-  groupSize: 2 | 3 | 4;
+  groupSize: GroupSize;
   seatsAvailable: number;
   members: string[];
   year: string;
   role: string;
   message: string;
   menu?: string;
+  listingType?: "swap" | "pay" | "both";
+  price?: number;
   status: "active" | "confirmed" | "closed";
 }): Listing {
   return {
@@ -45,6 +47,8 @@ function mapProfileListing(doc: {
     role: doc.role,
     message: doc.message,
     menu: doc.menu ?? "",
+    listingType: doc.listingType ?? "swap",
+    ...(doc.price !== undefined ? { price: doc.price } : {}),
     status: doc.status,
     createdAt: doc._creationTime,
   };

@@ -4,8 +4,10 @@ import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
 import type { User } from "@/lib/auth/types";
-import { formatListingDate, formatRelativeTime } from "@/lib/data/format";
+import { formatListingDate, formatPrice, formatRelativeTime } from "@/lib/data/format";
 import type { Listing, SwapRequest } from "@/lib/data/types";
+import { resolveRequestType } from "@/lib/data/requestFilters";
+import { RequestTypeTag } from "@/components/swap/RequestTypeTag";
 
 type Props = {
   request: SwapRequest;
@@ -20,6 +22,7 @@ export function SentRequestRow({
   targetListing,
   onWithdraw,
 }: Props) {
+  const requestType = resolveRequestType(request);
   const statusLabel =
     request.status === "pending"
       ? "Pending"
@@ -33,9 +36,12 @@ export function SentRequestRow({
       padded={false}
       className="relative p-6"
     >
-      <span className="absolute right-4 top-3 rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
-        {statusLabel}
-      </span>
+      <div className="absolute right-4 top-3 flex flex-wrap items-center justify-end gap-1.5">
+        <RequestTypeTag requestType={requestType} />
+        <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
+          {statusLabel}
+        </span>
+      </div>
       <div className="flex items-start gap-4">
         <Link href={`/profile/${toUser.id}`}>
           <Avatar name={toUser.name} source={toUser.avatar} />
@@ -45,12 +51,23 @@ export function SentRequestRow({
             {toUser.name}
           </Link>
           <div className="text-sm leading-snug text-[var(--ink-muted)]">
-            {targetListing ? targetListing.college : "Swap request"}
-            {targetListing && (
-              <span className="text-[var(--ink-muted)]">
-                {" "}
-                · {formatListingDate(targetListing.dateTime)}
-              </span>
+            {requestType === "pay" ? (
+              <>
+                Pay request
+                {targetListing?.price !== undefined
+                  ? ` · ${formatPrice(targetListing.price)}`
+                  : ""}
+              </>
+            ) : targetListing ? (
+              <>
+                {targetListing.college}
+                <span className="text-[var(--ink-muted)]">
+                  {" "}
+                  · {formatListingDate(targetListing.dateTime)}
+                </span>
+              </>
+            ) : (
+              "Swap request"
             )}
           </div>
           {request.message ? (

@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
+import { groupSizeValidator } from "./groupSize";
 import { uiFontValidator } from "./uiFont";
 
 const avatar = v.optional(
@@ -39,7 +40,7 @@ export default defineSchema({
     ownerUserId: v.id("users"),
     college: v.string(),
     dateTime: v.string(),
-    groupSize: v.union(v.literal(2), v.literal(3), v.literal(4)),
+    groupSize: groupSizeValidator,
     seatsAvailable: v.number(),
     members: v.array(v.id("users")),
     year: v.string(),
@@ -51,6 +52,10 @@ export default defineSchema({
       v.literal("confirmed"),
       v.literal("closed"),
     ),
+    listingType: v.optional(
+      v.union(v.literal("swap"), v.literal("pay"), v.literal("both")),
+    ),
+    price: v.optional(v.number()),
   })
     .index("by_ownerUserId", ["ownerUserId"])
     .index("by_status", ["status"])
@@ -59,7 +64,8 @@ export default defineSchema({
     fromUserId: v.id("users"),
     toUserId: v.id("users"),
     targetListingId: v.id("listings"),
-    offeringListingId: v.id("listings"),
+    offeringListingId: v.optional(v.id("listings")),
+    requestType: v.optional(v.union(v.literal("swap"), v.literal("pay"))),
     message: v.string(),
     status: v.union(
       v.literal("pending"),

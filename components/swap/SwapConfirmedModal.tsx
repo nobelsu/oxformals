@@ -7,11 +7,12 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { User } from "@/lib/auth/types";
 import { formatListingDate } from "@/lib/data/format";
-import type { Listing } from "@/lib/data/types";
+import type { Listing, RequestType } from "@/lib/data/types";
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  requestType?: RequestType;
   myListing: Listing | null;
   theirListing: Listing | null;
   otherUser: User | null;
@@ -22,11 +23,13 @@ type Props = {
 export function SwapConfirmedModal({
   open,
   onClose,
+  requestType = "swap",
   myListing,
   theirListing,
   otherUser,
   otherUserId,
 }: Props) {
+  const isPay = requestType === "pay";
   const gatedProfile = useQuery(
     api.users.getPublicProfile,
     open && otherUserId ? { userId: otherUserId as Id<"users"> } : "skip",
@@ -47,20 +50,44 @@ export function SwapConfirmedModal({
   return (
     <Modal open={open} onClose={onClose}>
       <div className="text-center">
-        <h2 className="font-display text-4xl uppercase tracking-wide">Swap confirmed</h2>
-        {theirListing && (
-          <p className="mt-4 text-[var(--ink-muted)]">
-            You&apos;re going to{" "}
-            <span className="text-[var(--ink)]">{theirListing.college}</span> ·{" "}
-            {formatListingDate(theirListing.dateTime)}
-          </p>
+        <h2 className="font-display text-4xl uppercase tracking-wide">
+          {isPay ? "Request accepted" : "Swap confirmed"}
+        </h2>
+        {isPay ? (
+          theirListing && (
+            <p className="mt-4 text-[var(--ink-muted)]">
+              You&apos;re joining{" "}
+              <span className="text-[var(--ink)]">{theirListing.college}</span> ·{" "}
+              {formatListingDate(theirListing.dateTime)}
+            </p>
+          )
+        ) : (
+          <>
+            {theirListing && (
+              <p className="mt-4 text-[var(--ink-muted)]">
+                You&apos;re going to{" "}
+                <span className="text-[var(--ink)]">{theirListing.college}</span> ·{" "}
+                {formatListingDate(theirListing.dateTime)}
+              </p>
+            )}
+            {myListing && otherUser && (
+              <p className="mt-1 text-[var(--ink-muted)]">
+                <Link href={`/profile/${otherUser.id}`} className="text-[var(--ink)] hover:underline">
+                  {otherUser.name.split(" ")[0]}
+                </Link>{" "}
+                has joined your group at{" "}
+                <span className="text-[var(--ink)]">{myListing.college}</span> ·{" "}
+                {formatListingDate(myListing.dateTime)}
+              </p>
+            )}
+          </>
         )}
-        {myListing && otherUser && (
+        {isPay && myListing && otherUser && (
           <p className="mt-1 text-[var(--ink-muted)]">
             <Link href={`/profile/${otherUser.id}`} className="text-[var(--ink)] hover:underline">
               {otherUser.name.split(" ")[0]}
             </Link>{" "}
-            has joined your group at{" "}
+            will join your group at{" "}
             <span className="text-[var(--ink)]">{myListing.college}</span> ·{" "}
             {formatListingDate(myListing.dateTime)}
           </p>

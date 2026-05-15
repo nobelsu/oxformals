@@ -63,6 +63,10 @@ function ordinalSuffix(value: number): string {
   }
 }
 
+export function formatPrice(gbp: number): string {
+  return `£${gbp}`;
+}
+
 export function formatYearLabel(raw: string | number | null | undefined): string {
   if (raw == null) return "";
   const value = String(raw).trim();

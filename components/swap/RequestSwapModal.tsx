@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
 import { formatListingDate } from "@/lib/data/format";
+import { listingSupportsSwap } from "@/lib/data/listingType";
 import type { Listing } from "@/lib/data/types";
 
 type Props = {
@@ -21,10 +23,22 @@ export function RequestSwapModal({
   onSubmit,
 }: Props) {
   const activeMine = useMemo(
-    () => myListings.filter((l) => l.status === "active"),
+    () =>
+      myListings.filter(
+        (l) => l.status === "active" && listingSupportsSwap(l.listingType),
+      ),
     [myListings],
   );
+  const offeringOptions = useMemo(
+    () =>
+      activeMine.map((l) => ({
+        value: l.id,
+        label: `${l.college} — ${formatListingDate(l.dateTime)}`,
+      })),
+    [activeMine],
+  );
   const [offeringId, setOfferingId] = useState<string>("");
+  const [offeringPickerOpen, setOfferingPickerOpen] = useState(false);
   const [message, setMessage] = useState("");
 
   const effectiveOfferingId = offeringId || (activeMine[0]?.id ?? "");
@@ -58,9 +72,10 @@ export function RequestSwapModal({
 
       {activeMine.length === 0 ? (
         <div className="text-[var(--ink-muted)]">
-          You don&apos;t have an active listing to offer yet. Head to the
+          You need an active swap or both-type listing to offer. Pay-only
+          listings can&apos;t be used in swaps. Head to the
           <span className="font-medium text-[var(--ink)]"> Mine </span>
-          tab to post one first.
+          tab to list one.
         </div>
       ) : (
         <>
@@ -68,17 +83,17 @@ export function RequestSwapModal({
             <span className="text-sm text-[var(--ink-muted)]">
               Your formal to offer
             </span>
-            <select
+            <OutlineCombobox
+              open={offeringPickerOpen}
+              onOpenChange={setOfferingPickerOpen}
               value={effectiveOfferingId}
-              onChange={(e) => setOfferingId(e.target.value)}
-              className={fieldCls}
-            >
-              {activeMine.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.college} — {formatListingDate(l.dateTime)}
-                </option>
-              ))}
-            </select>
+              options={offeringOptions}
+              onChange={(v) => {
+                setOfferingId(v);
+                setOfferingPickerOpen(false);
+              }}
+              placeholder="Choose a listing"
+            />
           </label>
 
           <label className="flex flex-col gap-2 mb-6">
