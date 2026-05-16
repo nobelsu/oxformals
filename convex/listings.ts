@@ -5,6 +5,15 @@ import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { groupSizeValidator } from "./groupSize";
+import {
+  declinePendingRequestsForListing,
+  deleteMenuPdfIfPresent,
+  enrichListing,
+  expireListing,
+  listingIsPast,
+  resolveStatusAfterEdit,
+  validateMenuPdfId,
+} from "./listingHelpers";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -15,6 +24,8 @@ const listingTypeValidator = v.union(
 );
 
 const requestTypeValidator = v.union(v.literal("swap"), v.literal("pay"));
+
+const menuPdfIdOrClear = v.optional(v.union(v.id("_storage"), v.null()));
 
 function resolveListingType(
   listing: Doc<"listings">,
@@ -73,7 +84,8 @@ async function getListingOrThrow(
 export const listListings = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("listings").order("desc").take(200);
+    const listings = await ctx.db.query("listings").order("desc").take(200);
+    return Promise.all(listings.map((listing) => enrichListing(ctx, listing)));
   },
 });
 
@@ -82,11 +94,12 @@ export const listMyListings = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
-    return await ctx.db
+    const listings = await ctx.db
       .query("listings")
       .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", userId))
       .order("desc")
       .take(200);
+    return Promise.all(listings.map((listing) => enrichListing(ctx, listing)));
   },
 });
 
@@ -122,6 +135,7 @@ export const createListing = mutation({
     groupSize: groupSizeValidator,
     message: v.string(),
     menu: v.optional(v.string()),
+    menuPdfId: v.optional(v.id("_storage")),
     listingType: listingTypeValidator,
     price: v.optional(v.number()),
   },
@@ -144,6 +158,10 @@ export const createListing = mutation({
 
     validateListingTypeAndPrice(args.listingType, args.price);
 
+    if (args.menuPdfId !== undefined) {
+      await validateMenuPdfId(ctx, args.menuPdfId);
+    }
+
     return await ctx.db.insert("listings", {
       ownerUserId: userId,
       college,
@@ -157,6 +175,7 @@ export const createListing = mutation({
       menu: (args.menu ?? "").trim(),
       status: "active",
       listingType: args.listingType,
+      ...(args.menuPdfId !== undefined ? { menuPdfId: args.menuPdfId } : {}),
       ...(args.listingType === "swap"
         ? {}
         : { price: args.price }),
@@ -178,6 +197,9 @@ export const createRequest = mutation({
 
     if (target.status !== "active") {
       throw new Error("This listing is no longer active.");
+    }
+    if (listingIsPast(target.dateTime, Date.now())) {
+      throw new Error("This formal has passed.");
     }
     if (target.ownerUserId === userId) {
       throw new Error("You cannot request your own listing.");
@@ -228,6 +250,9 @@ export const createRequest = mutation({
     const offering = await getListingOrThrow(ctx, args.offeringListingId);
     if (offering.status !== "active") {
       throw new Error("Your offering listing must be active.");
+    }
+    if (listingIsPast(offering.dateTime, Date.now())) {
+      throw new Error("Your offering formal has passed.");
     }
     if (offering.ownerUserId !== userId) {
       throw new Error("You can only offer your own listing.");
@@ -321,6 +346,9 @@ async function performAccept(
   if (target.status !== "active") {
     throw new Error("Target listing is no longer active.");
   }
+  if (listingIsPast(target.dateTime, Date.now())) {
+    throw new Error("This formal has passed.");
+  }
   if (target.seatsAvailable <= 0) {
     throw new Error("No seats available on target listing.");
   }
@@ -361,6 +389,9 @@ async function performAccept(
   const offering = await getListingOrThrow(ctx, req.offeringListingId);
   if (offering.status !== "active") {
     throw new Error("Offering listing is no longer active.");
+  }
+  if (listingIsPast(offering.dateTime, Date.now())) {
+    throw new Error("This formal has passed.");
   }
   if (offering.seatsAvailable <= 0) {
     throw new Error("No seats available on offering listing.");
@@ -418,7 +449,11 @@ export const leaveGroup = mutation({
 
     const newMembers = listing.members.filter((m) => m !== userId);
     const newSeats = listing.seatsAvailable + 1;
-    const reopened = listing.status === "closed" && newSeats > 0;
+    const nowMs = Date.now();
+    const reopened =
+      listing.status === "closed" &&
+      newSeats > 0 &&
+      !listingIsPast(listing.dateTime, nowMs);
     await ctx.db.patch(args.listingId, {
       members: newMembers,
       seatsAvailable: newSeats,
@@ -459,7 +494,11 @@ export const removeMember = mutation({
 
     const newMembers = listing.members.filter((m) => m !== args.memberId);
     const newSeats = listing.seatsAvailable + 1;
-    const reopened = listing.status === "closed" && newSeats > 0;
+    const nowMs = Date.now();
+    const reopened =
+      listing.status === "closed" &&
+      newSeats > 0 &&
+      !listingIsPast(listing.dateTime, nowMs);
     await ctx.db.patch(args.listingId, {
       members: newMembers,
       seatsAvailable: newSeats,
@@ -489,6 +528,7 @@ export const updateListing = mutation({
     groupSize: v.optional(groupSizeValidator),
     message: v.optional(v.string()),
     menu: v.optional(v.string()),
+    menuPdfId: menuPdfIdOrClear,
     listingType: v.optional(listingTypeValidator),
     price: v.optional(v.number()),
   },
@@ -498,9 +538,6 @@ export const updateListing = mutation({
 
     if (listing.ownerUserId !== userId) {
       throw new Error("Only the owner can edit a listing.");
-    }
-    if (listing.status === "closed") {
-      throw new Error("Closed listings cannot be edited.");
     }
 
     if (args.listingType !== undefined) {
@@ -534,13 +571,7 @@ export const updateListing = mutation({
         );
       }
       patch.groupSize = args.groupSize;
-      const newSeats = args.groupSize - listing.members.length;
-      patch.seatsAvailable = newSeats;
-      if (newSeats === 0 && listing.status === "active") {
-        patch.status = "confirmed";
-      } else if (newSeats > 0 && listing.status === "confirmed") {
-        patch.status = "active";
-      }
+      patch.seatsAvailable = args.groupSize - listing.members.length;
     }
 
     if (args.message !== undefined) {
@@ -549,6 +580,21 @@ export const updateListing = mutation({
 
     if (args.menu !== undefined) {
       patch.menu = args.menu.trim();
+    }
+
+    if (args.menuPdfId !== undefined) {
+      if (args.menuPdfId === null) {
+        if (listing.menuPdfId) {
+          await deleteMenuPdfIfPresent(ctx, listing.menuPdfId);
+        }
+        patch.menuPdfId = undefined;
+      } else {
+        await validateMenuPdfId(ctx, args.menuPdfId);
+        if (listing.menuPdfId && listing.menuPdfId !== args.menuPdfId) {
+          await deleteMenuPdfIfPresent(ctx, listing.menuPdfId);
+        }
+        patch.menuPdfId = args.menuPdfId;
+      }
     }
 
     if (args.listingType !== undefined || args.price !== undefined) {
@@ -568,12 +614,94 @@ export const updateListing = mutation({
       }
     }
 
-    if (Object.keys(patch).length === 0) {
+    const finalDateTime = patch.dateTime ?? listing.dateTime;
+    const finalGroupSize = patch.groupSize ?? listing.groupSize;
+    const newStatus = resolveStatusAfterEdit(
+      listing,
+      finalDateTime,
+      finalGroupSize,
+      Date.now(),
+    );
+    if (newStatus !== undefined) {
+      patch.status = newStatus;
+    }
+
+    const hasMenuPdfChange = args.menuPdfId !== undefined;
+    if (Object.keys(patch).length === 0 && !hasMenuPdfChange) {
       return args.listingId;
     }
 
-    await ctx.db.patch(args.listingId, patch);
+    if (Object.keys(patch).length > 0) {
+      await ctx.db.patch(args.listingId, patch);
+    }
     return args.listingId;
+  },
+});
+
+const EXPIRE_BATCH_SIZE = 100;
+
+async function expirePastListingsBatch(
+  ctx: MutationCtx,
+  cursor?: string,
+): Promise<{ expired: number; scanned: number; isDone: boolean; continueCursor: string }> {
+  const nowMs = Date.now();
+  const result = await ctx.db
+    .query("listings")
+    .withIndex("by_status", (q) => q.eq("status", "active"))
+    .paginate({
+      numItems: EXPIRE_BATCH_SIZE,
+      cursor: cursor ?? null,
+    });
+
+  let expired = 0;
+  for (const listing of result.page) {
+    if (listingIsPast(listing.dateTime, nowMs)) {
+      await expireListing(ctx, listing._id);
+      expired++;
+    }
+  }
+
+  return {
+    expired,
+    scanned: result.page.length,
+    isDone: result.isDone,
+    continueCursor: result.continueCursor,
+  };
+}
+
+export const expirePastListings = internalMutation({
+  args: { cursor: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const batch = await expirePastListingsBatch(ctx, args.cursor);
+
+    if (!batch.isDone) {
+      await ctx.scheduler.runAfter(0, internal.listings.expirePastListings, {
+        cursor: batch.continueCursor,
+      });
+    }
+
+    return { expired: batch.expired, scanned: batch.scanned };
+  },
+});
+
+export const syncExpiredListings = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireUserId(ctx);
+
+    let totalExpired = 0;
+    let totalScanned = 0;
+    let cursor: string | undefined;
+
+    for (;;) {
+      const batch = await expirePastListingsBatch(ctx, cursor);
+      totalExpired += batch.expired;
+      totalScanned += batch.scanned;
+      if (batch.isDone) break;
+      cursor = batch.continueCursor;
+    }
+
+    return { expired: totalExpired, scanned: totalScanned };
   },
 });
 
@@ -592,21 +720,21 @@ export const backfillMenu = internalMutation({
   },
 });
 
-export const backfillListingTypeBoth = internalMutation({
+export const backfillListingTypeSwap = internalMutation({
   args: {},
   handler: async (ctx) => {
     const listings = await ctx.db.query("listings").take(100);
     let patched = 0;
     for (const listing of listings) {
-      if (listing.listingType !== "both") {
-        await ctx.db.patch(listing._id, { listingType: "both" });
+      if (listing.listingType !== "swap") {
+        await ctx.db.patch(listing._id, { listingType: "swap" });
         patched++;
       }
     }
     if (listings.length === 100) {
       await ctx.scheduler.runAfter(
         0,
-        internal.listings.backfillListingTypeBoth,
+        internal.listings.backfillListingTypeSwap,
         {},
       );
     }
@@ -621,7 +749,7 @@ export const backfillListingAndRequestTypes = internalMutation({
     let listingsPatched = 0;
     for (const listing of listings) {
       if (listing.listingType === undefined) {
-        await ctx.db.patch(listing._id, { listingType: "both" });
+        await ctx.db.patch(listing._id, { listingType: "swap" });
         listingsPatched++;
       }
     }
@@ -655,30 +783,10 @@ export const deleteListing = mutation({
     if (listing.ownerUserId !== userId) {
       throw new Error("Only the owner can delete a listing.");
     }
-    if (listing.status === "closed") {
-      throw new Error("Closed listings cannot be deleted.");
-    }
 
-    const pendingAsTarget = await ctx.db
-      .query("requests")
-      .withIndex("by_targetListingId_and_status", (q) =>
-        q.eq("targetListingId", args.listingId).eq("status", "pending"),
-      )
-      .take(200);
-    for (const req of pendingAsTarget) {
-      await ctx.db.patch(req._id, { status: "declined" });
-    }
+    await declinePendingRequestsForListing(ctx, args.listingId);
 
-    const pendingAsOffering = await ctx.db
-      .query("requests")
-      .withIndex("by_offeringListingId_and_status", (q) =>
-        q.eq("offeringListingId", args.listingId).eq("status", "pending"),
-      )
-      .take(200);
-    for (const req of pendingAsOffering) {
-      await ctx.db.patch(req._id, { status: "declined" });
-    }
-
+    await deleteMenuPdfIfPresent(ctx, listing.menuPdfId);
     await ctx.db.delete(args.listingId);
     return args.listingId;
   },

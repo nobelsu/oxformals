@@ -12,9 +12,12 @@ import type * as AdminEmail from "../AdminEmail.js";
 import type * as ResendOTP from "../ResendOTP.js";
 import type * as adminReset from "../adminReset.js";
 import type * as auth from "../auth.js";
+import type * as crons from "../crons.js";
 import type * as groupSize from "../groupSize.js";
 import type * as http from "../http.js";
+import type * as listingHelpers from "../listingHelpers.js";
 import type * as listings from "../listings.js";
+import type * as storage from "../storage.js";
 import type * as uiFont from "../uiFont.js";
 import type * as users from "../users.js";
 
@@ -29,9 +32,12 @@ declare const fullApi: ApiFromModules<{
   ResendOTP: typeof ResendOTP;
   adminReset: typeof adminReset;
   auth: typeof auth;
+  crons: typeof crons;
   groupSize: typeof groupSize;
   http: typeof http;
+  listingHelpers: typeof listingHelpers;
   listings: typeof listings;
+  storage: typeof storage;
   uiFont: typeof uiFont;
   users: typeof users;
 }>;

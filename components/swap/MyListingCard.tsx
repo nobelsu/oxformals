@@ -34,6 +34,7 @@ export function MyListingCard({
     active: "Active",
     confirmed: "Listing full",
     closed: listing.seatsAvailable === 0 ? "Group full" : "Closed",
+    expired: "Past",
   };
 
   const handleViewRequests = useCallback(() => {

@@ -38,9 +38,11 @@ function mapProfileListing(doc: {
   role: string;
   message: string;
   menu?: string;
+  menuPdfUrl?: string | null;
+  menuFileContentType?: string | null;
   listingType?: "swap" | "pay" | "both";
   price?: number;
-  status: "active" | "confirmed" | "closed";
+  status: "active" | "confirmed" | "closed" | "expired";
 }): Listing {
   return {
     id: doc._id,
@@ -54,6 +56,10 @@ function mapProfileListing(doc: {
     role: doc.role,
     message: doc.message,
     menu: doc.menu ?? "",
+    ...(doc.menuPdfUrl ? { menuPdfUrl: doc.menuPdfUrl } : {}),
+    ...(doc.menuFileContentType
+      ? { menuFileContentType: doc.menuFileContentType }
+      : {}),
     listingType: doc.listingType ?? "swap",
     ...(doc.price !== undefined ? { price: doc.price } : {}),
     status: doc.status,

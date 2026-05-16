@@ -203,6 +203,7 @@ export function BrowseTab({
     () =>
       listings
         .filter((l) => l.status === "active")
+        .filter((l) => Date.parse(l.dateTime) > Date.now())
         .filter((l) => !user || l.ownerUserId !== user.id)
         .filter((l) => {
           if (!effectiveCollegeFilter) return true;

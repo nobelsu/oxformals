@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Avatar } from "@/components/ui/Avatar";
 import { IncomingRequestRow } from "@/components/swap/IncomingRequestRow";
+import { ListingMenu } from "@/components/swap/ListingMenu";
 import { ListFormalForm } from "@/components/swap/ListFormalForm";
 import { NewRequestPicker } from "@/components/swap/NewRequestPicker";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
@@ -182,6 +183,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     active: "Active",
     confirmed: "Listing full",
     closed: listing.seatsAvailable === 0 ? "Group full" : "Closed",
+    expired: "Past",
   };
 
   function openOutboundRequest(target: Listing, requestType: RequestType) {
@@ -225,33 +227,29 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                 <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
                   {statusMap[listing.status]}
                 </span>
-                {(listing.status === "active" || listing.status === "confirmed") && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setEditModalOpen(true)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-                      aria-label="Edit listing"
-                    >
-                      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                        <path d="m15 5 4 4" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteDialogOpen(true)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-red-600 text-red-600 transition-colors hover:bg-red-600 hover:text-white"
-                      aria-label="Delete listing"
-                    >
-                      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 6h18" />
-                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                      </svg>
-                    </button>
-                  </>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setEditModalOpen(true)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                  aria-label="Edit listing"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    <path d="m15 5 4 4" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-red-600 text-red-600 transition-colors hover:bg-red-600 hover:text-white"
+                  aria-label="Delete listing"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                  </svg>
+                </button>
               </div>
             </div>
             <p className="mt-2 text-[var(--ink-muted)]">
@@ -266,11 +264,12 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             {listing.message ? (
               <p className="mt-4 text-sm italic text-[var(--ink-soft)]">&ldquo;{listing.message}&rdquo;</p>
             ) : null}
-            {listing.menu ? (
-              <p className="mt-2 text-sm text-[var(--ink-soft)]">
-                <span className="font-semibold">Menu:</span> {listing.menu}
-              </p>
-            ) : null}
+            <ListingMenu
+              menu={listing.menu}
+              menuPdfUrl={listing.menuPdfUrl}
+              menuFileContentType={listing.menuFileContentType}
+              className="mt-2 text-sm text-[var(--ink-soft)]"
+            />
           </div>
 
           {memberUsers.length > 0 && (
@@ -543,6 +542,8 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
               groupSize: listing.groupSize,
               message: listing.message,
               menu: listing.menu,
+              menuPdfUrl: listing.menuPdfUrl,
+              menuFileContentType: listing.menuFileContentType,
               listingType: listing.listingType,
               price: listing.price,
             }}
@@ -553,6 +554,10 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                 groupSize: input.groupSize,
                 message: input.message,
                 menu: input.menu,
+                ...(input.menuPdfId !== undefined
+                  ? { menuPdfId: input.menuPdfId }
+                  : {}),
+                ...(input.clearMenuPdf ? { clearMenuPdf: true } : {}),
                 listingType: input.listingType,
                 ...(input.price !== undefined ? { price: input.price } : {}),
               });
@@ -564,7 +569,11 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
 
       <ConfirmDialog
         open={deleteDialogOpen}
-        message="Delete this listing? All pending requests will be declined."
+        message={
+          listing?.status === "active"
+            ? "Delete this listing? All pending requests will be declined."
+            : "Delete this past listing?"
+        }
         variant="destructive"
         confirmLabel="Delete"
         onConfirm={() => {

@@ -4,6 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
+import { enrichListing } from "./listingHelpers";
 import { DEFAULT_UI_FONT, uiFontValidator } from "./uiFont";
 
 const avatarValue = v.union(
@@ -297,7 +298,11 @@ export const getPublicProfile = query({
         uiFont: user.uiFont ?? DEFAULT_UI_FONT,
         avatar: user.avatar,
       },
-      listings: activeListings.filter((l) => l.status === "active"),
+      listings: await Promise.all(
+        activeListings
+          .filter((l) => l.status === "active")
+          .map((listing) => enrichListing(ctx, listing)),
+      ),
     };
   },
 });

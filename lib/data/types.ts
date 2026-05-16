@@ -2,7 +2,7 @@ export type GroupSize = 2 | 3 | 4 | 5 | 6;
 
 export const GROUP_SIZES: GroupSize[] = [2, 3, 4, 5, 6];
 
-export type ListingStatus = "active" | "confirmed" | "closed";
+export type ListingStatus = "active" | "confirmed" | "closed" | "expired";
 
 export type ListingType = "swap" | "pay" | "both";
 
@@ -22,6 +22,8 @@ export type Listing = {
   role: string;
   message: string;
   menu: string;
+  menuPdfUrl?: string;
+  menuFileContentType?: string;
   listingType: ListingType;
   price?: number;
   status: ListingStatus;

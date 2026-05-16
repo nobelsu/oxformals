@@ -3,6 +3,7 @@
 import {
   createContext,
   useCallback,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -65,6 +66,8 @@ export type DataContextValue = {
       groupSize?: GroupSize;
       message?: string;
       menu?: string;
+      menuPdfId?: string;
+      clearMenuPdf?: boolean;
       listingType?: ListingType;
       price?: number;
     },
@@ -96,7 +99,12 @@ function mapUser(doc: Doc<"users">): User {
   };
 }
 
-function mapListing(doc: Doc<"listings">): Listing {
+type ConvexListingDoc = Doc<"listings"> & {
+  menuPdfUrl?: string | null;
+  menuFileContentType?: string | null;
+};
+
+function mapListing(doc: ConvexListingDoc): Listing {
   return {
     id: doc._id,
     ownerUserId: doc.ownerUserId,
@@ -109,6 +117,10 @@ function mapListing(doc: Doc<"listings">): Listing {
     role: doc.role,
     message: doc.message,
     menu: doc.menu ?? "",
+    ...(doc.menuPdfUrl ? { menuPdfUrl: doc.menuPdfUrl } : {}),
+    ...(doc.menuFileContentType
+      ? { menuFileContentType: doc.menuFileContentType }
+      : {}),
     listingType: doc.listingType ?? "swap",
     ...(doc.price !== undefined ? { price: doc.price } : {}),
     status: doc.status,
@@ -183,7 +195,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const deleteListingMut = useMutation(api.listings.deleteListing);
   const leaveGroupMut = useMutation(api.listings.leaveGroup);
   const removeMemberMut = useMutation(api.listings.removeMember);
+  const syncExpiredListingsMut = useMutation(api.listings.syncExpiredListings);
   const saveWishlistMut = useMutation(api.users.saveWishlistColleges);
+
+  useEffect(() => {
+    if (!user) return;
+    void syncExpiredListingsMut({});
+  }, [user, syncExpiredListingsMut]);
 
   const users = useMemo<User[]>(() => {
     if (!ready || convexUsers === undefined) return [];
@@ -261,6 +279,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         message: input.message,
         menu: input.menu,
         listingType: input.listingType,
+        ...(input.menuPdfId !== undefined
+          ? { menuPdfId: input.menuPdfId as Id<"_storage"> }
+          : {}),
         ...(input.price !== undefined ? { price: input.price } : {}),
       });
       return {
@@ -390,6 +411,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         groupSize?: GroupSize;
         message?: string;
         menu?: string;
+        menuPdfId?: string;
+        clearMenuPdf?: boolean;
         listingType?: ListingType;
         price?: number;
       },
@@ -401,6 +424,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ...(patch.groupSize !== undefined ? { groupSize: patch.groupSize } : {}),
         ...(patch.message !== undefined ? { message: patch.message } : {}),
         ...(patch.menu !== undefined ? { menu: patch.menu } : {}),
+        ...(patch.clearMenuPdf
+          ? { menuPdfId: null }
+          : patch.menuPdfId !== undefined
+            ? { menuPdfId: patch.menuPdfId as Id<"_storage"> }
+            : {}),
         ...(patch.listingType !== undefined
           ? { listingType: patch.listingType }
           : {}),

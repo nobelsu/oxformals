@@ -32,8 +32,13 @@ export function RequestsTab() {
   const myBookedListings = useMemo(
     () =>
       myListings
-        .filter((l) => l.status === "confirmed" || l.status === "closed")
-        .sort((a, b) => b.createdAt - a.createdAt),
+        .filter(
+          (l) =>
+            l.status === "confirmed" ||
+            l.status === "closed" ||
+            l.status === "expired",
+        )
+        .sort((a, b) => +new Date(b.dateTime) - +new Date(a.dateTime)),
     [myListings],
   );
 

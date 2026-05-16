@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
+import { ListingMenu } from "@/components/swap/ListingMenu";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
 import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
 import { listingRequestCta } from "@/lib/data/listingType";
@@ -64,11 +65,15 @@ export function ListingDetailModal({
               {listing.college}
             </h2>
             <ListingTypeTag listingType={listing.listingType} />
-            {(listing.status === "confirmed" || listing.status === "closed") && (
+            {listing.status === "expired" ? (
+              <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
+                Past
+              </span>
+            ) : (listing.status === "confirmed" || listing.status === "closed") ? (
               <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
                 {listing.seatsAvailable === 0 ? "Group full" : "Listing full"}
               </span>
-            )}
+            ) : null}
           </div>
           <p className="mt-1.5 text-sm text-[var(--ink-muted)]">
             {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} · {seatsLabel}
@@ -151,14 +156,18 @@ export function ListingDetailModal({
           </p>
         )}
 
-        {listing.menu && (
-          <p className="text-sm text-[var(--ink-muted)]">
-            <span className="font-semibold">Menu:</span> {listing.menu}
-          </p>
-        )}
+        <ListingMenu
+          menu={listing.menu}
+          menuPdfUrl={listing.menuPdfUrl}
+          menuFileContentType={listing.menuFileContentType}
+        />
 
         <div className="flex shrink-0 justify-center pt-2">
-          {listing.status === "confirmed" || listing.status === "closed" ? (
+          {listing.status === "expired" ? (
+            <span className="rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-5 py-2 text-sm text-[var(--ink)]">
+              Past
+            </span>
+          ) : listing.status === "confirmed" || listing.status === "closed" ? (
             <span className="rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-5 py-2 text-sm text-[var(--ink)]">
               {listing.seatsAvailable === 0 ? "Group full" : "Listing full"}
             </span>

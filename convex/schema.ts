@@ -47,10 +47,12 @@ export default defineSchema({
     role: v.string(),
     message: v.string(),
     menu: v.optional(v.string()),
+    menuPdfId: v.optional(v.id("_storage")),
     status: v.union(
       v.literal("active"),
       v.literal("confirmed"),
       v.literal("closed"),
+      v.literal("expired"),
     ),
     listingType: v.optional(
       v.union(v.literal("swap"), v.literal("pay"), v.literal("both")),

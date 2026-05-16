@@ -46,6 +46,8 @@ export type NewListingInput = Pick<
   "dateTime" | "groupSize" | "message" | "menu" | "listingType"
 > & {
   price?: number;
+  menuPdfId?: string;
+  clearMenuPdf?: boolean;
 };
 
 export const dataClient = {

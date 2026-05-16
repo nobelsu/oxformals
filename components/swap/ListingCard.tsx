@@ -7,6 +7,7 @@ import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
 import type { User } from "@/lib/auth/types";
 import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
 import type { Listing } from "@/lib/data/types";
+import { ListingMenu } from "@/components/swap/ListingMenu";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
 import { listingRequestCta } from "@/lib/data/listingType";
 
@@ -98,11 +99,13 @@ export function ListingCard({
           </div>
         )}
 
-        {listing.menu ? (
-          <p className="line-clamp-4 break-words text-pretty text-[0.924rem] text-[var(--ink-muted)]">
-            <span className="font-semibold not-italic">Menu:</span> {listing.menu}
-          </p>
-        ) : null}
+        <ListingMenu
+          menu={listing.menu}
+          menuPdfUrl={listing.menuPdfUrl}
+          menuFileContentType={listing.menuFileContentType}
+          className="line-clamp-4 break-words text-pretty text-[0.924rem] text-[var(--ink-muted)]"
+          textClassName="line-clamp-4"
+        />
 
         {listing.message ? (
           <p className="line-clamp-6 break-words text-pretty text-[0.924rem] italic text-[var(--ink-muted)]">
@@ -125,7 +128,11 @@ export function ListingCard({
       )}
 
       <div className="flex shrink-0 justify-center pt-4" onClick={(e) => e.stopPropagation()}>
-        {listing.status === "confirmed" || listing.status === "closed" ? (
+        {listing.status === "expired" ? (
+          <span className="rounded-full bg-[var(--paper)] border-[2px] border-[var(--ink)] px-5 py-2 text-[0.77rem] text-[var(--ink)]">
+            Past
+          </span>
+        ) : listing.status === "confirmed" || listing.status === "closed" ? (
           <span className="rounded-full bg-[var(--paper)] border-[2px] border-[var(--ink)] px-5 py-2 text-[0.77rem] text-[var(--ink)]">
             {listing.seatsAvailable === 0 ? "Group full" : "Listing full"}
           </span>
