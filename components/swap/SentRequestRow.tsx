@@ -7,6 +7,7 @@ import type { User } from "@/lib/auth/types";
 import { formatListingDate, formatPrice, formatRelativeTime } from "@/lib/data/format";
 import type { Listing, SwapRequest } from "@/lib/data/types";
 import { resolveRequestType } from "@/lib/data/requestFilters";
+import { RequestMessage } from "@/components/swap/RequestMessage";
 import { RequestTypeTag } from "@/components/swap/RequestTypeTag";
 
 type Props = {
@@ -70,11 +71,7 @@ export function SentRequestRow({
               "Swap request"
             )}
           </div>
-          {request.message ? (
-            <p className="truncate text-sm italic leading-relaxed text-[var(--ink-soft)]">
-              &ldquo;{request.message}&rdquo;
-            </p>
-          ) : null}
+          {request.message ? <RequestMessage message={request.message} /> : null}
           <p className="text-xs leading-relaxed text-[var(--ink-soft)]">
             Sent {formatRelativeTime(request.createdAt)}
           </p>
