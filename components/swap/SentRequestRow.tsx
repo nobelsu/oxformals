@@ -35,22 +35,27 @@ export function SentRequestRow({
     <SketchCard
       seed={seedFrom(request.id)}
       padded={false}
-      className="relative p-6"
+      className="p-4 sm:p-6"
     >
-      <div className="absolute right-4 top-3 flex flex-wrap items-center justify-end gap-1.5">
-        <RequestTypeTag requestType={requestType} />
-        <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
-          {statusLabel}
-        </span>
-      </div>
-      <div className="flex items-start gap-4">
-        <Link href={`/profile/${toUser.id}`}>
+      <div className="flex items-start gap-3 sm:gap-4">
+        <Link href={`/profile/${toUser.id}`} className="shrink-0">
           <Avatar name={toUser.name} source={toUser.avatar} />
         </Link>
-        <div className="min-w-0 flex-1 space-y-1.5 pt-1">
-          <Link href={`/profile/${toUser.id}`} className="text-lg leading-tight hover:underline">
-            {toUser.name}
-          </Link>
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+            <Link
+              href={`/profile/${toUser.id}`}
+              className="min-w-0 text-lg leading-tight hover:underline break-words"
+            >
+              {toUser.name}
+            </Link>
+            <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+              <RequestTypeTag requestType={requestType} />
+              <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs whitespace-nowrap">
+                {statusLabel}
+              </span>
+            </div>
+          </div>
           <div className="text-sm leading-snug text-[var(--ink-muted)]">
             {requestType === "pay" ? (
               <>
