@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
 import { formatListingDate } from "@/lib/data/format";
@@ -12,7 +12,10 @@ type Props = {
   onClose: () => void;
   targetListing: Listing | null;
   myListings: Listing[];
-  onSubmit: (args: { offeringListingId: string; message: string }) => void;
+  onSubmit: (args: {
+    offeringListingId: string;
+    message: string;
+  }) => void | Promise<void>;
 };
 
 export function RequestSwapModal({
@@ -40,18 +43,34 @@ export function RequestSwapModal({
   const [offeringId, setOfferingId] = useState<string>("");
   const [offeringPickerOpen, setOfferingPickerOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const effectiveOfferingId = offeringId || (activeMine[0]?.id ?? "");
 
-  function handleSubmit() {
-    if (!effectiveOfferingId) return;
-    onSubmit({ offeringListingId: effectiveOfferingId, message });
-    setMessage("");
-    setOfferingId("");
-  }
+  useEffect(() => {
+    if (!open) {
+      setError(null);
+      setSubmitting(false);
+    }
+  }, [open]);
 
-  const fieldCls =
-    "w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base focus:outline-none";
+  async function handleSubmit() {
+    if (!effectiveOfferingId || submitting) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      await onSubmit({ offeringListingId: effectiveOfferingId, message });
+      setMessage("");
+      setOfferingId("");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not send request.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <Modal
@@ -109,18 +128,24 @@ export function RequestSwapModal({
             />
           </label>
 
+          {error ? (
+            <p className="mb-4 text-sm text-[var(--danger)]">{error}</p>
+          ) : null}
+
           <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] px-4 py-1.5 text-sm transition-colors"
+              disabled={submitting}
+              className="rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] px-4 py-1.5 text-sm transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="button"
-              onClick={handleSubmit}
-              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-5 py-1.5 text-sm"
+              onClick={() => void handleSubmit()}
+              disabled={submitting}
+              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-5 py-1.5 text-sm disabled:opacity-50"
             >
               Send request!
             </button>

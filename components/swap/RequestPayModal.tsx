@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { formatListingDate, formatPrice } from "@/lib/data/format";
 import type { Listing } from "@/lib/data/types";
@@ -9,7 +9,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   targetListing: Listing | null;
-  onSubmit: (args: { message: string }) => void;
+  onSubmit: (args: { message: string }) => void | Promise<void>;
 };
 
 export function RequestPayModal({
@@ -19,14 +19,31 @@ export function RequestPayModal({
   onSubmit,
 }: Props) {
   const [message, setMessage] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit() {
-    onSubmit({ message });
-    setMessage("");
+  useEffect(() => {
+    if (!open) {
+      setError(null);
+      setSubmitting(false);
+    }
+  }, [open]);
+
+  async function handleSubmit() {
+    if (submitting) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      await onSubmit({ message });
+      setMessage("");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not send request.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
-
-  const fieldCls =
-    "w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base focus:outline-none";
 
   return (
     <Modal
@@ -66,18 +83,24 @@ export function RequestPayModal({
         />
       </label>
 
+      {error ? (
+        <p className="mb-4 text-sm text-[var(--danger)]">{error}</p>
+      ) : null}
+
       <div className="flex justify-end gap-2">
         <button
           type="button"
           onClick={onClose}
-          className="rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] px-4 py-1.5 text-sm transition-colors"
+          disabled={submitting}
+          className="rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] px-4 py-1.5 text-sm transition-colors disabled:opacity-50"
         >
           Cancel
         </button>
         <button
           type="button"
-          onClick={handleSubmit}
-          className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-5 py-1.5 text-sm"
+          onClick={() => void handleSubmit()}
+          disabled={submitting}
+          className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-5 py-1.5 text-sm disabled:opacity-50"
         >
           Send request!
         </button>

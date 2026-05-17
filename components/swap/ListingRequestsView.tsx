@@ -11,6 +11,8 @@ import { ListingMenu } from "@/components/swap/ListingMenu";
 import { ListFormalForm } from "@/components/swap/ListFormalForm";
 import { NewRequestPicker } from "@/components/swap/NewRequestPicker";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
+import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
+import { EditListingBlockedModal } from "@/components/swap/EditListingBlockedModal";
 import { RequestPayModal } from "@/components/swap/RequestPayModal";
 import { RequestSwapModal } from "@/components/swap/RequestSwapModal";
 import { RequestTypeChooserModal } from "@/components/swap/RequestTypeChooserModal";
@@ -23,7 +25,9 @@ import { SketchCard } from "@/components/ui/SketchCard";
 import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
 import { listingSupportsSwap } from "@/lib/data/listingType";
 import {
+  findBlockingOutgoingRequest,
   incomingRequestsForListing,
+  pendingIncomingRequestsForListing,
   resolveRequestType,
   sentRequestsForListing,
 } from "@/lib/data/requestFilters";
@@ -88,6 +92,14 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     [requests, user, listing],
   );
 
+  const pendingIncoming = useMemo(
+    () =>
+      user && listing
+        ? pendingIncomingRequestsForListing(requests, user.id, listing.id)
+        : [],
+    [requests, user, listing],
+  );
+
   const sent = useMemo(
     () =>
       user && listing
@@ -109,6 +121,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
   );
 
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editBlockedOpen, setEditBlockedOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
@@ -128,6 +141,8 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     confirmLabel?: string;
     onConfirm: () => void;
   } | null>(null);
+  const [blockingRequestOpen, setBlockingRequestOpen] = useState(false);
+  const [blockingHasAccepted, setBlockingHasAccepted] = useState(false);
 
   const handleWithdraw = useCallback(
     (requestId: string) => {
@@ -187,6 +202,14 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
   };
 
   function openOutboundRequest(target: Listing, requestType: RequestType) {
+    if (user) {
+      const blocking = findBlockingOutgoingRequest(requests, user.id);
+      if (blocking) {
+        setBlockingHasAccepted(blocking.status === "accepted");
+        setBlockingRequestOpen(true);
+        return;
+      }
+    }
     if (requestType === "swap" && myActiveListings.length === 0) return;
     setPendingRequestType(requestType);
     setRequestTarget(target);
@@ -229,7 +252,13 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setEditModalOpen(true)}
+                  onClick={() => {
+                    if (pendingIncoming.length > 0) {
+                      setEditBlockedOpen(true);
+                      return;
+                    }
+                    setEditModalOpen(true);
+                  }}
                   className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
                   aria-label="Edit listing"
                 >
@@ -322,7 +351,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
       </SketchCard>
 
       <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-2 md:gap-8 lg:gap-12">
-        <section className="min-w-0">
+        <section id="incoming-requests" className="min-w-0 scroll-mt-8">
           <h2 className="font-display text-3xl uppercase tracking-wide">
             Incoming requests
           </h2>
@@ -462,9 +491,10 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             offeringListingId,
             message,
           });
+          if (!result) throw new Error("Could not send request.");
           setRequestTarget(null);
           setPendingRequestType(null);
-          if (result?.status === "accepted") {
+          if (result.status === "accepted") {
             setConfirmed({
               requestType: "swap",
               mine: getListing(offeringListingId) ?? null,
@@ -489,9 +519,10 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             targetListingId: requestTarget.id,
             message,
           });
+          if (!result) throw new Error("Could not send request.");
           setRequestTarget(null);
           setPendingRequestType(null);
-          if (result?.status === "accepted") {
+          if (result.status === "accepted") {
             setConfirmed({
               requestType: "pay",
               mine: listing,
@@ -512,6 +543,24 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
           confirmed?.otherUserId ? (getUser(confirmed.otherUserId) ?? null) : null
         }
         otherUserId={confirmed?.otherUserId ?? null}
+      />
+
+      <BlockingRequestModal
+        open={blockingRequestOpen}
+        onClose={() => setBlockingRequestOpen(false)}
+        hasAccepted={blockingHasAccepted}
+        onViewRequests={() => router.push("/?tab=requests")}
+      />
+
+      <EditListingBlockedModal
+        open={editBlockedOpen}
+        onClose={() => setEditBlockedOpen(false)}
+        pendingCount={pendingIncoming.length}
+        onViewRequests={() => {
+          document
+            .getElementById("incoming-requests")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
       />
 
       <ConfirmDialog
@@ -549,6 +598,11 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             }}
             minGroupSize={listing.members.length}
             onSubmit={(input) => {
+              if (pendingIncoming.length > 0) {
+                setEditModalOpen(false);
+                setEditBlockedOpen(true);
+                return;
+              }
               updateListing(listing.id, {
                 dateTime: input.dateTime,
                 groupSize: input.groupSize,

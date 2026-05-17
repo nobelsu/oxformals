@@ -9,6 +9,7 @@ import { MY_FORMALS_SENTINEL } from "./CollegeFilter";
 import { Hero } from "./Hero";
 import { ListingCard } from "./ListingCard";
 import { ListingDetailModal } from "./ListingDetailModal";
+import { BlockingRequestModal } from "./BlockingRequestModal";
 import { RequestPayModal } from "./RequestPayModal";
 import { RequestSwapModal } from "./RequestSwapModal";
 import { RequestTypeChooserModal } from "./RequestTypeChooserModal";
@@ -21,6 +22,7 @@ import {
   BROWSE_DATE_CALENDAR_INSTRUCTIONS,
 } from "./BrowseDateCalendar";
 import { isoToLocalDateKey } from "@/lib/data/format";
+import { findBlockingOutgoingRequest } from "@/lib/data/requestFilters";
 import type { Listing } from "@/lib/data/types";
 
 type Props = {
@@ -112,6 +114,7 @@ export function BrowseTab({
   const { user, isAuthenticated } = useAuth();
   const {
     listings,
+    requests,
     wishlist,
     sendRequest,
     getUser,
@@ -131,6 +134,8 @@ export function BrowseTab({
   );
   const [typeChooserTarget, setTypeChooserTarget] = useState<Listing | null>(null);
   const [showNoListingPrompt, setShowNoListingPrompt] = useState(false);
+  const [blockingRequestOpen, setBlockingRequestOpen] = useState(false);
+  const [blockingHasAccepted, setBlockingHasAccepted] = useState(false);
   const [confirmed, setConfirmed] = useState<{
     requestType: RequestType;
     mine: Listing | null;
@@ -262,6 +267,14 @@ export function BrowseTab({
   const openSwaps = collegeFilteredListings.length;
 
   function openRequestFlow(listing: Listing, requestType: RequestType) {
+    if (user) {
+      const blocking = findBlockingOutgoingRequest(requests, user.id);
+      if (blocking) {
+        setBlockingHasAccepted(blocking.status === "accepted");
+        setBlockingRequestOpen(true);
+        return;
+      }
+    }
     if (requestType === "swap" && myActiveListings.length === 0) {
       setShowNoListingPrompt(true);
       return;
@@ -534,9 +547,10 @@ export function BrowseTab({
             offeringListingId,
             message,
           });
+          if (!result) throw new Error("Could not send request.");
           setRequestTarget(null);
           setPendingRequestType(null);
-          if (result?.status === "accepted") {
+          if (result.status === "accepted") {
             setConfirmed({
               requestType: "swap",
               mine: getListing(offeringListingId) ?? null,
@@ -561,9 +575,10 @@ export function BrowseTab({
             targetListingId: requestTarget.id,
             message,
           });
+          if (!result) throw new Error("Could not send request.");
           setRequestTarget(null);
           setPendingRequestType(null);
-          if (result?.status === "accepted") {
+          if (result.status === "accepted") {
             setConfirmed({
               requestType: "pay",
               mine: null,
@@ -584,6 +599,13 @@ export function BrowseTab({
           confirmed?.otherUserId ? (getUser(confirmed.otherUserId) ?? null) : null
         }
         otherUserId={confirmed?.otherUserId ?? null}
+      />
+
+      <BlockingRequestModal
+        open={blockingRequestOpen}
+        onClose={() => setBlockingRequestOpen(false)}
+        hasAccepted={blockingHasAccepted}
+        onViewRequests={onNavigateToRequests}
       />
 
       <Modal

@@ -13,6 +13,7 @@ import type * as ResendOTP from "../ResendOTP.js";
 import type * as adminReset from "../adminReset.js";
 import type * as auth from "../auth.js";
 import type * as crons from "../crons.js";
+import type * as emails from "../emails.js";
 import type * as groupSize from "../groupSize.js";
 import type * as http from "../http.js";
 import type * as listingHelpers from "../listingHelpers.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   adminReset: typeof adminReset;
   auth: typeof auth;
   crons: typeof crons;
+  emails: typeof emails;
   groupSize: typeof groupSize;
   http: typeof http;
   listingHelpers: typeof listingHelpers;

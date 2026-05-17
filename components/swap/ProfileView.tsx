@@ -15,6 +15,7 @@ import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { ListingCard } from "@/components/swap/ListingCard";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
+import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
 import { RequestPayModal } from "@/components/swap/RequestPayModal";
 import { RequestSwapModal } from "@/components/swap/RequestSwapModal";
 import { RequestTypeChooserModal } from "@/components/swap/RequestTypeChooserModal";
@@ -22,6 +23,7 @@ import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
 import { listingSupportsSwap } from "@/lib/data/listingType";
+import { findBlockingOutgoingRequest } from "@/lib/data/requestFilters";
 import type { GroupSize, Listing, RequestType } from "@/lib/data/types";
 import { formatYearLabel } from "@/lib/data/format";
 
@@ -126,7 +128,7 @@ function AvatarLightbox({
 export function ProfileView({ userId }: { userId: string }) {
   const router = useRouter();
   const { user: currentUser, isAuthenticated } = useAuth();
-  const { getUser, listings, sendRequest, getListing } = useData();
+  const { getUser, listings, requests, sendRequest, getListing } = useData();
   const [detailListing, setDetailListing] = useState<Listing | null>(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
@@ -136,6 +138,8 @@ export function ProfileView({ userId }: { userId: string }) {
     null,
   );
   const [showNoListingPrompt, setShowNoListingPrompt] = useState(false);
+  const [blockingRequestOpen, setBlockingRequestOpen] = useState(false);
+  const [blockingHasAccepted, setBlockingHasAccepted] = useState(false);
   const [confirmed, setConfirmed] = useState<{
     requestType: RequestType;
     mine: Listing | null;
@@ -163,6 +167,14 @@ export function ProfileView({ userId }: { userId: string }) {
 
   const openRequestFlow = useCallback(
     (listing: Listing, requestType: RequestType) => {
+      if (currentUser) {
+        const blocking = findBlockingOutgoingRequest(requests, currentUser.id);
+        if (blocking) {
+          setBlockingHasAccepted(blocking.status === "accepted");
+          setBlockingRequestOpen(true);
+          return;
+        }
+      }
       if (requestType === "swap" && myActiveListings.length === 0) {
         setShowNoListingPrompt(true);
         return;
@@ -170,7 +182,7 @@ export function ProfileView({ userId }: { userId: string }) {
       setPendingRequestType(requestType);
       setRequestTarget(listing);
     },
-    [myActiveListings.length],
+    [currentUser, requests, myActiveListings.length],
   );
 
   const handleRequestClick = useCallback(
@@ -477,9 +489,10 @@ export function ProfileView({ userId }: { userId: string }) {
             message,
             targetOwnerUserId: requestTarget.ownerUserId,
           });
+          if (!result) throw new Error("Could not send request.");
           setRequestTarget(null);
           setPendingRequestType(null);
-          if (result?.status === "accepted") {
+          if (result.status === "accepted") {
             setConfirmed({
               requestType: "swap",
               mine: getListing(offeringListingId) ?? null,
@@ -506,9 +519,10 @@ export function ProfileView({ userId }: { userId: string }) {
             message,
             targetOwnerUserId: requestTarget.ownerUserId,
           });
+          if (!result) throw new Error("Could not send request.");
           setRequestTarget(null);
           setPendingRequestType(null);
-          if (result?.status === "accepted") {
+          if (result.status === "accepted") {
             setConfirmed({
               requestType: "pay",
               mine: null,
@@ -530,6 +544,13 @@ export function ProfileView({ userId }: { userId: string }) {
           confirmed?.otherUserId ? (getUser(confirmed.otherUserId) ?? null) : null
         }
         otherUserId={confirmed?.otherUserId ?? null}
+      />
+
+      <BlockingRequestModal
+        open={blockingRequestOpen}
+        onClose={() => setBlockingRequestOpen(false)}
+        hasAccepted={blockingHasAccepted}
+        onViewRequests={() => router.push("/?tab=requests")}
       />
 
       <Modal

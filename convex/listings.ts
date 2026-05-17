@@ -213,6 +213,17 @@ export const createRequest = mutation({
       .withIndex("by_fromUserId", (q) => q.eq("fromUserId", userId))
       .take(200);
 
+    const blocking = mine.find(
+      (item) => item.status === "pending" || item.status === "accepted",
+    );
+    if (blocking) {
+      throw new Error(
+        blocking.status === "accepted"
+          ? "You already have an accepted request. You cannot send another."
+          : "You already have a request waiting for a reply. Withdraw it before sending another.",
+      );
+    }
+
     if (args.requestType === "pay") {
       if (args.offeringListingId !== undefined) {
         throw new Error("Pay requests cannot include an offering listing.");
@@ -235,6 +246,10 @@ export const createRequest = mutation({
         requestType: "pay",
         message: args.message.trim(),
         status: "pending",
+      });
+
+      await ctx.scheduler.runAfter(0, internal.emails.sendNewRequestEmail, {
+        requestId,
       });
 
       return { requestId, autoAccepted: false as const };
@@ -280,6 +295,10 @@ export const createRequest = mutation({
       requestType: "swap",
       message: args.message.trim(),
       status: "pending",
+    });
+
+    await ctx.scheduler.runAfter(0, internal.emails.sendNewRequestEmail, {
+      requestId,
     });
 
     const mirrorCandidates = await ctx.db
@@ -540,18 +559,16 @@ export const updateListing = mutation({
       throw new Error("Only the owner can edit a listing.");
     }
 
-    if (args.listingType !== undefined) {
-      const pendingOnListing = await ctx.db
-        .query("requests")
-        .withIndex("by_targetListingId_and_status", (q) =>
-          q.eq("targetListingId", args.listingId).eq("status", "pending"),
-        )
-        .take(1);
-      if (pendingOnListing.length > 0) {
-        throw new Error(
-          "Cannot change listing type while there are pending requests.",
-        );
-      }
+    const pendingOnListing = await ctx.db
+      .query("requests")
+      .withIndex("by_targetListingId_and_status", (q) =>
+        q.eq("targetListingId", args.listingId).eq("status", "pending"),
+      )
+      .take(1);
+    if (pendingOnListing.length > 0) {
+      throw new Error(
+        "Cannot edit listing while there are pending requests.",
+      );
     }
 
     const patch: Partial<Doc<"listings">> = {};

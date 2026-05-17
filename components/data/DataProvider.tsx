@@ -318,14 +318,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const toUserId =
         targetFromCache?.ownerUserId ?? args.targetOwnerUserId;
       if (!toUserId) return null;
-      const result = await createRequestMut({
-        requestType: args.requestType,
-        targetListingId: args.targetListingId as Id<"listings">,
-        ...(args.offeringListingId !== undefined
-          ? { offeringListingId: args.offeringListingId as Id<"listings"> }
-          : {}),
-        message: args.message,
-      });
+      let result;
+      try {
+        result = await createRequestMut({
+          requestType: args.requestType,
+          targetListingId: args.targetListingId as Id<"listings">,
+          ...(args.offeringListingId !== undefined
+            ? { offeringListingId: args.offeringListingId as Id<"listings"> }
+            : {}),
+          message: args.message,
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Could not send request.";
+        throw new Error(message);
+      }
       const convo = dataClient.ensureConversation(
         user.id,
         toUserId,
