@@ -1,14 +1,18 @@
 "use client";
 
+import { useQuery } from "convex/react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { UnreadBadge } from "@/components/chat/UnreadBadge";
+import { api } from "@/convex/_generated/api";
 import { useAuth } from "./auth/useAuth";
 import { NavSettingsModal } from "./NavSettingsModal";
 
 const TABS = [
   { id: "browse", label: "Browse" },
   { id: "requests", label: "Requests" },
+  { id: "chats", label: "Chats" },
   { id: "mine", label: "Mine" },
 ] as const;
 
@@ -42,7 +46,11 @@ function NavInner() {
     ? "requests"
     : searchParams.get("tab") ?? "browse";
   const onTabbedPage = pathname === "/" || isRequestsDetail;
-
+  const totalUnread =
+    useQuery(
+      api.chat.getTotalUnreadCount,
+      isAuthenticated ? {} : "skip",
+    ) ?? 0;
   function hrefFor(tab: string): string {
     if (tab === "browse") return "/";
     return `/?tab=${tab}`;
@@ -56,17 +64,21 @@ function NavInner() {
         <ul className="flex min-w-0 max-w-full items-center justify-center gap-4 overflow-x-auto overflow-y-hidden sm:gap-10">
           {TABS.map((t) => {
             const isActive = onTabbedPage && activeTab === t.id;
+            const showUnread = t.id === "chats" && totalUnread > 0;
             return (
               <li key={t.id}>
                 <Link
                   href={hrefFor(t.id)}
-                  className={`font-display uppercase tracking-[0.2em] text-lg sm:text-xl whitespace-nowrap pb-0.5 transition-opacity ${
+                  className={`inline-flex items-center gap-2 font-display uppercase tracking-[0.2em] text-lg sm:text-xl whitespace-nowrap pb-0.5 transition-opacity ${
                     isActive
                       ? "text-[var(--ink)] underline underline-offset-[8px] decoration-[2.5px]"
                       : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
                   }`}
                 >
                   {t.label}
+                  {showUnread ? (
+                    <UnreadBadge count={totalUnread} className="translate-y-px" />
+                  ) : null}
                 </Link>
               </li>
             );

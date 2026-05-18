@@ -7,8 +7,10 @@ import type { User } from "@/lib/auth/types";
 import { formatListingDate, formatPrice, formatRelativeTime } from "@/lib/data/format";
 import type { Listing, SwapRequest } from "@/lib/data/types";
 import { resolveRequestType } from "@/lib/data/requestFilters";
+import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { RequestMessage } from "@/components/swap/RequestMessage";
 import { RequestTypeTag } from "@/components/swap/RequestTypeTag";
+import type { Id } from "@/convex/_generated/dataModel";
 
 type Props = {
   request: SwapRequest;
@@ -82,8 +84,13 @@ export function SentRequestRow({
           </p>
         </div>
       </div>
-      {request.status === "pending" && onWithdraw ? (
-        <div className="mt-3 flex justify-start">
+      <div className="mt-3 flex flex-wrap gap-2 justify-start">
+        <MessageUserButton
+          otherUserId={toUser.id as Id<"users">}
+          label="Message"
+          className="rounded-full border-[2px] border-[var(--ink)] px-4 py-1 text-sm transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+        />
+        {request.status === "pending" && onWithdraw ? (
           <button
             type="button"
             onClick={() => onWithdraw(request.id)}
@@ -91,8 +98,8 @@ export function SentRequestRow({
           >
             Withdraw
           </button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </SketchCard>
   );
 }

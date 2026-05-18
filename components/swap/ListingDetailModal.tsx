@@ -4,8 +4,12 @@ import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
+import { ListingGroupChatButton } from "@/components/chat/ListingGroupChatButton";
+import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { ListingMenu } from "@/components/swap/ListingMenu";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
+import { useAuth } from "@/components/auth/useAuth";
+import type { Id } from "@/convex/_generated/dataModel";
 import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
 import { listingRequestCta } from "@/lib/data/listingType";
 import type { User } from "@/lib/auth/types";
@@ -34,7 +38,14 @@ export function ListingDetailModal({
   disabledLabel,
   hideInterests,
 }: Props) {
+  const { user, isAuthenticated } = useAuth();
   if (!listing || !owner) return null;
+
+  const showMessage =
+    isAuthenticated && user && user.id !== listing.ownerUserId;
+
+  const isListingMember =
+    isAuthenticated && user && listing.members.includes(user.id);
 
   const profileLine = [
     owner.college,
@@ -137,6 +148,13 @@ export function ListingDetailModal({
                 );
               })}
             </div>
+            {isListingMember ? (
+              <ListingGroupChatButton
+                listingId={listing.id as Id<"listings">}
+                memberCount={listing.members.length}
+                className="mt-3 w-full text-xs"
+              />
+            ) : null}
           </section>
         )}
 
@@ -162,7 +180,13 @@ export function ListingDetailModal({
           menuFileContentType={listing.menuFileContentType}
         />
 
-        <div className="flex shrink-0 justify-center pt-2">
+        <div className="flex shrink-0 flex-col items-center justify-center gap-2 pt-2 sm:flex-row">
+          {showMessage ? (
+            <MessageUserButton
+              otherUserId={listing.ownerUserId as Id<"users">}
+              onBeforeNavigate={onClose}
+            />
+          ) : null}
           {listing.status === "expired" ? (
             <span className="rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-5 py-2 text-sm text-[var(--ink)]">
               Past

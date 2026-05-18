@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "convex/react";
+import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { Modal } from "@/components/ui/Modal";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -141,13 +142,31 @@ export function SwapConfirmedModal({
             </Link>
           </div>
         )}
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-6 rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-6 py-2 text-sm"
-        >
-          Done
-        </button>
+        {otherUserId ? (
+          <div className="mt-5 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+            <MessageUserButton
+              otherUserId={otherUserId as Id<"users">}
+              label="Message in app"
+              onBeforeNavigate={onClose}
+              className="rounded-full bg-[var(--accent)] px-6 py-2 text-sm text-white transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border-[2px] border-[var(--ink)] px-6 py-2 text-sm transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-6 rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-6 py-2 text-sm"
+          >
+            Done
+          </button>
+        )}
       </div>
     </Modal>
   );

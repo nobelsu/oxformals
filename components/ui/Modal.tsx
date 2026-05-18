@@ -79,7 +79,7 @@ export function Modal({
         <div
           className={
             bodyScrollable
-              ? "min-h-0 min-w-0 w-full flex-1 overflow-y-auto"
+              ? "min-h-0 min-w-0 w-full flex-1 overflow-y-auto overflow-x-clip px-1.5"
               : "min-h-min min-w-0 w-full shrink-0 overflow-visible"
           }
         >

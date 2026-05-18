@@ -44,19 +44,4 @@ export type SwapRequest = {
   createdAt: number;
 };
 
-export type Conversation = {
-  id: string;
-  participantIds: [string, string];
-  listingId?: string;
-  updatedAt: number;
-};
-
-export type Message = {
-  id: string;
-  conversationId: string;
-  fromUserId: string;
-  body: string;
-  createdAt: number;
-};
-
 export type Wishlists = Record<string, string[]>;

@@ -3,12 +3,13 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
+import { MessagesTab } from "@/components/chat/MessagesTab";
 import { BrowseTab } from "@/components/swap/BrowseTab";
 import { MineTab } from "@/components/swap/MineTab";
 import { RequestsTab } from "@/components/swap/RequestsTab";
 import { SignInGate } from "@/components/swap/SignInGate";
 
-const TABS = ["browse", "requests", "mine"] as const;
+const TABS = ["browse", "requests", "chats", "mine"] as const;
 type Tab = (typeof TABS)[number];
 
 function isTab(x: string | null): x is Tab {
@@ -67,6 +68,9 @@ export function HomeClient() {
     }
     if (tab === "requests") {
       return <RequestsTab />;
+    }
+    if (tab === "chats") {
+      return <MessagesTab />;
     }
     if (tab === "mine") {
       return <MineTab />;

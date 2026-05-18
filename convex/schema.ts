@@ -81,4 +81,45 @@ export default defineSchema({
     .index("by_offeringListingId", ["offeringListingId"])
     .index("by_targetListingId_and_status", ["targetListingId", "status"])
     .index("by_offeringListingId_and_status", ["offeringListingId", "status"]),
+  conversations: defineTable({
+    kind: v.optional(v.union(v.literal("dm"), v.literal("group"))),
+    participantLow: v.optional(v.id("users")),
+    participantHigh: v.optional(v.id("users")),
+    lastMessageAt: v.number(),
+    participantLowLastReadAt: v.optional(v.number()),
+    participantHighLastReadAt: v.optional(v.number()),
+    participantLowClearedAt: v.optional(v.number()),
+    participantHighClearedAt: v.optional(v.number()),
+    name: v.optional(v.string()),
+    createdByUserId: v.optional(v.id("users")),
+    sourceListingId: v.optional(v.id("listings")),
+  })
+    .index("by_participants", ["participantLow", "participantHigh"])
+    .index("by_participantLow", ["participantLow", "lastMessageAt"])
+    .index("by_participantHigh", ["participantHigh", "lastMessageAt"])
+    .index("by_sourceListingId", ["sourceListingId"]),
+  conversationMembers: defineTable({
+    conversationId: v.id("conversations"),
+    userId: v.id("users"),
+    lastReadAt: v.optional(v.number()),
+    joinedAt: v.number(),
+  })
+    .index("by_conversationId", ["conversationId"])
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_conversationId", ["userId", "conversationId"]),
+  messages: defineTable({
+    conversationId: v.id("conversations"),
+    senderUserId: v.id("users"),
+    body: v.string(),
+    referencedListingId: v.optional(v.id("listings")),
+    mentions: v.optional(
+      v.array(
+        v.object({
+          userId: v.id("users"),
+          label: v.string(),
+          start: v.number(),
+        }),
+      ),
+    ),
+  }).index("by_conversationId", ["conversationId"]),
 });

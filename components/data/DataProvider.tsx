@@ -5,7 +5,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
 import { useMutation, useQuery } from "convex/react";
@@ -14,17 +13,12 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import type { User } from "@/lib/auth/types";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
-import {
-  dataClient,
-  type NewListingInput,
-} from "@/lib/data/dataClient";
+import { type NewListingInput } from "@/lib/data/dataClient";
 import { normalizeCollegeName } from "@/lib/data/colleges";
 import type {
-  Conversation,
   GroupSize,
   Listing,
   ListingType,
-  Message,
   RequestType,
   SwapRequest,
 } from "@/lib/data/types";
@@ -34,12 +28,10 @@ export type DataContextValue = {
   users: User[];
   listings: Listing[];
   requests: SwapRequest[];
-  conversations: Conversation[];
   wishlist: string[];
 
   getUser: (userId: string) => User | undefined;
   getListing: (listingId: string) => Listing | undefined;
-  messagesFor: (conversationId: string) => Message[];
 
   createListing: (input: NewListingInput) => Listing | null;
   sendRequest: (args: {
@@ -75,8 +67,6 @@ export type DataContextValue = {
   deleteListing: (listingId: string) => void;
   leaveGroup: (listingId: string) => void;
   removeMember: (listingId: string, memberId: string) => void;
-  sendMessage: (conversationId: string, body: string) => void;
-  openConversationWith: (otherUserId: string, listingId?: string) => Conversation | null;
   saveWishlist: (colleges: string[]) => Promise<void>;
 };
 
@@ -148,9 +138,6 @@ function mapRequest(doc: Doc<"requests">): SwapRequest {
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const { status: authStatus, user } = useAuth();
-  const [tick, setTick] = useState(0);
-
-  const refresh = useCallback(() => setTick((t) => t + 1), []);
   const ready = authStatus === "ready";
 
   const convexUsers = useQuery(api.users.listPublic);
@@ -197,6 +184,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const removeMemberMut = useMutation(api.listings.removeMember);
   const syncExpiredListingsMut = useMutation(api.listings.syncExpiredListings);
   const saveWishlistMut = useMutation(api.users.saveWishlistColleges);
+  const getOrCreateConversationMut = useMutation(api.chat.getOrCreateConversation);
+  const sendChatMessageMut = useMutation(api.chat.sendMessage);
 
   useEffect(() => {
     if (!user) return;
@@ -233,12 +222,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return Array.from(byId.values()).sort((a, b) => b.createdAt - a.createdAt);
   }, [ready, user, incomingRequests, outgoingRequests]);
 
-  const conversations = useMemo<Conversation[]>(() => {
-    if (!ready) return [];
-    return dataClient.listConversations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, tick]);
-
   const wishlistColleges = useMemo<string[]>(() => {
     if (!ready || !user || wishlist === undefined) return [];
     return wishlist;
@@ -252,15 +235,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const getListing = useCallback(
     (listingId: string) => listings.find((l) => l.id === listingId),
     [listings],
-  );
-
-  const messagesFor = useCallback(
-    (conversationId: string) => {
-      // Read directly so message sends reflect immediately after refresh.
-      void tick;
-      return dataClient.messagesFor(conversationId);
-    },
-    [tick],
   );
 
   const createListing = useCallback(
@@ -333,15 +307,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
           err instanceof Error ? err.message : "Could not send request.";
         throw new Error(message);
       }
-      const convo = dataClient.ensureConversation(
-        user.id,
-        toUserId,
-        args.targetListingId,
-      );
       if (args.message.trim()) {
-        dataClient.sendMessage(convo.id, user.id, args.message.trim());
+        try {
+          const conversationId = await getOrCreateConversationMut({
+            otherUserId: toUserId as Id<"users">,
+          });
+          await sendChatMessageMut({
+            conversationId,
+            body: args.message.trim(),
+          });
+        } catch {
+          // Request succeeded; chat seed is best-effort.
+        }
       }
-      refresh();
       return {
         id: result.requestId,
         fromUserId: user.id,
@@ -356,7 +334,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         createdAt: Date.now(),
       };
     },
-    [user, listings, createRequestMut, refresh],
+    [user, listings, createRequestMut, getOrCreateConversationMut, sendChatMessageMut],
   );
 
   const requestSwap = useCallback(
@@ -472,25 +450,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [user, removeMemberMut],
   );
 
-  const sendMessage = useCallback(
-    (conversationId: string, body: string) => {
-      if (!user || !body.trim()) return;
-      dataClient.sendMessage(conversationId, user.id, body.trim());
-      refresh();
-    },
-    [user, refresh],
-  );
-
-  const openConversationWith = useCallback(
-    (otherUserId: string, listingId?: string) => {
-      if (!user) return null;
-      const c = dataClient.ensureConversation(user.id, otherUserId, listingId);
-      refresh();
-      return c;
-    },
-    [user, refresh],
-  );
-
   const saveWishlist = useCallback(
     async (colleges: string[]) => {
       if (!user) return;
@@ -505,11 +464,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       users,
       listings,
       requests,
-      conversations,
       wishlist: wishlistColleges,
       getUser,
       getListing,
-      messagesFor,
       createListing,
       sendRequest,
       requestSwap,
@@ -520,8 +477,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       deleteListing,
       leaveGroup,
       removeMember,
-      sendMessage,
-      openConversationWith,
       saveWishlist,
     }),
     [
@@ -529,11 +484,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       users,
       listings,
       requests,
-      conversations,
       wishlistColleges,
       getUser,
       getListing,
-      messagesFor,
       createListing,
       sendRequest,
       requestSwap,
@@ -544,8 +497,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       deleteListing,
       leaveGroup,
       removeMember,
-      sendMessage,
-      openConversationWith,
       saveWishlist,
     ],
   );

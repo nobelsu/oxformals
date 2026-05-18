@@ -7,8 +7,10 @@ import type { User } from "@/lib/auth/types";
 import { formatListingDate, formatPrice, formatRelativeTime } from "@/lib/data/format";
 import type { Listing, SwapRequest } from "@/lib/data/types";
 import { resolveRequestType } from "@/lib/data/requestFilters";
+import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { RequestMessage } from "@/components/swap/RequestMessage";
 import { RequestTypeTag } from "@/components/swap/RequestTypeTag";
+import type { Id } from "@/convex/_generated/dataModel";
 
 type Props = {
   request: SwapRequest;
@@ -83,24 +85,31 @@ export function IncomingRequestRow({
         </div>
       </div>
 
-      {isPending ? (
-        <div className="mt-3 flex gap-2 justify-start">
-          <button
-            type="button"
-            onClick={onAccept}
-            className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-4 py-1 text-sm"
-          >
-            Accept
-          </button>
-          <button
-            type="button"
-            onClick={onDecline}
-            className="rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] px-4 py-1 text-sm transition-colors"
-          >
-            Decline
-          </button>
-        </div>
-      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2 justify-start">
+        <MessageUserButton
+          otherUserId={fromUser.id as Id<"users">}
+          label="Message"
+          className="rounded-full border-[2px] border-[var(--ink)] px-4 py-1 text-sm transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+        />
+        {isPending ? (
+          <>
+            <button
+              type="button"
+              onClick={onAccept}
+              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-4 py-1 text-sm"
+            >
+              Accept
+            </button>
+            <button
+              type="button"
+              onClick={onDecline}
+              className="rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] px-4 py-1 text-sm transition-colors"
+            >
+              Decline
+            </button>
+          </>
+        ) : null}
+      </div>
     </SketchCard>
   );
 }

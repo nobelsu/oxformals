@@ -12,6 +12,8 @@ import type * as AdminEmail from "../AdminEmail.js";
 import type * as ResendOTP from "../ResendOTP.js";
 import type * as adminReset from "../adminReset.js";
 import type * as auth from "../auth.js";
+import type * as chat from "../chat.js";
+import type * as chatMentions from "../chatMentions.js";
 import type * as crons from "../crons.js";
 import type * as emails from "../emails.js";
 import type * as groupSize from "../groupSize.js";
@@ -33,6 +35,8 @@ declare const fullApi: ApiFromModules<{
   ResendOTP: typeof ResendOTP;
   adminReset: typeof adminReset;
   auth: typeof auth;
+  chat: typeof chat;
+  chatMentions: typeof chatMentions;
   crons: typeof crons;
   emails: typeof emails;
   groupSize: typeof groupSize;

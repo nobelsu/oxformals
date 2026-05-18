@@ -19,6 +19,7 @@ import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
 import { RequestPayModal } from "@/components/swap/RequestPayModal";
 import { RequestSwapModal } from "@/components/swap/RequestSwapModal";
 import { RequestTypeChooserModal } from "@/components/swap/RequestTypeChooserModal";
+import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
@@ -305,7 +306,8 @@ export function ProfileView({ userId }: { userId: string }) {
 
       <SketchCard seed={userId.length} className="overflow-hidden p-6">
         <div className="flex flex-col gap-5">
-          <div className="flex min-w-0 items-center gap-4">
+          <div className="flex min-w-0 flex-1 items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-4">
           <div
             role="button"
             tabIndex={0}
@@ -333,7 +335,28 @@ export function ProfileView({ userId }: { userId: string }) {
                 {profileLine}
               </p>
             )}
-          </div>
+              </div>
+            </div>
+            {!isOwnProfile ? (
+              isAuthenticated ? (
+                <MessageUserButton
+                  otherUserId={userId as Id<"users">}
+                  className="shrink-0 rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(
+                      `/login?next=${encodeURIComponent(`/profile/${userId}`)}`,
+                    )
+                  }
+                  className="shrink-0 rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                >
+                  Message
+                </button>
+              )
+            ) : null}
           </div>
 
           {(instagramHandle || whatsappPhone) && (

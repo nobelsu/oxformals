@@ -19,9 +19,11 @@ import { RequestTypeChooserModal } from "@/components/swap/RequestTypeChooserMod
 import { SentRequestRow } from "@/components/swap/SentRequestRow";
 import { SignInGate } from "@/components/swap/SignInGate";
 import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
+import { ListingGroupChatButton } from "@/components/chat/ListingGroupChatButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
+import type { Id } from "@/convex/_generated/dataModel";
 import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
 import { listingSupportsSwap } from "@/lib/data/listingType";
 import {
@@ -349,6 +351,11 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                   );
                 })}
               </div>
+              <ListingGroupChatButton
+                listingId={listing.id as Id<"listings">}
+                memberCount={listing.members.length}
+                className="mt-4 w-full text-xs"
+              />
             </div>
           )}
         </div>
