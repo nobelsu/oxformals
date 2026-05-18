@@ -195,26 +195,28 @@ export function ListingDetailModal({
             <span className="rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-5 py-2 text-sm text-[var(--ink)]">
               {listing.seatsAvailable === 0 ? "Group full" : "Listing full"}
             </span>
-          ) : disabled ? (
-            <button
-              type="button"
-              disabled
-              className="cursor-not-allowed rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-8 py-3 text-sm text-white opacity-70"
-            >
-              {disabledLabel ?? ctaLabel}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                onRequest?.();
-                onClose();
-              }}
-              className="rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
-            >
-              {ctaLabel}
-            </button>
-          )}
+          ) : onRequest ? (
+            disabled ? (
+              <button
+                type="button"
+                disabled
+                className="cursor-not-allowed rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-8 py-3 text-sm text-white opacity-70"
+              >
+                {disabledLabel ?? ctaLabel}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  onRequest();
+                  onClose();
+                }}
+                className="rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+              >
+                {ctaLabel}
+              </button>
+            )
+          ) : null}
         </div>
       </div>
     </Modal>

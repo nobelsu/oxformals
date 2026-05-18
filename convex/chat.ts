@@ -25,6 +25,7 @@ const chatMentionValidator = v.object({
 const listingSummaryValidator = v.object({
   id: v.id("listings"),
   ownerUserId: v.id("users"),
+  ownerName: v.string(),
   college: v.string(),
   dateTime: v.string(),
   status: v.union(
@@ -33,6 +34,7 @@ const listingSummaryValidator = v.object({
     v.literal("closed"),
     v.literal("expired"),
   ),
+  seatsAvailable: v.number(),
   listingType: v.optional(
     v.union(v.literal("swap"), v.literal("pay"), v.literal("both")),
   ),
@@ -88,9 +90,11 @@ const conversationPreviewValidator = v.union(
 export type ListingSummary = {
   id: Id<"listings">;
   ownerUserId: Id<"users">;
+  ownerName: string;
   college: string;
   dateTime: string;
   status: Doc<"listings">["status"];
+  seatsAvailable: number;
   listingType?: "swap" | "pay" | "both";
   price?: number;
 };
@@ -116,13 +120,24 @@ function participantPairKey(
   return `${participantLow}:${participantHigh}`;
 }
 
-function toListingSummary(listing: Doc<"listings">): ListingSummary {
+async function toListingSummary(
+  ctx: QueryCtx,
+  listing: Doc<"listings">,
+  ownerNameCache: Map<string, string>,
+): Promise<ListingSummary> {
+  const ownerName = await resolveSenderName(
+    ctx,
+    listing.ownerUserId,
+    ownerNameCache,
+  );
   return {
     id: listing._id,
     ownerUserId: listing.ownerUserId,
+    ownerName,
     college: listing.college,
     dateTime: listing.dateTime,
     status: listing.status,
+    seatsAvailable: listing.seatsAvailable,
     ...(listing.listingType !== undefined
       ? { listingType: listing.listingType }
       : {}),
@@ -179,11 +194,12 @@ async function buildReplySnapshot(
     };
   }
 
+  const ownerNameCache = new Map<string, string>();
   let referencedListing: ListingSummary | undefined;
   if (parent.referencedListingId) {
     const listing = await ctx.db.get(parent.referencedListingId);
     if (listing) {
-      referencedListing = toListingSummary(listing);
+      referencedListing = await toListingSummary(ctx, listing, ownerNameCache);
     }
   }
 
@@ -1247,13 +1263,18 @@ export const listMessages = query({
       }),
     );
 
+    const ownerNameCache = new Map<string, string>();
     const page = await Promise.all(
       result.page.map(async (msg) => {
         let referencedListing: ListingSummary | undefined;
         if (msg.referencedListingId) {
           const listing = await ctx.db.get(msg.referencedListingId);
           if (listing) {
-            referencedListing = toListingSummary(listing);
+            referencedListing = await toListingSummary(
+              ctx,
+              listing,
+              ownerNameCache,
+            );
           }
         }
 
@@ -1450,7 +1471,7 @@ export const resolveReferableListing = query({
       );
       if (!referable) return null;
     }
-    return toListingSummary(listing);
+    return await toListingSummary(ctx, listing, new Map());
   },
 });
 
@@ -1467,12 +1488,13 @@ export const listReferableListings = query({
 
     const summaries: ListingSummary[] = [];
     const seen = new Set<string>();
+    const ownerNameCache = new Map<string, string>();
 
-    const addListing = (listing: Doc<"listings">) => {
+    const addListing = async (listing: Doc<"listings">) => {
       const key = listing._id;
       if (seen.has(key)) return;
       seen.add(key);
-      summaries.push(toListingSummary(listing));
+      summaries.push(await toListingSummary(ctx, listing, ownerNameCache));
     };
 
     if (conversationKind(convo) === "group") {
@@ -1483,7 +1505,7 @@ export const listReferableListings = query({
           .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", memberId))
           .collect();
         for (const listing of listings) {
-          addListing(listing);
+          await addListing(listing);
         }
       }
     } else {
@@ -1494,7 +1516,7 @@ export const listReferableListings = query({
         .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", userId))
         .collect();
       for (const listing of myListings) {
-        addListing(listing);
+        await addListing(listing);
       }
 
       const theirListings = await ctx.db
@@ -1502,7 +1524,7 @@ export const listReferableListings = query({
         .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", otherId))
         .collect();
       for (const listing of theirListings) {
-        addListing(listing);
+        await addListing(listing);
       }
     }
 

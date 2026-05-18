@@ -1,3 +1,21 @@
+import type { ListingStatus } from "@/lib/data/types";
+
+export function formatListingStatusLabel(
+  status: ListingStatus,
+  seatsAvailable?: number,
+): string {
+  switch (status) {
+    case "active":
+      return "Active";
+    case "confirmed":
+      return "Listing full";
+    case "closed":
+      return seatsAvailable === 0 ? "Group full" : "Closed";
+    case "expired":
+      return "Past";
+  }
+}
+
 // "Thu 8 May · 7:15pm"
 export function formatListingDate(iso: string): string {
   const d = new Date(iso);

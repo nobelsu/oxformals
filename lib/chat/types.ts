@@ -4,9 +4,11 @@ import type { ListingType } from "@/lib/data/types";
 export type ListingSummary = {
   id: Id<"listings">;
   ownerUserId: Id<"users">;
+  ownerName: string;
   college: string;
   dateTime: string;
   status: "active" | "confirmed" | "closed" | "expired";
+  seatsAvailable: number;
   listingType?: ListingType;
   price?: number;
 };

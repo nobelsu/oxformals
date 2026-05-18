@@ -66,3 +66,7 @@ export function listingIdFromPath(pathname: string): Id<"listings"> | null {
   const match = pathname.match(/^\/requests\/([a-zA-Z0-9]+)$/);
   return match?.[1] ? (match[1] as Id<"listings">) : null;
 }
+
+export function listingRequestsPath(listingId: Id<"listings">): string {
+  return `/requests/${listingId}`;
+}

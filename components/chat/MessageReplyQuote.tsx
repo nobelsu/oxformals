@@ -1,6 +1,7 @@
 "use client";
 
-import { formatListingDate } from "@/lib/data/format";
+import { formatListingDate, formatListingStatusLabel } from "@/lib/data/format";
+import type { Id } from "@/convex/_generated/dataModel";
 import type { MessageReplySnapshot } from "@/lib/chat/types";
 
 type Props = {
@@ -8,6 +9,7 @@ type Props = {
   senderLabel: string;
   isMine?: boolean;
   variant?: "bubble" | "composer";
+  onListingPress?: (listingId: Id<"listings">) => void;
   onCancel?: () => void;
 };
 
@@ -16,6 +18,7 @@ export function MessageReplyQuote({
   senderLabel,
   isMine = false,
   variant = "bubble",
+  onListingPress,
   onCancel,
 }: Props) {
   const isComposer = variant === "composer";
@@ -35,6 +38,18 @@ export function MessageReplyQuote({
 
   const previewBody =
     reply.body.length > 120 ? `${reply.body.slice(0, 120)}…` : reply.body;
+
+  const listingPreview = reply.referencedListing
+    ? [
+        reply.referencedListing.ownerName,
+        reply.referencedListing.college,
+        formatListingDate(reply.referencedListing.dateTime),
+        formatListingStatusLabel(
+          reply.referencedListing.status,
+          reply.referencedListing.seatsAvailable,
+        ),
+      ].join(" · ")
+    : null;
 
   return (
     <div
@@ -67,16 +82,26 @@ export function MessageReplyQuote({
                 {previewBody}
               </p>
             ) : null}
-            {reply.referencedListing ? (
-              <p
-                className={`mt-0.5 truncate text-xs ${
-                  isComposer ? "text-[var(--ink-muted)]" : listingClass
-                }`}
-              >
-                {reply.referencedListing.college}
-                {" · "}
-                {formatListingDate(reply.referencedListing.dateTime)}
-              </p>
+            {listingPreview ? (
+              reply.referencedListing && onListingPress ? (
+                <button
+                  type="button"
+                  onClick={() => onListingPress(reply.referencedListing!.id)}
+                  className={`mt-0.5 block w-full truncate text-left text-xs underline-offset-2 hover:underline ${
+                    isComposer ? "text-[var(--ink-muted)]" : listingClass
+                  }`}
+                >
+                  {listingPreview}
+                </button>
+              ) : (
+                <p
+                  className={`mt-0.5 truncate text-xs ${
+                    isComposer ? "text-[var(--ink-muted)]" : listingClass
+                  }`}
+                >
+                  {listingPreview}
+                </p>
+              )
             ) : null}
           </>
         )}

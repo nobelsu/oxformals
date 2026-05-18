@@ -20,6 +20,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatRelativeTime } from "@/lib/data/format";
+import { ListingBrowseDetailHost } from "@/components/swap/ListingBrowseDetailHost";
 import type { MentionParticipant } from "@/lib/chat/mentions";
 import type {
   ChatMention,
@@ -70,16 +71,22 @@ const NEAR_BOTTOM_THRESHOLD_PX = 80;
 type Props = {
   conversation: ConversationPreview;
   onBack: () => void;
-  onListingPress?: (listingId: Id<"listings">) => void;
 };
 
-export function ChatThread({ conversation, onBack, onListingPress }: Props) {
+export function ChatThread({ conversation, onBack }: Props) {
   const { user } = useAuth();
   const sendMessageMut = useMutation(api.chat.sendMessage);
   const markRead = useMutation(api.chat.markConversationRead);
   const [membersOpen, setMembersOpen] = useState(false);
   const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
+  const [detailListingId, setDetailListingId] = useState<Id<"listings"> | null>(
+    null,
+  );
   const [showScrollDown, setShowScrollDown] = useState(false);
+
+  const openListingDetail = useCallback((listingId: Id<"listings">) => {
+    setDetailListingId(listingId);
+  }, []);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
@@ -382,6 +389,11 @@ export function ChatThread({ conversation, onBack, onListingPress }: Props) {
                         defaultMentionUsers,
                       )}
                       isMine={isMine}
+                      onListingPress={
+                        msg.replyTo.referencedListing
+                          ? openListingDetail
+                          : undefined
+                      }
                     />
                   ) : null}
                   {msg.body ? (
@@ -396,11 +408,7 @@ export function ChatThread({ conversation, onBack, onListingPress }: Props) {
                       <ListingReferenceCard
                         listing={msg.referencedListing}
                         compact
-                        onPress={
-                          onListingPress
-                            ? () => onListingPress(msg.referencedListing!.id)
-                            : undefined
-                        }
+                        onPress={() => openListingDetail(msg.referencedListing!.id)}
                       />
                     </div>
                   ) : null}
@@ -449,9 +457,16 @@ export function ChatThread({ conversation, onBack, onListingPress }: Props) {
           defaultMentionUsers={defaultMentionUsers}
           replyTarget={replyTarget}
           onCancelReply={() => setReplyTarget(null)}
+          onListingPress={openListingDetail}
           onSend={(args) => void handleSend(args)}
         />
       </div>
+
+      <ListingBrowseDetailHost
+        listingId={detailListingId}
+        open={!!detailListingId}
+        onClose={() => setDetailListingId(null)}
+      />
 
       {isGroup ? (
         <GroupMembersSheet

@@ -10,7 +10,7 @@ import { ListingReferenceCard } from "@/components/chat/ListingReferenceCard";
 import { ListingReferencePicker } from "@/components/chat/ListingReferencePicker";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { formatListingDate } from "@/lib/data/format";
+import { formatListingDate, formatListingStatusLabel } from "@/lib/data/format";
 import {
   detectListingLinkSuggestion,
   parsePastedListingLink,
@@ -27,6 +27,7 @@ type Props = {
   defaultMentionUsers?: MentionParticipant[];
   replyTarget?: ChatMessage | null;
   onCancelReply?: () => void;
+  onListingPress?: (listingId: Id<"listings">) => void;
   onSend: (args: {
     body: string;
     mentions?: ChatMention[];
@@ -51,6 +52,7 @@ export function ChatComposer({
   defaultMentionUsers,
   replyTarget,
   onCancelReply,
+  onListingPress,
   onSend,
 }: Props) {
   const { user } = useAuth();
@@ -180,6 +182,9 @@ export function ChatComposer({
             defaultMentionUsers ?? [],
           )}
           variant="composer"
+          onListingPress={
+            replyTarget?.referencedListing ? onListingPress : undefined
+          }
           onCancel={onCancelReply}
         />
       ) : null}
@@ -195,9 +200,16 @@ export function ChatComposer({
           </span>
           <span>
             Attach{" "}
-            <span className="text-[var(--ink)]">{linkSuggestion.college}</span>
+            <span className="text-[var(--ink)]">
+              {linkSuggestion.ownerName}&apos;s {linkSuggestion.college}
+            </span>
             {" · "}
             {formatListingDate(linkSuggestion.dateTime)}
+            {" · "}
+            {formatListingStatusLabel(
+              linkSuggestion.status,
+              linkSuggestion.seatsAvailable,
+            )}
           </span>
         </button>
       ) : null}
@@ -205,7 +217,15 @@ export function ChatComposer({
       {pendingRef ? (
         <div className="mb-2 flex items-center gap-2">
           <div className="min-w-0 flex-1">
-            <ListingReferenceCard listing={pendingRef} compact />
+            <ListingReferenceCard
+              listing={pendingRef}
+              compact
+              onPress={
+                onListingPress
+                  ? () => onListingPress(pendingRef.id)
+                  : undefined
+              }
+            />
           </div>
           <button
             type="button"
