@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  --app-nav-height: 5.5rem;
   --bg: #f2ead8;
   --paper: #f6efe0;
   --ink: #1a140f;

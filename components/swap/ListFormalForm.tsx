@@ -176,7 +176,7 @@ export function ListFormalForm({
     const role = profile.role.trim();
     if (!resolvedCollege || !year || !role) {
       setError(
-        "Set college, year, and role in My profile (Mine tab), save, then try again.",
+        "Set college, year, and role in My profile (Me tab), save, then try again.",
       );
       return;
     }

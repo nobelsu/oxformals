@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ChatThread } from "@/components/chat/ChatThread";
 import { CreateGroupModal } from "@/components/chat/CreateGroupModal";
 import { StartChatModal } from "@/components/chat/StartChatModal";
@@ -61,31 +61,53 @@ export function MessagesTab() {
     }
   }, [clearConversation, clearTargetId, conversationParam, router]);
 
+  useEffect(() => {
+    if (!conversationParam) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [conversationParam]);
+
+  const threadShellClassName =
+    "fixed inset-x-0 bottom-0 top-[var(--app-nav-height)] z-20 flex flex-col bg-[var(--bg)] px-4 sm:px-6";
+
   if (conversationParam) {
     if (activeConversation === undefined) {
-      return <p className="text-sm text-[var(--ink-soft)]">Loading…</p>;
+      return (
+        <div className={`${threadShellClassName} items-center justify-center`}>
+          <p className="text-sm text-[var(--ink-soft)]">Loading…</p>
+        </div>
+      );
     }
     if (activeConversation === null) {
       return (
-        <div>
-          <p className="text-sm text-[var(--ink-soft)]">
-            Conversation not found.
-          </p>
-          <button
-            type="button"
-            onClick={closeThread}
-            className="mt-4 text-sm underline"
-          >
-            Back to chats
-          </button>
+        <div className={`${threadShellClassName} items-center justify-center`}>
+          <div>
+            <p className="text-sm text-[var(--ink-soft)]">
+              Conversation not found.
+            </p>
+            <button
+              type="button"
+              onClick={closeThread}
+              className="mt-4 text-sm underline"
+            >
+              Back to chats
+            </button>
+          </div>
         </div>
       );
     }
     return (
-      <ChatThread
-        conversation={activeConversation}
-        onBack={closeThread}
-      />
+      <div className={threadShellClassName}>
+        <div className="mx-auto flex h-full w-full min-h-0 max-w-5xl flex-col">
+          <ChatThread
+            conversation={activeConversation}
+            onBack={closeThread}
+          />
+        </div>
+      </div>
     );
   }
 
@@ -97,7 +119,7 @@ export function MessagesTab() {
             Chats
           </h1>
           <p className="mt-2 text-sm text-[var(--ink-muted)]">
-            Chats appear here after the first message is sent.
+            Seat swaps, dress codes, and the inevitable plus-one debate.
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">

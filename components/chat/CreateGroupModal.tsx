@@ -11,6 +11,7 @@ import { OutlineButton } from "@/components/ui/OutlineButton";
 import { OutlineTextField } from "@/components/ui/OutlineTextField";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { MAX_GROUP_SIZE } from "@/lib/chat/constants";
 
 type SelectedMember = {
   id: Id<"users">;
@@ -43,8 +44,12 @@ export function CreateGroupModal({ open, onClose }: Props) {
     onClose();
   }
 
+  const maxOthers = MAX_GROUP_SIZE - 1;
+  const atCapacity = selected.length >= maxOthers;
+
   function addMember(member: SelectedMember) {
     if (selected.some((m) => m.id === member.id)) return;
+    if (atCapacity) return;
     setSelected((prev) => [...prev, member]);
     setSearch("");
   }
@@ -58,7 +63,7 @@ export function CreateGroupModal({ open, onClose }: Props) {
     const memberIds = [
       ...new Set([user.id as Id<"users">, ...selected.map((m) => m.id)]),
     ];
-    if (memberIds.length < 2) return;
+    if (memberIds.length < 2 || memberIds.length > MAX_GROUP_SIZE) return;
     handleClose();
     await startGroup(memberIds, groupName);
   }
@@ -73,7 +78,8 @@ export function CreateGroupModal({ open, onClose }: Props) {
       panelClassName="max-w-md"
     >
       <p className="text-sm text-[var(--ink-muted)]">
-        Add at least one other person. You&apos;ll be included automatically.
+        Round up your crew — you&apos;re already in. Just add one more person
+        to get the chat going (up to {MAX_GROUP_SIZE} people total).
       </p>
 
       <OutlineTextField
@@ -123,13 +129,14 @@ export function CreateGroupModal({ open, onClose }: Props) {
           <ul className="flex flex-col gap-1">
             {searchResults.map((u) => {
               const isSelected = selected.some((m) => m.id === u.id);
+              const disabled = starting || isSelected || atCapacity;
               return (
                 <li key={u.id}>
                   <ChatUserPickRow
                     name={u.name}
                     college={u.college}
                     selected={isSelected}
-                    disabled={starting || isSelected}
+                    disabled={disabled}
                     trailing={
                       isSelected ? (
                         <span className="text-xs font-medium text-[var(--accent)]">
@@ -150,6 +157,11 @@ export function CreateGroupModal({ open, onClose }: Props) {
             })}
           </ul>
         )}
+        {atCapacity ? (
+          <p className="mt-2 text-sm text-[var(--ink-soft)]">
+            Group is full ({MAX_GROUP_SIZE} people max).
+          </p>
+        ) : null}
       </div>
 
       <div className="mt-6 flex flex-wrap justify-end gap-3">

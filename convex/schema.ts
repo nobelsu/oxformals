@@ -111,6 +111,7 @@ export default defineSchema({
     conversationId: v.id("conversations"),
     senderUserId: v.id("users"),
     body: v.string(),
+    replyToMessageId: v.optional(v.id("messages")),
     referencedListingId: v.optional(v.id("listings")),
     mentions: v.optional(
       v.array(

@@ -50,7 +50,10 @@ export function ListingGroupChatButton({
     <button
       type="button"
       disabled={loading}
-      onClick={() => void handleClick()}
+      onClick={(e) => {
+        e.stopPropagation();
+        void handleClick();
+      }}
       className={`rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-sm transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50 ${className}`}
     >
       {loading ? "Opening…" : label}

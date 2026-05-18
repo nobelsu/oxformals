@@ -146,11 +146,19 @@ export function MyListingCard({
   if (onViewRequests) {
     return (
       <>
-        <button
-          type="button"
-          onClick={handleViewRequests}
-          disabled={opening}
-          className="group w-full cursor-pointer text-left disabled:cursor-progress"
+        <div
+          role="button"
+          tabIndex={opening ? -1 : 0}
+          onClick={opening ? undefined : handleViewRequests}
+          onKeyDown={(e) => {
+            if (opening) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleViewRequests();
+            }
+          }}
+          aria-disabled={opening}
+          className={`group w-full text-left ${opening ? "cursor-progress" : "cursor-pointer"}`}
           aria-label={`View requests for ${listing.college}`}
         >
           <SketchCard
@@ -159,7 +167,7 @@ export function MyListingCard({
           >
             {cardContent}
           </SketchCard>
-        </button>
+        </div>
         {openingOverlay}
       </>
     );

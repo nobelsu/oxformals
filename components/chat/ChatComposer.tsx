@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MentionComposer,
   type MentionComposerHandle,
@@ -17,31 +17,59 @@ import {
   stripListingLinksFromText,
 } from "@/lib/chat/listingLink";
 import type { MentionParticipant } from "@/lib/chat/mentions";
-import type { ChatMention } from "@/lib/chat/types";
+import { MessageReplyQuote } from "@/components/chat/MessageReplyQuote";
+import { useAuth } from "@/components/auth/useAuth";
+import type { ChatMention, ChatMessage } from "@/lib/chat/types";
 import type { ListingSummary } from "@/lib/chat/types";
 
 type Props = {
   conversationId: Id<"conversations">;
   defaultMentionUsers?: MentionParticipant[];
-  sending: boolean;
+  replyTarget?: ChatMessage | null;
+  onCancelReply?: () => void;
   onSend: (args: {
     body: string;
     mentions?: ChatMention[];
     referencedListingId?: Id<"listings">;
+    replyToMessageId?: Id<"messages">;
   }) => void;
 };
+
+function replySenderLabel(
+  msg: ChatMessage,
+  currentUserId: string | undefined,
+  participants: MentionParticipant[],
+): string {
+  if (currentUserId && msg.senderUserId === currentUserId) return "You";
+  if (msg.senderName) return msg.senderName;
+  const match = participants.find((p) => p.id === msg.senderUserId);
+  return match?.name ?? "User";
+}
 
 export function ChatComposer({
   conversationId,
   defaultMentionUsers,
-  sending,
+  replyTarget,
+  onCancelReply,
   onSend,
 }: Props) {
+  const { user } = useAuth();
   const [draftBody, setDraftBody] = useState("");
   const [editorEmpty, setEditorEmpty] = useState(true);
   const [pendingRef, setPendingRef] = useState<ListingSummary | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const composerRef = useRef<MentionComposerHandle>(null);
+
+  // Focus when opening or switching a conversation.
+  useEffect(() => {
+    composerRef.current?.focus();
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (replyTarget) {
+      composerRef.current?.focus();
+    }
+  }, [replyTarget]);
 
   const referableListings = useQuery(api.chat.listReferableListings, {
     conversationId,
@@ -97,19 +125,22 @@ export function ChatComposer({
       mentions: [],
     };
     const body = serialized.body.trim();
-    if (sending || (!body && !pendingRef)) return;
+    if (!body && !pendingRef) return;
     onSend({
       body,
       ...(serialized.mentions.length > 0
         ? { mentions: serialized.mentions }
         : {}),
       ...(pendingRef ? { referencedListingId: pendingRef.id } : {}),
+      ...(replyTarget ? { replyToMessageId: replyTarget.id } : {}),
     });
     composerRef.current?.clear();
     setDraftBody("");
     setEditorEmpty(true);
     setPendingRef(null);
-  }, [pendingRef, sending, onSend]);
+    onCancelReply?.();
+    composerRef.current?.focus();
+  }, [pendingRef, replyTarget, onSend, onCancelReply]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -126,8 +157,33 @@ export function ChatComposer({
     submit();
   }
 
+  const replyPreview = replyTarget
+    ? {
+        id: replyTarget.id,
+        senderUserId: replyTarget.senderUserId,
+        senderName: replyTarget.senderName,
+        body: replyTarget.body,
+        ...(replyTarget.referencedListing
+          ? { referencedListing: replyTarget.referencedListing }
+          : {}),
+      }
+    : null;
+
   return (
     <>
+      {replyPreview ? (
+        <MessageReplyQuote
+          reply={replyPreview}
+          senderLabel={replySenderLabel(
+            replyTarget!,
+            user?.id,
+            defaultMentionUsers ?? [],
+          )}
+          variant="composer"
+          onCancel={onCancelReply}
+        />
+      ) : null}
+
       {linkSuggestion && !pendingRef ? (
         <button
           type="button"
@@ -189,14 +245,14 @@ export function ChatComposer({
         <MentionComposer
           ref={composerRef}
           defaultMentionUsers={defaultMentionUsers}
-          disabled={sending}
+          placeholder="@ to mention someone · + to attach a listing"
           onBodyChange={setDraftBody}
           onEmptyChange={setEditorEmpty}
           onEnter={submit}
         />
         <button
           type="submit"
-          disabled={sending || (editorEmpty && !pendingRef)}
+          disabled={editorEmpty && !pendingRef}
           className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] px-5 text-sm text-white transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
         >
           Send

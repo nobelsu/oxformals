@@ -11,9 +11,9 @@ import { NavSettingsModal } from "./NavSettingsModal";
 
 const TABS = [
   { id: "browse", label: "Browse" },
-  { id: "requests", label: "Requests" },
+  { id: "requests", label: "Listings" },
   { id: "chats", label: "Chats" },
-  { id: "mine", label: "Mine" },
+  { id: "mine", label: "Me" },
 ] as const;
 
 export function Nav() {
@@ -29,7 +29,7 @@ export function Nav() {
 
 function NavShell() {
   return (
-    <nav className="w-full bg-[var(--bg)]">
+    <nav className="w-full shrink-0 bg-[var(--bg)]">
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 py-5" />
     </nav>
   );
@@ -57,7 +57,7 @@ function NavInner() {
   }
 
   return (
-    <nav className="w-full bg-[var(--bg)]">
+    <nav className="w-full shrink-0 bg-[var(--bg)]">
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 py-5 flex items-center justify-between gap-4 sm:grid sm:grid-cols-[1fr_auto_1fr]">
         <div className="hidden sm:block" />
 
@@ -71,11 +71,27 @@ function NavInner() {
                   href={hrefFor(t.id)}
                   className={`inline-flex items-center gap-2 font-display uppercase tracking-[0.2em] text-lg sm:text-xl whitespace-nowrap pb-0.5 transition-opacity ${
                     isActive
-                      ? "text-[var(--ink)] underline underline-offset-[8px] decoration-[2.5px]"
+                      ? "text-[var(--ink)]"
                       : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
                   }`}
                 >
-                  {t.label}
+                  <span
+                    className={
+                      isActive
+                        ? "underline underline-offset-[8px] decoration-[2.5px]"
+                        : undefined
+                    }
+                  >
+                    {t.label}
+                  </span>
+                  {t.id === "chats" ? (
+                    <span
+                      className="rounded-full border border-[var(--accent)] px-1.5 py-px text-[0.55rem] font-semibold normal-case tracking-normal text-[var(--accent)]"
+                      aria-hidden="true"
+                    >
+                      new
+                    </span>
+                  ) : null}
                   {showUnread ? (
                     <UnreadBadge count={totalUnread} className="translate-y-px" />
                   ) : null}

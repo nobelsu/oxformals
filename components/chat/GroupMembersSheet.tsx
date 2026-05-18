@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChatUserPickRow } from "@/components/chat/ChatUserPickRow";
 import { useAuth } from "@/components/auth/useAuth";
 import { Avatar } from "@/components/ui/Avatar";
@@ -13,6 +13,7 @@ import { OutlineButton } from "@/components/ui/OutlineButton";
 import { OutlineTextField } from "@/components/ui/OutlineTextField";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { MAX_GROUP_SIZE } from "@/lib/chat/constants";
 import { chatsTabUrl } from "@/lib/chat/navigation";
 import type { GroupConversationPreview } from "@/lib/chat/types";
 
@@ -27,6 +28,8 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
   const { user } = useAuth();
   const [addSearch, setAddSearch] = useState("");
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [groupName, setGroupName] = useState("");
+  const [renaming, setRenaming] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<{
     id: Id<"users">;
     name: string;
@@ -40,6 +43,15 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
   const addGroupMember = useMutation(api.chat.addGroupMember);
   const removeGroupMember = useMutation(api.chat.removeGroupMember);
   const leaveGroup = useMutation(api.chat.leaveGroupConversation);
+  const renameGroup = useMutation(api.chat.renameGroupConversation);
+
+  useEffect(() => {
+    if (open) setGroupName(conversation.name ?? "");
+  }, [open, conversation.name]);
+
+  const trimmedGroupName = groupName.trim();
+  const nameDirty =
+    trimmedGroupName !== (conversation.name ?? "").trim();
 
   const trimmed = addSearch.trim();
   const searchResults = useQuery(
@@ -50,6 +62,8 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
   );
 
   const memberIds = new Set(members?.map((m) => m.id) ?? []);
+  const memberCount = members?.length ?? conversation.memberCount;
+  const atCapacity = memberCount >= MAX_GROUP_SIZE;
   const addCandidates =
     searchResults?.filter((u) => !memberIds.has(u.id)) ?? [];
 
@@ -74,6 +88,19 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
     router.replace(chatsTabUrl(), { scroll: false });
   }
 
+  async function handleRename() {
+    if (!nameDirty || renaming) return;
+    setRenaming(true);
+    try {
+      await renameGroup({
+        conversationId: conversation.id,
+        name: groupName,
+      });
+    } finally {
+      setRenaming(false);
+    }
+  }
+
   return (
     <>
       <Modal
@@ -85,6 +112,27 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
         <p className="truncate text-sm text-[var(--ink-muted)]">
           {conversation.title} · {conversation.memberCount} people
         </p>
+
+        {conversation.isCreator ? (
+          <div className="mt-4 border-b-[2px] border-[var(--ink)]/10 pb-4">
+            <OutlineTextField
+              label="Group name"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              placeholder="e.g. Trinity formal crew"
+              maxLength={80}
+              hint="Leave blank to show member names instead."
+            />
+            <OutlineButton
+              variant="primary"
+              className="mt-3 w-full"
+              disabled={!nameDirty || renaming}
+              onClick={() => void handleRename()}
+            >
+              {renaming ? "Saving…" : "Save name"}
+            </OutlineButton>
+          </div>
+        ) : null}
 
         <ul className="mt-4 max-h-[40vh] space-y-2 overflow-y-auto">
           {members === undefined ? (
@@ -139,32 +187,40 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
 
         {conversation.isCreator ? (
           <div className="mt-4 border-t-[2px] border-[var(--ink)]/10 pt-4">
-            <OutlineTextField
-              label="Add member"
-              type="search"
-              value={addSearch}
-              onChange={(e) => setAddSearch(e.target.value)}
-              onClear={() => setAddSearch("")}
-              clearable
-              placeholder="Search by name or college…"
-            />
-            {trimmed.length >= 2 && addCandidates.length > 0 ? (
-              <ul className="mt-2 flex flex-col gap-1">
-                {addCandidates.slice(0, 8).map((u) => (
-                  <li key={u.id}>
-                    <ChatUserPickRow
-                      name={u.name}
-                      college={u.college}
-                      onClick={() => void handleAdd(u.id)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : trimmed.length >= 2 && searchResults !== undefined ? (
-              <p className="mt-2 text-sm text-[var(--ink-soft)]">
-                No more people to add.
+            {atCapacity ? (
+              <p className="text-sm text-[var(--ink-soft)]">
+                Group is full ({MAX_GROUP_SIZE} people max).
               </p>
-            ) : null}
+            ) : (
+              <>
+                <OutlineTextField
+                  label="Add member"
+                  type="search"
+                  value={addSearch}
+                  onChange={(e) => setAddSearch(e.target.value)}
+                  onClear={() => setAddSearch("")}
+                  clearable
+                  placeholder="Search by name or college…"
+                />
+                {trimmed.length >= 2 && addCandidates.length > 0 ? (
+                  <ul className="mt-2 flex flex-col gap-1">
+                    {addCandidates.slice(0, 8).map((u) => (
+                      <li key={u.id}>
+                        <ChatUserPickRow
+                          name={u.name}
+                          college={u.college}
+                          onClick={() => void handleAdd(u.id)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                ) : trimmed.length >= 2 && searchResults !== undefined ? (
+                  <p className="mt-2 text-sm text-[var(--ink-soft)]">
+                    No more people to add.
+                  </p>
+                ) : null}
+              </>
+            )}
           </div>
         ) : null}
 

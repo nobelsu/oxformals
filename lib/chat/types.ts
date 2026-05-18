@@ -17,6 +17,15 @@ export type ChatMention = {
   start: number;
 };
 
+export type MessageReplySnapshot = {
+  id: Id<"messages">;
+  senderUserId: Id<"users">;
+  senderName?: string;
+  body: string;
+  referencedListing?: ListingSummary;
+  unavailable?: boolean;
+};
+
 export type ChatMessage = {
   id: Id<"messages">;
   conversationId: Id<"conversations">;
@@ -26,6 +35,7 @@ export type ChatMessage = {
   createdAt: number;
   referencedListing?: ListingSummary;
   mentions?: ChatMention[];
+  replyTo?: MessageReplySnapshot;
 };
 
 export type GroupMemberPreview = {
@@ -49,6 +59,8 @@ export type GroupConversationPreview = {
   kind: "group";
   id: Id<"conversations">;
   title: string;
+  /** Custom name when set; title falls back to member names when unset. */
+  name?: string;
   memberCount: number;
   memberPreview: GroupMemberPreview[];
   createdByUserId: Id<"users">;

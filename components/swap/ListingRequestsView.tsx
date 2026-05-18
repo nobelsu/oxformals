@@ -184,7 +184,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             href="/?tab=requests"
             className="mt-5 inline-flex rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
           >
-            Back to Requests
+            Back to Listings
           </Link>
         </SketchCard>
       </main>

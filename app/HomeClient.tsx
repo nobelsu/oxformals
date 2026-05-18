@@ -79,6 +79,8 @@ export function HomeClient() {
   }, [tab, isAuthenticated, setActiveTab, router]);
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 sm:px-6 py-8">{content}</main>
+    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 px-4 py-8 sm:px-6">
+      {content}
+    </main>
   );
 }

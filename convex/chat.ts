@@ -12,7 +12,8 @@ import {
 type Ctx = QueryCtx | MutationCtx;
 
 const MAX_MESSAGE_LENGTH = 2000;
-const MAX_GROUP_SIZE = 20;
+const REPLY_PREVIEW_MAX_LENGTH = 120;
+const MAX_GROUP_SIZE = 7;
 const MAX_GROUP_NAME_LENGTH = 80;
 
 const chatMentionValidator = v.object({
@@ -38,6 +39,15 @@ const listingSummaryValidator = v.object({
   price: v.optional(v.number()),
 });
 
+const messageReplySnapshotValidator = v.object({
+  id: v.id("messages"),
+  senderUserId: v.id("users"),
+  senderName: v.optional(v.string()),
+  body: v.string(),
+  referencedListing: v.optional(listingSummaryValidator),
+  unavailable: v.optional(v.boolean()),
+});
+
 const groupMemberPreviewValidator = v.object({
   id: v.id("users"),
   name: v.string(),
@@ -59,6 +69,7 @@ const groupConversationPreviewValidator = v.object({
   kind: v.literal("group"),
   id: v.id("conversations"),
   title: v.string(),
+  name: v.optional(v.string()),
   memberCount: v.number(),
   memberPreview: v.array(groupMemberPreviewValidator),
   createdByUserId: v.id("users"),
@@ -116,6 +127,78 @@ function toListingSummary(listing: Doc<"listings">): ListingSummary {
       ? { listingType: listing.listingType }
       : {}),
     ...(listing.price !== undefined ? { price: listing.price } : {}),
+  };
+}
+
+function truncateReplyBody(body: string): string {
+  const trimmed = body.trim();
+  if (trimmed.length <= REPLY_PREVIEW_MAX_LENGTH) return trimmed;
+  return `${trimmed.slice(0, REPLY_PREVIEW_MAX_LENGTH)}…`;
+}
+
+async function resolveSenderName(
+  ctx: QueryCtx,
+  senderUserId: Id<"users">,
+  cache: Map<string, string>,
+): Promise<string> {
+  let cached = cache.get(senderUserId);
+  if (!cached) {
+    const u = await ctx.db.get(senderUserId);
+    cached = u?.name?.trim() || "User";
+    cache.set(senderUserId, cached);
+  }
+  return cached;
+}
+
+async function buildReplySnapshot(
+  ctx: QueryCtx,
+  parent: Doc<"messages"> | null,
+  clearedAt: number,
+  senderNameCache: Map<string, string>,
+): Promise<
+  | {
+      id: Id<"messages">;
+      senderUserId: Id<"users">;
+      senderName?: string;
+      body: string;
+      referencedListing?: ListingSummary;
+      unavailable?: boolean;
+    }
+  | undefined
+> {
+  if (!parent) {
+    return undefined;
+  }
+
+  if (parent._creationTime <= clearedAt) {
+    return {
+      id: parent._id,
+      senderUserId: parent.senderUserId,
+      body: "",
+      unavailable: true,
+    };
+  }
+
+  let referencedListing: ListingSummary | undefined;
+  if (parent.referencedListingId) {
+    const listing = await ctx.db.get(parent.referencedListingId);
+    if (listing) {
+      referencedListing = toListingSummary(listing);
+    }
+  }
+
+  const senderName = await resolveSenderName(
+    ctx,
+    parent.senderUserId,
+    senderNameCache,
+  );
+
+  return {
+    id: parent._id,
+    senderUserId: parent.senderUserId,
+    body: truncateReplyBody(parent.body),
+    senderName,
+    ...(referencedListing ? { referencedListing } : {}),
   };
 }
 
@@ -257,26 +340,21 @@ async function getGroupMemberUserIds(
 }
 
 async function isListingReferableInDm(
-  ctx: Ctx,
+  _ctx: Ctx,
   listing: Doc<"listings">,
   viewerId: Id<"users">,
   otherUserId: Id<"users">,
 ): Promise<boolean> {
-  if (listing.ownerUserId === viewerId && listing.status === "active") {
-    return true;
-  }
-  if (listing.ownerUserId === otherUserId && listing.status === "active") {
-    return true;
-  }
-  return false;
+  return (
+    listing.ownerUserId === viewerId || listing.ownerUserId === otherUserId
+  );
 }
 
 async function isListingReferableInGroup(
-  ctx: Ctx,
+  _ctx: Ctx,
   listing: Doc<"listings">,
   memberUserIds: Id<"users">[],
 ): Promise<boolean> {
-  if (listing.status !== "active") return false;
   return memberUserIds.includes(listing.ownerUserId);
 }
 
@@ -374,6 +452,7 @@ async function buildGroupConversationPreview(
   kind: "group";
   id: Id<"conversations">;
   title: string;
+  name?: string;
   memberCount: number;
   memberPreview: { id: Id<"users">; name: string }[];
   createdByUserId: Id<"users">;
@@ -402,8 +481,9 @@ async function buildGroupConversationPreview(
     });
   }
 
+  const customName = convo.name?.trim();
   const title =
-    convo.name?.trim() ||
+    customName ||
     memberPreview.map((m) => m.name).join(", ") ||
     "Group chat";
 
@@ -415,6 +495,7 @@ async function buildGroupConversationPreview(
     kind: "group",
     id: convo._id,
     title,
+    ...(customName ? { name: customName } : {}),
     memberCount: memberRows.length,
     memberPreview,
     createdByUserId,
@@ -568,6 +649,36 @@ export const createGroupConversation = mutation({
   },
 });
 
+export const renameGroupConversation = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    name: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const viewerId = await requireUserId(ctx);
+    const convo = await ctx.db.get(args.conversationId);
+    if (!convo || conversationKind(convo) !== "group") {
+      throw new Error("Group not found");
+    }
+    if (convo.createdByUserId !== viewerId) {
+      throw new Error("Only the group creator can rename the group");
+    }
+
+    const trimmed = args.name.trim();
+    if (trimmed.length > MAX_GROUP_NAME_LENGTH) {
+      throw new Error(
+        `Group name must be at most ${MAX_GROUP_NAME_LENGTH} characters`,
+      );
+    }
+
+    await ctx.db.patch(args.conversationId, {
+      name: trimmed || undefined,
+    });
+    return null;
+  },
+});
+
 export const addGroupMember = mutation({
   args: {
     conversationId: v.id("conversations"),
@@ -691,6 +802,9 @@ export const getOrCreateListingGroupChat = mutation({
     if (listing.members.length < 2) {
       throw new Error("Need at least 2 people dining together for a group chat");
     }
+    if (listing.members.length > MAX_GROUP_SIZE) {
+      throw new Error(`Groups can have at most ${MAX_GROUP_SIZE} members`);
+    }
 
     const existing = await ctx.db
       .query("conversations")
@@ -702,6 +816,15 @@ export const getOrCreateListingGroupChat = mutation({
     if (existing) {
       const row = await getMemberRow(ctx, existing._id, viewerId);
       if (!row) {
+        const members = await ctx.db
+          .query("conversationMembers")
+          .withIndex("by_conversationId", (q) =>
+            q.eq("conversationId", existing._id),
+          )
+          .collect();
+        if (members.length >= MAX_GROUP_SIZE) {
+          throw new Error(`Groups can have at most ${MAX_GROUP_SIZE} members`);
+        }
         await ctx.db.insert("conversationMembers", {
           conversationId: existing._id,
           userId: viewerId,
@@ -1048,21 +1171,21 @@ export const listMyConversations = query({
       }
     }
 
-    const allConvos = [...dedupedDms, ...groupConvos].sort(
-      (a, b) => b.lastMessageAt - a.lastMessageAt,
-    );
+    const allConvos = [...dedupedDms, ...groupConvos];
 
     const results = await Promise.all(
       allConvos.map(async (convo) => {
-        const preview = await buildConversationPreview(ctx, convo, userId);
-        if (!preview) return null;
         const lastMsg = await getLastMessageForViewer(ctx, convo, userId);
         if (!lastMsg) return null;
-        return preview;
+        const preview = await buildConversationPreview(ctx, convo, userId);
+        if (!preview) return null;
+        return { ...preview, lastMessageAt: lastMsg._creationTime };
       }),
     );
 
-    return results.filter((r): r is NonNullable<typeof r> => r !== null);
+    return results
+      .filter((r): r is NonNullable<typeof r> => r !== null)
+      .sort((a, b) => b.lastMessageAt - a.lastMessageAt);
   },
 });
 
@@ -1082,6 +1205,7 @@ export const listMessages = query({
         createdAt: v.number(),
         referencedListing: v.optional(listingSummaryValidator),
         mentions: v.optional(v.array(chatMentionValidator)),
+        replyTo: v.optional(messageReplySnapshotValidator),
       }),
     ),
     isDone: v.boolean(),
@@ -1108,6 +1232,21 @@ export const listMessages = query({
 
     const senderNameCache = new Map<string, string>();
 
+    const replyParentIds = [
+      ...new Set(
+        result.page
+          .map((msg) => msg.replyToMessageId)
+          .filter((id): id is Id<"messages"> => id !== undefined),
+      ),
+    ];
+    const replyParentCache = new Map<string, Doc<"messages"> | null>();
+    await Promise.all(
+      replyParentIds.map(async (parentId) => {
+        const parent = await ctx.db.get(parentId);
+        replyParentCache.set(parentId, parent);
+      }),
+    );
+
     const page = await Promise.all(
       result.page.map(async (msg) => {
         let referencedListing: ListingSummary | undefined;
@@ -1119,14 +1258,33 @@ export const listMessages = query({
         }
 
         let senderName: string | undefined;
-        if (isGroup) {
-          let cached = senderNameCache.get(msg.senderUserId);
-          if (!cached) {
-            const u = await ctx.db.get(msg.senderUserId);
-            cached = u?.name?.trim() || "User";
-            senderNameCache.set(msg.senderUserId, cached);
-          }
-          senderName = cached;
+        if (isGroup || msg.senderUserId !== userId) {
+          senderName = await resolveSenderName(
+            ctx,
+            msg.senderUserId,
+            senderNameCache,
+          );
+        }
+
+        let replyTo:
+          | {
+              id: Id<"messages">;
+              senderUserId: Id<"users">;
+              senderName?: string;
+              body: string;
+              referencedListing?: ListingSummary;
+              unavailable?: boolean;
+            }
+          | undefined;
+        if (msg.replyToMessageId) {
+          const parent =
+            replyParentCache.get(msg.replyToMessageId) ?? null;
+          replyTo = await buildReplySnapshot(
+            ctx,
+            parent,
+            clearedAt,
+            senderNameCache,
+          );
         }
 
         return {
@@ -1140,6 +1298,7 @@ export const listMessages = query({
           ...(msg.mentions && msg.mentions.length > 0
             ? { mentions: msg.mentions }
             : {}),
+          ...(replyTo ? { replyTo } : {}),
         };
       }),
     );
@@ -1158,6 +1317,7 @@ export const sendMessage = mutation({
     body: v.string(),
     referencedListingId: v.optional(v.id("listings")),
     mentions: v.optional(v.array(chatMentionValidator)),
+    replyToMessageId: v.optional(v.id("messages")),
   },
   returns: v.id("messages"),
   handler: async (ctx, args) => {
@@ -1167,6 +1327,21 @@ export const sendMessage = mutation({
       args.conversationId,
       userId,
     );
+
+    const clearedAt = await getClearedAt(convo, userId);
+
+    if (args.replyToMessageId) {
+      const parent = await ctx.db.get(args.replyToMessageId);
+      if (!parent) {
+        throw new Error("The message you are replying to no longer exists");
+      }
+      if (parent.conversationId !== args.conversationId) {
+        throw new Error("Cannot reply to a message from another conversation");
+      }
+      if (parent._creationTime <= clearedAt) {
+        throw new Error("Cannot reply to a message that is no longer visible");
+      }
+    }
 
     const body = args.body.trim();
     if (!body && !args.referencedListingId) {
@@ -1216,11 +1391,13 @@ export const sendMessage = mutation({
       }
     }
 
-    const now = Date.now();
     const messageId = await ctx.db.insert("messages", {
       conversationId: args.conversationId,
       senderUserId: userId,
       body,
+      ...(args.replyToMessageId
+        ? { replyToMessageId: args.replyToMessageId }
+        : {}),
       ...(args.referencedListingId
         ? { referencedListingId: args.referencedListingId }
         : {}),
@@ -1229,7 +1406,11 @@ export const sendMessage = mutation({
         : {}),
     });
 
-    await ctx.db.patch(args.conversationId, { lastMessageAt: now });
+    const message = await ctx.db.get(messageId);
+    if (!message) throw new Error("Failed to create message");
+    await ctx.db.patch(args.conversationId, {
+      lastMessageAt: message._creationTime,
+    });
 
     return messageId;
   },
@@ -1287,8 +1468,7 @@ export const listReferableListings = query({
     const summaries: ListingSummary[] = [];
     const seen = new Set<string>();
 
-    const addListing = (listing: Doc<"listings"> | null) => {
-      if (!listing || listing.status !== "active") return;
+    const addListing = (listing: Doc<"listings">) => {
       const key = listing._id;
       if (seen.has(key)) return;
       seen.add(key);
@@ -1301,7 +1481,7 @@ export const listReferableListings = query({
         const listings = await ctx.db
           .query("listings")
           .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", memberId))
-          .take(50);
+          .collect();
         for (const listing of listings) {
           addListing(listing);
         }
@@ -1312,7 +1492,7 @@ export const listReferableListings = query({
       const myListings = await ctx.db
         .query("listings")
         .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", userId))
-        .take(50);
+        .collect();
       for (const listing of myListings) {
         addListing(listing);
       }
@@ -1320,7 +1500,7 @@ export const listReferableListings = query({
       const theirListings = await ctx.db
         .query("listings")
         .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", otherId))
-        .take(50);
+        .collect();
       for (const listing of theirListings) {
         addListing(listing);
       }

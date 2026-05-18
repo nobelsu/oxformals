@@ -163,7 +163,7 @@ export const MentionComposer = forwardRef<MentionComposerHandle, Props>(
     {
       defaultMentionUsers = [],
       disabled = false,
-      placeholder = "Write a message…",
+      placeholder = "@ to mention someone · + to attach a listing",
       onBodyChange,
       onEmptyChange,
       onEnter,
@@ -266,7 +266,16 @@ export const MentionComposer = forwardRef<MentionComposerHandle, Props>(
           return serializeMentionEditor(root).body.trim().length === 0;
         },
         focus: () => {
-          editorRef.current?.focus();
+          const root = editorRef.current;
+          if (!root) return;
+          root.focus();
+          const selection = window.getSelection();
+          if (!selection) return;
+          const range = document.createRange();
+          range.selectNodeContents(root);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
         },
       }),
       [onBodyChange, onEmptyChange, resizeEditor],

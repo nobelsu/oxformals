@@ -134,7 +134,7 @@ export function RequestSwapModal({
         <div className="text-[var(--ink-muted)]">
           You need an active swap or both-type listing to offer. Pay-only
           listings can&apos;t be used in swaps. Head to the
-          <span className="font-medium text-[var(--ink)]"> Mine </span>
+          <span className="font-medium text-[var(--ink)]"> Me </span>
           tab to list one.
         </div>
       ) : listingsWithCapacity.length === 0 ? (
