@@ -5,13 +5,19 @@ import { Modal } from "@/components/ui/Modal";
 import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
 import { formatListingDate } from "@/lib/data/format";
 import { listingSupportsSwap } from "@/lib/data/listingType";
-import type { Listing } from "@/lib/data/types";
+import {
+  canSendSwapWithOffering,
+  OFFERING_NO_SWAP_CAPACITY_MESSAGE,
+} from "@/lib/data/requestFilters";
+import type { Listing, SwapRequest } from "@/lib/data/types";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   targetListing: Listing | null;
   myListings: Listing[];
+  requests: SwapRequest[];
+  userId: string | undefined;
   onSubmit: (args: {
     offeringListingId: string;
     message: string;
@@ -23,6 +29,8 @@ export function RequestSwapModal({
   onClose,
   targetListing,
   myListings,
+  requests,
+  userId,
   onSubmit,
 }: Props) {
   const activeMine = useMemo(
@@ -32,13 +40,19 @@ export function RequestSwapModal({
       ),
     [myListings],
   );
+  const listingsWithCapacity = useMemo(() => {
+    if (!userId) return activeMine;
+    return activeMine.filter((l) =>
+      canSendSwapWithOffering(requests, userId, l.id, l.seatsAvailable),
+    );
+  }, [activeMine, requests, userId]);
   const offeringOptions = useMemo(
     () =>
-      activeMine.map((l) => ({
+      listingsWithCapacity.map((l) => ({
         value: l.id,
         label: `${l.college} — ${formatListingDate(l.dateTime)}`,
       })),
-    [activeMine],
+    [listingsWithCapacity],
   );
   const [offeringId, setOfferingId] = useState<string>("");
   const [offeringPickerOpen, setOfferingPickerOpen] = useState(false);
@@ -46,7 +60,18 @@ export function RequestSwapModal({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const effectiveOfferingId = offeringId || (activeMine[0]?.id ?? "");
+  const effectiveOfferingId = useMemo(() => {
+    if (
+      offeringId &&
+      listingsWithCapacity.some((l) => l.id === offeringId)
+    ) {
+      return offeringId;
+    }
+    return listingsWithCapacity[0]?.id ?? "";
+  }, [offeringId, listingsWithCapacity]);
+  const selectedOffering = listingsWithCapacity.find(
+    (l) => l.id === effectiveOfferingId,
+  );
 
   useEffect(() => {
     if (!open) {
@@ -57,6 +82,22 @@ export function RequestSwapModal({
 
   async function handleSubmit() {
     if (!effectiveOfferingId || submitting) return;
+    if (!userId) return;
+
+    const offering = activeMine.find((l) => l.id === effectiveOfferingId);
+    if (
+      !offering ||
+      !canSendSwapWithOffering(
+        requests,
+        userId,
+        effectiveOfferingId,
+        offering.seatsAvailable,
+      )
+    ) {
+      setError(OFFERING_NO_SWAP_CAPACITY_MESSAGE);
+      return;
+    }
+
     setError(null);
     setSubmitting(true);
     try {
@@ -96,6 +137,10 @@ export function RequestSwapModal({
           <span className="font-medium text-[var(--ink)]"> Mine </span>
           tab to list one.
         </div>
+      ) : listingsWithCapacity.length === 0 ? (
+        <p className="text-[var(--ink-muted)]">
+          {OFFERING_NO_SWAP_CAPACITY_MESSAGE}
+        </p>
       ) : (
         <>
           <label className="flex flex-col gap-2 mb-4">
@@ -110,10 +155,19 @@ export function RequestSwapModal({
               onChange={(v) => {
                 setOfferingId(v);
                 setOfferingPickerOpen(false);
+                setError(null);
               }}
               placeholder="Choose a listing"
             />
           </label>
+
+          {selectedOffering && (
+            <p className="mb-4 text-xs text-[var(--ink-muted)]">
+              {selectedOffering.seatsAvailable}{" "}
+              {selectedOffering.seatsAvailable === 1 ? "seat" : "seats"} left
+              to offer on this listing
+            </p>
+          )}
 
           <label className="flex flex-col gap-2 mb-6">
             <span className="text-sm text-[var(--ink-muted)]">
@@ -144,7 +198,7 @@ export function RequestSwapModal({
             <button
               type="button"
               onClick={() => void handleSubmit()}
-              disabled={submitting}
+              disabled={submitting || !effectiveOfferingId}
               className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-5 py-1.5 text-sm disabled:opacity-50"
             >
               Send request!

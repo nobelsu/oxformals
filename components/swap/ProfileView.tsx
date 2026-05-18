@@ -23,7 +23,7 @@ import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
 import { listingSupportsSwap } from "@/lib/data/listingType";
-import { findBlockingOutgoingRequest } from "@/lib/data/requestFilters";
+import { findBlockingOutgoingRequestForTarget } from "@/lib/data/requestFilters";
 import type { GroupSize, Listing, RequestType } from "@/lib/data/types";
 import { formatYearLabel } from "@/lib/data/format";
 
@@ -168,7 +168,11 @@ export function ProfileView({ userId }: { userId: string }) {
   const openRequestFlow = useCallback(
     (listing: Listing, requestType: RequestType) => {
       if (currentUser) {
-        const blocking = findBlockingOutgoingRequest(requests, currentUser.id);
+        const blocking = findBlockingOutgoingRequestForTarget(
+          requests,
+          currentUser.id,
+          listing.id,
+        );
         if (blocking) {
           setBlockingHasAccepted(blocking.status === "accepted");
           setBlockingRequestOpen(true);
@@ -485,6 +489,8 @@ export function ProfileView({ userId }: { userId: string }) {
         }}
         targetListing={requestTarget}
         myListings={myActiveListings}
+        requests={requests}
+        userId={currentUser?.id}
         onSubmit={async ({ offeringListingId, message }) => {
           if (!requestTarget) return;
           const result = await sendRequest({

@@ -25,7 +25,7 @@ import { SketchCard } from "@/components/ui/SketchCard";
 import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
 import { listingSupportsSwap } from "@/lib/data/listingType";
 import {
-  findBlockingOutgoingRequest,
+  findBlockingOutgoingRequestForTarget,
   incomingRequestsForListing,
   pendingIncomingRequestsForListing,
   resolveRequestType,
@@ -203,7 +203,11 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
 
   function openOutboundRequest(target: Listing, requestType: RequestType) {
     if (user) {
-      const blocking = findBlockingOutgoingRequest(requests, user.id);
+      const blocking = findBlockingOutgoingRequestForTarget(
+        requests,
+        user.id,
+        target.id,
+      );
       if (blocking) {
         setBlockingHasAccepted(blocking.status === "accepted");
         setBlockingRequestOpen(true);
@@ -483,6 +487,8 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
         }}
         targetListing={requestTarget}
         myListings={myActiveListings.filter((l) => l.id !== listing.id)}
+        requests={requests}
+        userId={user?.id}
         onSubmit={async ({ offeringListingId, message }) => {
           if (!requestTarget) return;
           const result = await sendRequest({

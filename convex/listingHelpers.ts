@@ -115,6 +115,28 @@ export async function expireListing(
   await ctx.db.patch(listingId, { status: "expired" });
 }
 
+export function resolveRequestType(
+  req: Pick<Doc<"requests">, "requestType" | "offeringListingId">,
+): "swap" | "pay" {
+  return req.requestType ?? (req.offeringListingId !== undefined ? "swap" : "pay");
+}
+
+export const OFFERING_NO_SWAP_CAPACITY_MESSAGE =
+  "Your listing has no seats left to offer in new swaps.";
+
+/** Pending + accepted swaps that reserve seats on an offering listing. */
+export function countReservedSwapsForOffering(
+  mine: Doc<"requests">[],
+  offeringListingId: Id<"listings">,
+): number {
+  return mine.filter(
+    (item) =>
+      item.offeringListingId === offeringListingId &&
+      resolveRequestType(item) === "swap" &&
+      (item.status === "pending" || item.status === "accepted"),
+  ).length;
+}
+
 export async function enrichListing(
   ctx: QueryCtx,
   listing: Doc<"listings">,

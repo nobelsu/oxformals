@@ -22,7 +22,7 @@ import {
   BROWSE_DATE_CALENDAR_INSTRUCTIONS,
 } from "./BrowseDateCalendar";
 import { isoToLocalDateKey } from "@/lib/data/format";
-import { findBlockingOutgoingRequest } from "@/lib/data/requestFilters";
+import { findBlockingOutgoingRequestForTarget } from "@/lib/data/requestFilters";
 import type { Listing } from "@/lib/data/types";
 
 type Props = {
@@ -268,7 +268,11 @@ export function BrowseTab({
 
   function openRequestFlow(listing: Listing, requestType: RequestType) {
     if (user) {
-      const blocking = findBlockingOutgoingRequest(requests, user.id);
+      const blocking = findBlockingOutgoingRequestForTarget(
+        requests,
+        user.id,
+        listing.id,
+      );
       if (blocking) {
         setBlockingHasAccepted(blocking.status === "accepted");
         setBlockingRequestOpen(true);
@@ -539,6 +543,8 @@ export function BrowseTab({
         }}
         targetListing={requestTarget}
         myListings={myActiveListings}
+        requests={requests}
+        userId={user?.id}
         onSubmit={async ({ offeringListingId, message }) => {
           if (!requestTarget) return;
           const result = await sendRequest({

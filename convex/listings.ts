@@ -6,11 +6,13 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { groupSizeValidator } from "./groupSize";
 import {
+  countReservedSwapsForOffering,
   declinePendingRequestsForListing,
   deleteMenuPdfIfPresent,
   enrichListing,
   expireListing,
   listingIsPast,
+  OFFERING_NO_SWAP_CAPACITY_MESSAGE,
   resolveStatusAfterEdit,
   validateMenuPdfId,
 } from "./listingHelpers";
@@ -213,14 +215,16 @@ export const createRequest = mutation({
       .withIndex("by_fromUserId", (q) => q.eq("fromUserId", userId))
       .take(200);
 
-    const blocking = mine.find(
-      (item) => item.status === "pending" || item.status === "accepted",
+    const blockingForTarget = mine.find(
+      (item) =>
+        item.targetListingId === args.targetListingId &&
+        (item.status === "pending" || item.status === "accepted"),
     );
-    if (blocking) {
+    if (blockingForTarget) {
       throw new Error(
-        blocking.status === "accepted"
-          ? "You already have an accepted request. You cannot send another."
-          : "You already have a request waiting for a reply. Withdraw it before sending another.",
+        blockingForTarget.status === "accepted"
+          ? "You already have an accepted request for this listing. You cannot send another."
+          : "You already have a request waiting for a reply on this listing. Withdraw it before sending another.",
       );
     }
 
@@ -274,6 +278,16 @@ export const createRequest = mutation({
     }
     if (!listingSupportsSwap(resolveListingType(offering))) {
       throw new Error("Pay listings cannot be used in a swap.");
+    }
+    if (offering.seatsAvailable <= 0) {
+      throw new Error(OFFERING_NO_SWAP_CAPACITY_MESSAGE);
+    }
+    const reservedForOffering = countReservedSwapsForOffering(
+      mine,
+      args.offeringListingId,
+    );
+    if (reservedForOffering >= offering.seatsAvailable) {
+      throw new Error(OFFERING_NO_SWAP_CAPACITY_MESSAGE);
     }
 
     const existingSwap = mine.find(
