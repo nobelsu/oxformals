@@ -163,7 +163,7 @@ export const MentionComposer = forwardRef<MentionComposerHandle, Props>(
     {
       defaultMentionUsers = [],
       disabled = false,
-      placeholder = "@ to mention someone · + to attach a listing",
+      placeholder = "@ to mention someone",
       onBodyChange,
       onEmptyChange,
       onEnter,
@@ -415,7 +415,7 @@ export const MentionComposer = forwardRef<MentionComposerHandle, Props>(
           data-placeholder={placeholder}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
-          className="mention-composer max-h-32 min-h-11 overflow-y-auto rounded-xl border-[2px] border-[var(--ink)]/20 bg-[var(--paper)] px-3 py-2.5 text-sm leading-5 outline-none focus:border-[var(--ink)] empty:before:pointer-events-none empty:before:text-[var(--ink-soft)] empty:before:content-[attr(data-placeholder)]"
+          className="mention-composer max-h-32 min-h-11 overflow-y-auto rounded-xl border-[2px] border-[var(--ink)]/20 bg-[var(--paper)] px-3 py-2.5 text-base leading-5 outline-none focus:border-[var(--ink)] md:text-sm empty:before:pointer-events-none empty:before:text-[var(--ink-soft)] empty:before:content-[attr(data-placeholder)]"
         />
       </div>
     );

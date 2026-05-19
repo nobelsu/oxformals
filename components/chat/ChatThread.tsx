@@ -14,6 +14,7 @@ import { ChatComposer } from "@/components/chat/ChatComposer";
 import { GroupMembersSheet } from "@/components/chat/GroupMembersSheet";
 import { MessageBody } from "@/components/chat/MessageBody";
 import { MessageReplyQuote } from "@/components/chat/MessageReplyQuote";
+import { SwipeToReplyMessage } from "@/components/chat/SwipeToReplyMessage";
 import { ListingReferenceCard } from "@/components/chat/ListingReferenceCard";
 import { useAuth } from "@/components/auth/useAuth";
 import { Avatar } from "@/components/ui/Avatar";
@@ -46,7 +47,7 @@ function MessageReplyButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--ink-soft)] opacity-100 transition-[opacity,background-color,color] hover:bg-[var(--ink)]/10 hover:text-[var(--ink)] sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+      className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--ink-soft)] transition-[opacity,background-color,color] hover:bg-[var(--ink)]/10 hover:text-[var(--ink)] sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
       aria-label="Reply"
     >
       <svg
@@ -368,8 +369,9 @@ export function ChatThread({ conversation, onBack }: Props) {
                 {isMine ? (
                   <MessageReplyButton onClick={() => setReplyTarget(msg)} />
                 ) : null}
+                <SwipeToReplyMessage onReply={() => setReplyTarget(msg)}>
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
+                  className={`w-full rounded-2xl px-4 py-2.5 ${
                     isMine
                       ? "bg-[var(--accent)] text-white"
                       : "border-[2px] border-[var(--ink)]/15 bg-[var(--paper)] text-[var(--ink)]"
@@ -420,6 +422,7 @@ export function ChatThread({ conversation, onBack }: Props) {
                     {formatRelativeTime(msg.createdAt)}
                   </p>
                 </div>
+                </SwipeToReplyMessage>
                 {!isMine ? (
                   <MessageReplyButton onClick={() => setReplyTarget(msg)} />
                 ) : null}

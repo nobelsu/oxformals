@@ -379,32 +379,17 @@ export const saveWishlistColleges = mutation({
 });
 
 export const backfillEmailWishlistAlerts = internalMutation({
-  args: { cursor: v.optional(v.string()) },
-  handler: async (ctx, args) => {
-    const page = await ctx.db.query("users").order("asc").paginate({
-      numItems: 100,
-      cursor: args.cursor ?? null,
-    });
-
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
     let patched = 0;
-    for (const user of page.page) {
+    for (const user of users) {
       if (user.emailWishlistAlerts !== true) {
         await ctx.db.patch(user._id, { emailWishlistAlerts: true });
         patched++;
       }
     }
-
-    if (!page.isDone) {
-      await ctx.scheduler.runAfter(0, internal.users.backfillEmailWishlistAlerts, {
-        cursor: page.continueCursor,
-      });
-    }
-
-    return {
-      patched,
-      scanned: page.page.length,
-      isDone: page.isDone,
-    };
+    return { patched, total: users.length };
   },
 });
 

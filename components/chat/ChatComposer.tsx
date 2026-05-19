@@ -265,7 +265,7 @@ export function ChatComposer({
         <MentionComposer
           ref={composerRef}
           defaultMentionUsers={defaultMentionUsers}
-          placeholder="@ to mention someone · + to attach a listing"
+          placeholder="@ to mention someone"
           onBodyChange={setDraftBody}
           onEmptyChange={setEditorEmpty}
           onEnter={submit}
