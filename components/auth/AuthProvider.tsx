@@ -141,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       formData.set("email", trimmed);
       if (normalizedEmail === ADMIN_EMAIL) {
         await signInWithProvider("admin-email", formData);
-        return { status: "signed-in" as const, email: normalizedEmail };
+        return { status: "code-sent" as const, email: normalizedEmail };
       }
       await signInWithProvider("resend", formData);
       return { status: "code-sent" as const, email: normalizedEmail };
@@ -152,10 +152,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyCode = useCallback(
     async (email: string, code: string) => {
       const trimmedEmail = email.trim();
+      const normalizedEmail = trimmedEmail.toLowerCase();
       const trimmedCode = code.trim();
       const formData = new FormData();
       formData.set("email", trimmedEmail);
       formData.set("code", trimmedCode);
+      if (normalizedEmail === ADMIN_EMAIL) {
+        await signInWithProvider("admin-email", formData);
+        return;
+      }
       await signInWithProvider("resend", formData);
     },
     [signInWithProvider],

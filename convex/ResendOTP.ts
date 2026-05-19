@@ -10,7 +10,7 @@ function isOxfordEmail(email: string): boolean {
   return email.endsWith("@ox.ac.uk") || email.endsWith("@oxford.said.edu") || email.endsWith("@said.ox.ac.uk") || email.endsWith("@said.oxford.edu");
 }
 
-function buildOtpEmailHtml({
+export function buildOtpEmailHtml({
   token,
   expiresInMinutes,
 }: {
@@ -75,7 +75,7 @@ function buildOtpEmailHtml({
 </html>`;
 }
 
-function buildOtpEmailText({
+export function buildOtpEmailText({
   token,
   expiresInMinutes,
 }: {

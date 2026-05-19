@@ -32,10 +32,7 @@ export type Session = {
   issuedAt: number;
 };
 
-/** OTP flows return "code-sent"; the admin bypass flow returns "signed-in". */
-export type SignInResult =
-  | { status: "code-sent"; email: string }
-  | { status: "signed-in"; email: string };
+export type SignInResult = { status: "code-sent"; email: string };
 
 export type SignupInput = {
   email: string;

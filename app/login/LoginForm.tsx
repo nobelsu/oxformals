@@ -16,6 +16,7 @@ import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
 type Step = "email" | "code" | "profile";
 const ROLE_OPTIONS = ["Undergrad", "Masters", "DPhil"] as const;
 const COLLEGE_LIST = OXFORD_COLLEGES as readonly string[];
+const ADMIN_EMAIL = "admin@ox.ac.uk";
 
 function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
@@ -169,15 +170,10 @@ export function LoginForm() {
     }
     setSubmitting(true);
     try {
-      const signInResult = await requestCode(normalized);
+      await requestCode(normalized);
       setEmail(normalized);
-      if (signInResult.status === "signed-in") {
-        setStep("profile");
-        setCode("");
-      } else if (signInResult.status === "code-sent") {
-        setStep("code");
-        setCode("");
-      }
+      setStep("code");
+      setCode("");
     } catch {
       setError("Could not send the code — check your email and try again.");
     } finally {
@@ -319,8 +315,18 @@ export function LoginForm() {
         ) : step === "code" ? (
           <form onSubmit={onCodeSubmit} className="flex flex-col gap-4">
             <p className="text-[var(--ink-muted)] text-center leading-relaxed">
-              Enter the 6-digit code we sent to{" "}
-              <span className="text-[var(--ink)] font-medium">{email}</span>.
+              {normalizeEmail(email) === ADMIN_EMAIL ? (
+                <>
+                  Enter the 6-digit admin sign-in code sent to the admin
+                  contact email.
+                </>
+              ) : (
+                <>
+                  Enter the 6-digit code we sent to{" "}
+                  <span className="text-[var(--ink)] font-medium">{email}</span>
+                  .
+                </>
+              )}
             </p>
 
             <label className="flex flex-col gap-2">
