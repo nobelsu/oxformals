@@ -168,7 +168,7 @@ export function RequestsTab() {
       <Modal
         open={listFormalOpen}
         onClose={() => setListFormalOpen(false)}
-        panelClassName="!max-w-3xl"
+        panelClassName="!max-w-[min(48rem,calc(100vw-1.5rem))]"
         bodyScrollable={false}
       >
         <ListFormalForm

@@ -11,7 +11,7 @@
   --tag-ink: #f6efe0;
   --accent: #edbfba;
   --accent-hover: #e3a9a2;
-  --accent-ink: #ffffff;
+  --accent-ink: #1a140f;
   --danger: #c96360;
 }
 
@@ -62,7 +62,7 @@ html[data-ui-font="schoolbell"] {
   --tag-ink: #f6efe0;
   --accent: #edbfba;
   --accent-hover: #e3a9a2;
-  --accent-ink: #ffffff;
+  --accent-ink: #1a140f;
   --danger: #c96360;
 }
 
@@ -303,6 +303,22 @@ textarea,
 select,
 button {
   font-family: inherit;
+}
+
+/* datetime-local has a large intrinsic min-width on mobile WebKit */
+input[type="datetime-local"],
+input[type="date"],
+input[type="time"] {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+input[type="datetime-local"]::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
 }
 
 .scrollbar-hide {

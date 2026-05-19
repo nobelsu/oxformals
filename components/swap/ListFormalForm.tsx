@@ -219,7 +219,7 @@ export function ListFormalForm({
   }
 
   const fieldCls =
-    "w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base focus:outline-none";
+    "box-border min-w-0 max-w-full w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base focus:outline-none";
 
   const formInner = (
     <>
@@ -279,7 +279,7 @@ export function ListFormalForm({
 
         <div className="flex min-w-0 flex-col gap-2">
           <span className="text-sm text-[var(--ink-muted)]">Group size</span>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {GROUP_SIZES.map((s) => (
               <Chip
                 key={s}
@@ -302,7 +302,7 @@ export function ListFormalForm({
             onChange={(e) => setMenu(e.target.value)}
             rows={2}
             placeholder="What's on the menu?"
-            className="w-full rounded-[20px] border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base focus:outline-none"
+            className="box-border min-w-0 max-w-full w-full rounded-[20px] border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base focus:outline-none"
           />
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -375,7 +375,7 @@ export function ListFormalForm({
             onChange={(e) => setMessage(e.target.value)}
             rows={2}
             placeholder="Anything to mention?"
-            className="w-full rounded-[20px] border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base focus:outline-none"
+            className="box-border min-w-0 max-w-full w-full rounded-[20px] border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base focus:outline-none"
           />
         </label>
       </div>
@@ -394,7 +394,7 @@ export function ListFormalForm({
 
   if (embedded) {
     return (
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="flex w-full min-w-0 flex-col gap-5">
         {formInner}
       </form>
     );
@@ -402,7 +402,7 @@ export function ListFormalForm({
 
   return (
     <SketchCard seed={4} className="p-6">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="flex w-full min-w-0 flex-col gap-5">
         {formInner}
       </form>
     </SketchCard>

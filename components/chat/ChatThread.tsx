@@ -373,7 +373,7 @@ export function ChatThread({ conversation, onBack }: Props) {
                 <div
                   className={`w-full rounded-2xl px-4 py-2.5 ${
                     isMine
-                      ? "bg-[var(--accent)] text-white"
+                      ? "bg-[var(--accent)] text-[var(--accent-ink)]"
                       : "border-[2px] border-[var(--ink)]/15 bg-[var(--paper)] text-[var(--ink)]"
                   }`}
                 >
@@ -416,7 +416,9 @@ export function ChatThread({ conversation, onBack }: Props) {
                   ) : null}
                   <p
                     className={`mt-1 text-[0.65rem] ${
-                      isMine ? "text-white/70" : "text-[var(--ink-soft)]"
+                      isMine
+                        ? "text-[var(--accent-ink)]/70"
+                        : "text-[var(--ink-soft)]"
                     }`}
                   >
                     {formatRelativeTime(msg.createdAt)}

@@ -24,16 +24,16 @@ export function MessageReplyQuote({
   const isComposer = variant === "composer";
 
   const borderClass = isMine
-    ? "border-white/50"
+    ? "border-[var(--accent-ink)]/50"
     : "border-[var(--accent)]/60";
   const labelClass = isMine
-    ? "text-white/90"
+    ? "text-[var(--accent-ink)]/90"
     : "text-[var(--accent)]";
   const bodyClass = isMine
-    ? "text-white/75"
+    ? "text-[var(--accent-ink)]/75"
     : "text-[var(--ink-muted)]";
   const listingClass = isMine
-    ? "text-white/80"
+    ? "text-[var(--accent-ink)]/80"
     : "text-[var(--ink-muted)]";
 
   const previewBody =

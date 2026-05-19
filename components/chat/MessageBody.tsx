@@ -11,7 +11,7 @@ type Props = {
 export function MessageBody({ body, mentions, isMine = false }: Props) {
   const segments = segmentMessageBody(body, mentions);
   const mentionClassName = isMine
-    ? "font-semibold text-white underline underline-offset-2 hover:text-white/90"
+    ? "font-semibold text-[var(--accent-ink)] underline underline-offset-2 hover:opacity-90"
     : "font-semibold text-[var(--accent)] underline underline-offset-2 hover:text-[var(--accent-hover)]";
 
   return (
