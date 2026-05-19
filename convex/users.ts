@@ -3,7 +3,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
-import type { QueryCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { enrichListing } from "./listingHelpers";
 import { DEFAULT_UI_FONT, uiFontValidator } from "./uiFont";
 
@@ -13,6 +13,31 @@ const avatarValue = v.union(
 );
 
 const avatarOrClear = v.optional(v.union(avatarValue, v.null()));
+
+async function syncCollegeWishlists(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  colleges: string[],
+): Promise<void> {
+  const nextSet = new Set(colleges);
+  const existing = await ctx.db
+    .query("collegeWishlists")
+    .withIndex("by_userId", (q) => q.eq("userId", userId))
+    .collect();
+
+  for (const row of existing) {
+    if (!nextSet.has(row.college)) {
+      await ctx.db.delete(row._id);
+    }
+  }
+
+  const existingColleges = new Set(existing.map((row) => row.college));
+  for (const college of nextSet) {
+    if (!existingColleges.has(college)) {
+      await ctx.db.insert("collegeWishlists", { userId, college });
+    }
+  }
+}
 
 function listingIsUpcoming(listing: Doc<"listings">, nowMs: number): boolean {
   const t = Date.parse(listing.dateTime);
@@ -185,6 +210,7 @@ export const patchProfile = mutation({
     subject: v.optional(v.string()),
     uiFont: v.optional(uiFontValidator),
     avatar: avatarOrClear,
+    emailWishlistAlerts: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -204,6 +230,7 @@ export const patchProfile = mutation({
         | "subject"
         | "uiFont"
         | "avatar"
+        | "emailWishlistAlerts"
       >
     >;
 
@@ -242,6 +269,9 @@ export const patchProfile = mutation({
     if (args.avatar !== undefined) {
       patch.avatar =
         args.avatar === null ? undefined : (args.avatar as Doc<"users">["avatar"]);
+    }
+    if (args.emailWishlistAlerts !== undefined) {
+      patch.emailWishlistAlerts = args.emailWishlistAlerts;
     }
 
     if (Object.keys(patch).length === 0) {
@@ -325,6 +355,7 @@ export const toggleWishlistCollege = mutation({
       : [...current, college];
 
     await ctx.db.patch(userId, { wishlistColleges: next });
+    await syncCollegeWishlists(ctx, userId, next);
     return next;
   },
 });
@@ -342,7 +373,57 @@ export const saveWishlistColleges = mutation({
       new Set(args.colleges.map((college) => college.trim()).filter(Boolean)),
     );
     await ctx.db.patch(userId, { wishlistColleges: cleaned });
+    await syncCollegeWishlists(ctx, userId, cleaned);
     return cleaned;
+  },
+});
+
+export const backfillEmailWishlistAlerts = internalMutation({
+  args: { cursor: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const page = await ctx.db.query("users").order("asc").paginate({
+      numItems: 100,
+      cursor: args.cursor ?? null,
+    });
+
+    let patched = 0;
+    for (const user of page.page) {
+      if (user.emailWishlistAlerts !== true) {
+        await ctx.db.patch(user._id, { emailWishlistAlerts: true });
+        patched++;
+      }
+    }
+
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(0, internal.users.backfillEmailWishlistAlerts, {
+        cursor: page.continueCursor,
+      });
+    }
+
+    return {
+      patched,
+      scanned: page.page.length,
+      isDone: page.isDone,
+    };
+  },
+});
+
+export const backfillCollegeWishlists = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").take(100);
+    let synced = 0;
+    for (const user of users) {
+      const colleges = user.wishlistColleges ?? [];
+      if (colleges.length > 0) {
+        await syncCollegeWishlists(ctx, user._id, colleges);
+        synced++;
+      }
+    }
+    if (users.length === 100) {
+      await ctx.scheduler.runAfter(0, internal.users.backfillCollegeWishlists, {});
+    }
+    return { synced, scanned: users.length };
   },
 });
 

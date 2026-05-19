@@ -164,7 +164,7 @@ export const createListing = mutation({
       await validateMenuPdfId(ctx, args.menuPdfId);
     }
 
-    return await ctx.db.insert("listings", {
+    const listingId = await ctx.db.insert("listings", {
       ownerUserId: userId,
       college,
       dateTime: new Date(timestamp).toISOString(),
@@ -182,6 +182,12 @@ export const createListing = mutation({
         ? {}
         : { price: args.price }),
     });
+
+    await ctx.scheduler.runAfter(0, internal.emails.notifyWishlistForNewListing, {
+      listingId,
+    });
+
+    return listingId;
   },
 });
 

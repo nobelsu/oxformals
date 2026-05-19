@@ -17,12 +17,17 @@ export function NavSettingsModal({ open, onClose }: Props) {
   const [fontPickerOpen, setFontPickerOpen] = useState(false);
   const [fontBusy, setFontBusy] = useState(false);
   const [fontError, setFontError] = useState<string | null>(null);
-  const [notificationsOn, setNotificationsOn] = useState(false);
+  const [notificationsBusy, setNotificationsBusy] = useState(false);
+  const [notificationsError, setNotificationsError] = useState<string | null>(
+    null,
+  );
+
+  const notificationsOn = user?.emailWishlistAlerts !== false;
 
   const handleClose = useCallback(() => {
     setFontPickerOpen(false);
     setFontError(null);
-    setNotificationsOn(false);
+    setNotificationsError(null);
     onClose();
   }, [onClose]);
 
@@ -56,6 +61,20 @@ export function NavSettingsModal({ open, onClose }: Props) {
     },
     [user, updateProfile],
   );
+
+  const onNotificationsToggle = useCallback(async () => {
+    if (!user || notificationsBusy) return;
+    const next = !notificationsOn;
+    setNotificationsError(null);
+    setNotificationsBusy(true);
+    try {
+      await updateProfile({ emailWishlistAlerts: next });
+    } catch {
+      setNotificationsError("Could not save notification preference — try again.");
+    } finally {
+      setNotificationsBusy(false);
+    }
+  }, [user, notificationsOn, notificationsBusy, updateProfile]);
 
   if (!user) return null;
 
@@ -107,8 +126,11 @@ export function NavSettingsModal({ open, onClose }: Props) {
               role="switch"
               aria-checked={notificationsOn}
               aria-labelledby="nav-settings-notifications-label"
-              onClick={() => setNotificationsOn((v) => !v)}
-              className={`relative h-8 w-14 shrink-0 rounded-full border-[2px] border-[var(--ink)] transition-colors ${
+              disabled={notificationsBusy}
+              onClick={() => {
+                void onNotificationsToggle();
+              }}
+              className={`relative h-8 w-14 shrink-0 rounded-full border-[2px] border-[var(--ink)] transition-colors disabled:opacity-60 ${
                 notificationsOn
                   ? "bg-[var(--accent)]"
                   : "bg-[var(--paper)]"
@@ -134,13 +156,16 @@ export function NavSettingsModal({ open, onClose }: Props) {
                 aria-hidden
               />
               <p className="max-w-full break-words font-display text-lg uppercase tracking-[0.12em] text-[var(--ink)]">
-                Still on the drawing board
+                Wishlist emails
               </p>
               <p className="mt-2 max-w-full text-pretty break-words text-sm leading-relaxed text-[var(--ink-muted)]">
-                We&apos;re doodling bells &amp; pings behind the scenes — check
-                back soon and we&apos;ll make a fuss when it&apos;s ready.
+                We&apos;ll email you when someone posts a formal at a college on
+                your wishlist. Turn notifications off to unsubscribe.
               </p>
             </div>
+          ) : null}
+          {notificationsError ? (
+            <p className="mt-2 text-sm text-[var(--danger)]">{notificationsError}</p>
           ) : null}
         </div>
       </div>

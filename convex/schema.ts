@@ -30,12 +30,20 @@ export default defineSchema({
     dietaryRequirements: v.optional(v.string()),
     subject: v.optional(v.string()),
     wishlistColleges: v.optional(v.array(v.string())),
+    emailWishlistAlerts: v.optional(v.boolean()),
     agreedToRules: v.optional(v.boolean()),
     uiFont: v.optional(uiFontValidator),
     avatar,
   })
     .index("email", ["email"])
     .index("phone", ["phone"]),
+  collegeWishlists: defineTable({
+    userId: v.id("users"),
+    college: v.string(),
+  })
+    .index("by_college", ["college"])
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_college", ["userId", "college"]),
   listings: defineTable({
     ownerUserId: v.id("users"),
     college: v.string(),

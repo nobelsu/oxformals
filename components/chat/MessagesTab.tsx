@@ -9,7 +9,11 @@ import { StartChatModal } from "@/components/chat/StartChatModal";
 import { UnreadBadge } from "@/components/chat/UnreadBadge";
 import { Avatar } from "@/components/ui/Avatar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
+import {
+  SketchCard,
+  seedFrom,
+  sketchCardBlockyHover,
+} from "@/components/ui/SketchCard";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatRelativeTime } from "@/lib/data/format";
@@ -157,17 +161,17 @@ export function MessagesTab() {
               : convo.otherUserCollege;
 
             return (
+              <div key={convo.id} className="group w-full">
               <SketchCard
-                key={convo.id}
                 seed={seedFrom(convo.id)}
                 padded={false}
-                className="p-4"
+                className={`p-4 ${sketchCardBlockyHover}`}
               >
                 <div className="flex items-start gap-2">
                   <button
                     type="button"
                     onClick={() => openConversation(convo.id)}
-                    className="min-w-0 flex-1 text-left"
+                    className="min-w-0 flex-1 cursor-pointer text-left"
                   >
                     <div className="flex items-start gap-3">
                     {isGroup ? (
@@ -231,6 +235,7 @@ export function MessagesTab() {
                   ) : null}
                 </div>
               </SketchCard>
+              </div>
             );
           })
         )}

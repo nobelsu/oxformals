@@ -106,3 +106,7 @@ export function seedFrom(s: string): number {
   }
   return (hash % 10000) + 1;
 }
+
+/** Chunky offset hover for sketch cards inside a `group` wrapper. */
+export const sketchCardBlockyHover =
+  "transition-[transform,box-shadow] duration-200 ease-out group-hover:translate-x-3 group-hover:-translate-y-3 group-hover:shadow-[0_12px_26px_rgba(0,0,0,0.16)] group-focus-within:translate-x-3 group-focus-within:-translate-y-3 group-focus-within:shadow-[0_12px_26px_rgba(0,0,0,0.16)] group-focus-visible:translate-x-3 group-focus-visible:-translate-y-3 group-focus-visible:shadow-[0_12px_26px_rgba(0,0,0,0.16)]";

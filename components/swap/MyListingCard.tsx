@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { ListingGroupChatButton } from "@/components/chat/ListingGroupChatButton";
 import { Avatar } from "@/components/ui/Avatar";
-import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
+import {
+  SketchCard,
+  seedFrom,
+  sketchCardBlockyHover,
+} from "@/components/ui/SketchCard";
 import type { User } from "@/lib/auth/types";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
 import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
@@ -163,7 +167,7 @@ export function MyListingCard({
         >
           <SketchCard
             seed={seedFrom(listing.id)}
-            className={`flex flex-col gap-3 overflow-hidden p-5 transition-[transform,box-shadow] duration-200 ease-out group-hover:translate-x-3 group-hover:-translate-y-3 group-hover:shadow-[0_12px_26px_rgba(0,0,0,0.16)] group-focus-visible:translate-x-3 group-focus-visible:-translate-y-3 group-focus-visible:shadow-[0_12px_26px_rgba(0,0,0,0.16)] ${compact ? "" : "h-full min-h-[13.2rem] sm:min-h-[15.6rem]"}`}
+            className={`flex flex-col gap-3 overflow-hidden p-5 ${sketchCardBlockyHover} ${compact ? "" : "h-full min-h-[13.2rem] sm:min-h-[15.6rem]"}`}
           >
             {cardContent}
           </SketchCard>

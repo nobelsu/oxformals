@@ -22,6 +22,8 @@ export type User = {
   uiFont: UiFontId;
   avatar?: AvatarSource;
   agreedToRules?: boolean;
+  /** When false, user opts out of wishlist new-listing email alerts. */
+  emailWishlistAlerts?: boolean;
 };
 
 export type Session = {

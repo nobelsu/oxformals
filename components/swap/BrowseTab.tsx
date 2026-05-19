@@ -1,6 +1,7 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Modal } from "@/components/ui/Modal";
@@ -111,6 +112,11 @@ export function BrowseTab({
   onNavigateToRequests,
   onSignInRequired,
 }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const listingParam = searchParams.get("listing");
+  const clearedListingParamRef = useRef<string | null>(null);
+
   const { user, isAuthenticated } = useAuth();
   const {
     listings,
@@ -172,6 +178,22 @@ export function BrowseTab({
       document.head.appendChild(style);
     }
   }, []);
+
+  useEffect(() => {
+    if (!listingParam || clearedListingParamRef.current === listingParam) {
+      return;
+    }
+    const listing = getListing(listingParam);
+    if (!listing) return;
+
+    setDetailListing(listing);
+    clearedListingParamRef.current = listingParam;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("listing");
+    const qs = params.toString();
+    router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+  }, [listingParam, getListing, listings, router, searchParams]);
 
   const wishlistSet = useMemo(() => new Set(wishlist), [wishlist]);
 
