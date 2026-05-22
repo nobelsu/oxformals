@@ -12,7 +12,8 @@ import {
 import type { User } from "@/lib/auth/types";
 import { ListingFormalBadges } from "@/components/colleges/ListingFormalBadges";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
-import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
+import { formatListingMetaLine, formatYearLabel } from "@/lib/data/format";
+import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { Listing } from "@/lib/data/types";
 import { listingIsPast } from "@/lib/data/collegeReviewEligibility";
@@ -43,12 +44,6 @@ export function MyListingCard({
   const [opening, setOpening] = useState(false);
   const nowMs = useNowMs();
   const isPast = listingIsPast(listing.dateTime, nowMs);
-  const statusMap: Record<Listing["status"], string> = {
-    active: "Active",
-    confirmed: "Listing full",
-    closed: listing.seatsAvailable === 0 ? "Group full" : "Closed",
-    expired: "Past",
-  };
 
   const handleViewRequests = useCallback(() => {
     if (!onViewRequests || opening) return;
@@ -63,11 +58,6 @@ export function MyListingCard({
     .filter(Boolean)
     .join(" · ");
 
-  const seatsLabel =
-    listing.seatsAvailable === 0
-      ? "Group full"
-      : `${listing.seatsAvailable} ${listing.seatsAvailable === 1 ? "seat" : "seats"} left`;
-
   const cardContent = (
     <>
       <header className="flex min-w-0 shrink-0 items-start justify-between gap-3">
@@ -77,15 +67,23 @@ export function MyListingCard({
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
           <ListingTypeTag listingType={listing.listingType} />
           <ListingFormalBadges isPast={isPast} canRate={canRate} />
-          <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
-            {statusMap[listing.status]}
-          </span>
+          {!isPast ? (
+            <ListingStatusTag
+              status={listing.status}
+              seatsAvailable={listing.seatsAvailable}
+            />
+          ) : null}
         </div>
       </header>
 
       <div className="shrink-0 truncate text-[var(--ink-muted)]">
-        {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} · {seatsLabel}
-        {listing.price !== undefined ? ` · ${formatPrice(listing.price)}` : ""}
+        {formatListingMetaLine({
+          dateTime: listing.dateTime,
+          groupSize: listing.groupSize,
+          seatsAvailable: listing.seatsAvailable,
+          isPast,
+          price: listing.price,
+        })}
       </div>
 
       <div className="shrink-0 truncate text-sm text-[var(--ink-soft)]">

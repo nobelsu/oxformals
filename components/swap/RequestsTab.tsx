@@ -1,50 +1,26 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
-import { listingIsPast } from "@/lib/data/collegeReviewEligibility";
-import { useNowMs } from "@/lib/hooks/useNowMs";
 import { Modal } from "@/components/ui/Modal";
-import { outgoingPayRequests } from "@/lib/data/requestFilters";
-import { placeholderUser } from "@/lib/data/users";
+import { AttendedFormalsSection } from "./listings-hub/AttendedFormalsSection";
 import { ListFormalForm } from "./ListFormalForm";
-import { MyListingCard } from "./MyListingCard";
-import { SentRequestRow } from "./SentRequestRow";
+import { ListingsHubNav } from "./listings-hub/ListingsHubNav";
+import { ListingsOverview } from "./listings-hub/ListingsOverview";
+import { MyListingsSection } from "./listings-hub/MyListingsSection";
+import { PayRequestsSection } from "./listings-hub/PayRequestsSection";
+import { useListingsHubData } from "./listings-hub/useListingsHubData";
+import { useListingsSection } from "./listings-hub/useListingsSection";
 
 export function RequestsTab() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { requests, listings, createListing, getUser, getListing, withdrawRequest } =
-    useData();
-
-  const myListings = useMemo(
-    () => (user ? listings.filter((l) => l.ownerUserId === user.id) : []),
-    [listings, user],
-  );
-
-  const myActiveListings = useMemo(
-    () => myListings.filter((l) => l.status === "active"),
-    [myListings],
-  );
-
-  const myBookedListings = useMemo(
-    () =>
-      myListings
-        .filter(
-          (l) =>
-            l.status === "confirmed" ||
-            l.status === "closed" ||
-            l.status === "expired",
-        )
-        .sort((a, b) => +new Date(b.dateTime) - +new Date(a.dateTime)),
-    [myListings],
-  );
+  const { createListing, getUser, getListing, withdrawRequest } = useData();
+  const { section, setSection } = useListingsSection();
+  const data = useListingsHubData();
 
   const [listFormalOpen, setListFormalOpen] = useState(false);
   const shouldOpenListModal = searchParams.get("openList") === "1";
@@ -54,174 +30,74 @@ export function RequestsTab() {
     setListFormalOpen(true);
     const params = new URLSearchParams(searchParams.toString());
     params.delete("openList");
+    params.set("tab", "requests");
+    params.set("section", "listings");
     const qs = params.toString();
-    router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+    router.replace(`/?${qs}`, { scroll: false });
   }, [shouldOpenListModal, router, searchParams]);
-
-  const pendingCountByListing = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const r of requests) {
-      if (r.status !== "pending") continue;
-      if (!user || r.toUserId !== user.id) continue;
-      map.set(r.targetListingId, (map.get(r.targetListingId) ?? 0) + 1);
-    }
-    return map;
-  }, [requests, user]);
-
-  const myPayRequests = useMemo(
-    () =>
-      user
-        ? outgoingPayRequests(requests, user.id).sort(
-            (a, b) => b.createdAt - a.createdAt,
-          )
-        : [],
-    [requests, user],
-  );
-
-  const nowMs = useNowMs();
-
-  const pendingReviewListingIds = useQuery(
-    api.collegeReviews.getPendingReviewListingIds,
-    user ? { nowMs } : "skip",
-  );
-
-  const pendingReviewSet = useMemo(
-    () => new Set((pendingReviewListingIds ?? []).map(String)),
-    [pendingReviewListingIds],
-  );
-
-  const attendedPastListings = useMemo(() => {
-    if (!user) return [];
-    return listings
-      .filter(
-        (l) =>
-          l.members.includes(user.id) &&
-          l.ownerUserId !== user.id &&
-          listingIsPast(l.dateTime, nowMs),
-      )
-      .sort((a, b) => +new Date(b.dateTime) - +new Date(a.dateTime));
-  }, [listings, user, nowMs]);
 
   if (!user) return null;
 
+  const navCounts = {
+    myListings: data.myListingsUnreadCount,
+    pay: data.pendingPayRequestCount,
+    attended: data.attendedUnreadCount,
+    overviewAttention: data.overviewAttentionCount,
+  };
+
   return (
     <>
-      <section>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-3xl uppercase tracking-wide">
-            My active listings
-          </h2>
-          <button
-            type="button"
-            onClick={() => setListFormalOpen(true)}
-            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-2xl leading-none text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-            aria-label="List a formal"
-          >
-            +
-          </button>
+      <div className="flex flex-col gap-6 md:flex-row md:gap-8">
+        <ListingsHubNav
+          section={section}
+          onSectionChange={setSection}
+          counts={navCounts}
+        />
+
+        <div className="min-w-0 flex-1">
+          {section === "overview" ? (
+            <ListingsOverview
+              myActiveCount={data.myActiveListings.length}
+              totalPendingIncoming={data.totalPendingIncoming}
+              payRequestCount={data.myPayRequests.length}
+              formalsToReviewCount={data.formalsToReviewCount}
+              listingsNeedingReview={data.listingsNeedingReview}
+              listingsNeedingRequests={data.listingsNeedingRequests}
+              hasNeedsAttention={data.hasNeedsAttention}
+              onListFormal={() => setListFormalOpen(true)}
+            />
+          ) : null}
+
+          {section === "listings" ? (
+            <MyListingsSection
+              user={user}
+              myActiveListings={data.myActiveListings}
+              myBookedListings={data.myBookedListings}
+              pendingCountByListing={data.pendingCountByListing}
+              pendingReviewSet={data.pendingReviewSet}
+              getUser={getUser}
+              onListFormal={() => setListFormalOpen(true)}
+            />
+          ) : null}
+
+          {section === "pay" ? (
+            <PayRequestsSection
+              myPayRequests={data.myPayRequests}
+              getUser={getUser}
+              getListing={getListing}
+              onWithdraw={(requestId) => withdrawRequest(requestId)}
+            />
+          ) : null}
+
+          {section === "attended" ? (
+            <AttendedFormalsSection
+              attendedPastListings={data.attendedPastListings}
+              pendingReviewSet={data.pendingReviewSet}
+              getUser={getUser}
+            />
+          ) : null}
         </div>
-        {myActiveListings.length === 0 ? (
-          <p className="mt-2 text-[var(--ink-muted)]">
-            You don&apos;t have any active listings yet. Tap + to list a formal.
-          </p>
-        ) : (
-          <div className="mt-4 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
-            {myActiveListings.map((listing) => {
-              const members = listing.members
-                .map(getUser)
-                .filter((u): u is NonNullable<typeof u> => !!u);
-              return (
-                <MyListingCard
-                  key={listing.id}
-                  listing={listing}
-                  pendingRequestCount={pendingCountByListing.get(listing.id) ?? 0}
-                  profile={{ year: user.year, role: user.role }}
-                  memberUsers={members}
-                  canRate={pendingReviewSet.has(listing.id)}
-                  onViewRequests={() => router.push(`/requests/${listing.id}`)}
-                />
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {myPayRequests.length > 0 && (
-        <section className="mt-10">
-          <h2 className="font-display text-3xl uppercase tracking-wide">
-            Pay requests sent
-          </h2>
-          <div className="mt-4 flex flex-col gap-3">
-            {myPayRequests.map((r) => {
-              const toUser = getUser(r.toUserId) ?? placeholderUser(r.toUserId);
-              return (
-                <SentRequestRow
-                  key={r.id}
-                  request={r}
-                  toUser={toUser}
-                  targetListing={getListing(r.targetListingId)}
-                  onWithdraw={(requestId) => withdrawRequest(requestId)}
-                />
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {attendedPastListings.length > 0 && (
-        <section className="mt-10">
-          <h2 className="font-display text-3xl uppercase tracking-wide">
-            Formals I attended
-          </h2>
-          <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Rate your experience at another college after the formal has passed.
-          </p>
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {attendedPastListings.map((listing) => {
-              const owner = getUser(listing.ownerUserId);
-              if (!owner) return null;
-              return (
-                <MyListingCard
-                  key={listing.id}
-                  listing={listing}
-                  pendingRequestCount={0}
-                  memberUsers={[owner]}
-                  canRate={pendingReviewSet.has(listing.id)}
-                  onViewRequests={() => router.push(`/requests/${listing.id}`)}
-                  compact
-                />
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {myBookedListings.length > 0 && (
-        <section className="mt-10">
-          <h2 className="font-display text-3xl uppercase tracking-wide">
-            Past listings
-          </h2>
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {myBookedListings.map((listing) => {
-              const members = listing.members
-                .map(getUser)
-                .filter((u): u is NonNullable<typeof u> => !!u);
-              return (
-                <MyListingCard
-                  key={listing.id}
-                  listing={listing}
-                  pendingRequestCount={0}
-                  profile={{ year: user.year, role: user.role }}
-                  memberUsers={members}
-                  canRate={pendingReviewSet.has(listing.id)}
-                  onViewRequests={() => router.push(`/requests/${listing.id}`)}
-                  compact
-                />
-              );
-            })}
-          </div>
-        </section>
-      )}
+      </div>
 
       <Modal
         open={listFormalOpen}
@@ -242,7 +118,6 @@ export function RequestsTab() {
           }}
         />
       </Modal>
-
     </>
   );
 }

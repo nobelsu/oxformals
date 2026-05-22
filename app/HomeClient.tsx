@@ -43,8 +43,12 @@ export function HomeClient() {
       }
       if (next === "requests" && options?.openListFormal) {
         params.set("openList", "1");
+        params.set("section", "listings");
       } else {
         params.delete("openList");
+      }
+      if (next !== "mine") {
+        params.delete("edit");
       }
       const qs = params.toString();
       router.replace(qs ? `/?${qs}` : "/", { scroll: false });

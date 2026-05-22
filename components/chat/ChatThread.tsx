@@ -47,7 +47,7 @@ function MessageReplyButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--ink-soft)] transition-[opacity,background-color,color] hover:bg-[var(--ink)]/10 hover:text-[var(--ink)] sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+      className="hidden h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--ink-soft)] transition-[opacity,background-color,color] hover:bg-[var(--ink)]/10 hover:text-[var(--ink)] sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
       aria-label="Reply"
     >
       <svg

@@ -37,7 +37,7 @@ export function pendingIncomingRequestsForListing(
 
 /**
  * Outgoing swap requests offered via this listing.
- * Pay requests have no offering listing; see outgoingPayRequests on the Listings tab.
+ * Pay requests have no offering listing; see outgoingPayRequests on the Activity tab.
  */
 export function sentRequestsForListing(
   requests: SwapRequest[],

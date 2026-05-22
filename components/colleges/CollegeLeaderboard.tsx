@@ -5,15 +5,20 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
-  PodiumRankBadge,
-  PodiumRankIcon,
-  PodiumStep,
-  podiumRankVariant,
-  podiumWinnerEmphasis,
-  podiumWinnerScore,
-  podiumWinnerSurface,
-} from "@/components/colleges/PodiumRankArt";
-import { formatRatingAverage } from "@/components/colleges/StarRating";
+  MountainRankIcon,
+  MountainSilhouette,
+  MountainTrail,
+  RankBadge,
+  SummitPeakAccent,
+  rankMountainVariant,
+  rankSummitDivider,
+  rankSummitEmphasis,
+  rankSummitMuted,
+  rankSummitScore,
+  rankSummitStar,
+  rankSummitSurface,
+} from "@/components/colleges/RankMountainArt";
+import { formatRatingAverage, StarIcon } from "@/components/colleges/StarRating";
 import {
   SketchCard,
   seedFrom,
@@ -56,85 +61,113 @@ function LeaderboardScore({
   size,
 }: {
   entry: LeaderboardEntry;
-  size: "podium-first" | "podium-other" | "compact";
+  size: "summit" | "ridge" | "foothill" | "compact";
 }) {
   const scoreClass =
-    size === "podium-first"
-      ? `font-display text-3xl ${podiumWinnerScore}`
-      : size === "podium-other"
+    size === "summit"
+      ? `font-display text-3xl ${rankSummitScore}`
+      : size === "ridge"
         ? "font-display text-2xl text-[var(--accent)]"
-        : "font-display text-sm text-[var(--accent)]";
-  const unitClass =
-    size === "compact"
-      ? "text-xs text-[var(--ink-soft)]"
-      : "text-sm text-[var(--ink-soft)]";
-
+        : size === "foothill"
+          ? "font-display text-xl text-[var(--accent)]"
+          : "font-display text-sm text-[var(--accent)]";
+  const starClass =
+    size === "summit"
+      ? "h-5 w-5"
+      : size === "ridge"
+        ? "h-4 w-4"
+        : size === "foothill"
+          ? "h-3.5 w-3.5"
+          : "h-3.5 w-3.5";
   if (entry.average !== null) {
+    const label = `${formatRatingAverage(entry.average)} stars`;
     return (
-      <span className="shrink-0 text-right">
+      <span
+        className="inline-flex shrink-0 items-center gap-1"
+        aria-label={label}
+        title={label}
+      >
         <span className={scoreClass}>{formatRatingAverage(entry.average)}</span>
-        <span className={unitClass}> / 5</span>
+        <StarIcon
+          className={`${starClass} ${size === "summit" ? rankSummitStar : ""}`}
+        />
       </span>
     );
   }
 
-  return <span className="text-sm text-[var(--ink-soft)]">—</span>;
+  return (
+    <span
+      className={`text-sm ${size === "summit" ? rankSummitMuted : "text-[var(--ink-soft)]"}`}
+    >
+      —
+    </span>
+  );
 }
 
-function PodiumCard({
-  entry,
-  variant,
-}: {
-  entry: LeaderboardEntry;
-  variant: "first" | "other";
-}) {
+const ELEVATION_CLASS: Record<1 | 2 | 3, string> = {
+  1: "order-first md:order-2 md:col-span-1 md:pb-10 md:-translate-y-1 md:scale-[1.02]",
+  2: "md:order-1 md:col-span-1 md:pb-5",
+  3: "md:order-3 md:col-span-1 md:pb-1",
+};
+
+function MountainRankCard({ entry }: { entry: LeaderboardEntry }) {
   const rank = entry.rank! as 1 | 2 | 3;
-  const isFirst = variant === "first";
-  const rankVariant = podiumRankVariant(rank);
+  const isSummit = rank === 1;
+  const rankVariant = rankMountainVariant(rank);
 
-  const liOrderClass = isFirst
-    ? "order-first md:order-2 md:col-span-1 md:self-end"
-    : rank === 2
-      ? "md:order-1 md:col-span-1 md:self-end"
-      : "md:order-3 md:col-span-1 md:self-end";
-
-  const cardSurface = isFirst
-    ? podiumWinnerSurface
+  const cardSurface = isSummit
+    ? rankSummitSurface
     : rank === 2
       ? "bg-[var(--accent)]/12"
       : "bg-[var(--accent)]/8";
 
   return (
-    <li className={`flex flex-col items-stretch ${liOrderClass}`}>
+    <li
+      className={`group mountain-rank-item flex flex-col items-stretch ${ELEVATION_CLASS[rank]} ${
+        isSummit ? "mountain-rank-item--summit" : ""
+      }`}
+    >
       <Link
         href={`/college/${collegeToSlug(entry.college)}`}
-        className={`group relative block outline-none ${sketchCardBlockyHover} ${
-          isFirst ? "md:z-10" : ""
+        className={`relative block outline-none ${sketchCardBlockyHover} ${
+          isSummit ? "md:z-10" : ""
         }`}
       >
         <SketchCard
           seed={seedFrom(entry.college)}
-          roughness={isFirst ? 1.8 : 2.2}
-          className={`relative flex flex-col gap-3 px-5 py-5 ${cardSurface}`}
+          roughness={isSummit ? 1.8 : 2.2}
+          className={`relative flex flex-col gap-3 px-5 py-5 ${cardSurface} ${
+            isSummit ? "text-[var(--accent)]" : ""
+          }`}
         >
+          <div
+            className={`flex flex-col gap-3 ${isSummit ? "text-[var(--tag-ink)]" : ""}`}
+          >
           <div className="flex items-center gap-2">
-            <PodiumRankIcon
+            <MountainRankIcon
               variant={rankVariant}
-              className={isFirst ? podiumWinnerEmphasis : ""}
+              className={`mountain-rank-icon ${isSummit ? `h-11 w-11 ${rankSummitEmphasis}` : rank === 2 ? "h-10 w-10" : ""}`}
             />
-            <PodiumRankBadge rank={rank} />
+            <RankBadge rank={rank} onSummitBg={isSummit} />
+            {isSummit ? (
+              <span className="ml-auto hidden font-display text-[10px] uppercase tracking-[0.2em] text-[var(--rank-summit-muted)] md:inline">
+                Summit
+              </span>
+            ) : null}
           </div>
           <div className="min-w-0">
             <span
               className={`font-display uppercase tracking-wide group-hover:underline ${
-                isFirst
-                  ? `text-3xl leading-tight ${podiumWinnerEmphasis}`
+                isSummit
+                  ? `text-3xl leading-tight ${rankSummitEmphasis}`
                   : "text-2xl leading-tight"
               }`}
             >
               {entry.college}
             </span>
-            <p className="mt-2 text-sm text-[var(--ink-muted)]">
+            <p
+              className={`mt-2 text-sm ${isSummit ? rankSummitMuted : "text-[var(--ink-muted)]"}`}
+            >
               {formatAttendanceSubtitle(
                 entry.attendanceCount,
                 entry.completedFormalCount,
@@ -142,37 +175,76 @@ function PodiumCard({
               )}
             </p>
           </div>
-          <div className="border-t border-[var(--ink)]/10 pt-3">
+          <div
+            className={`border-t pt-3 ${isSummit ? rankSummitDivider : "border-[var(--ink)]/10"}`}
+          >
             <LeaderboardScore
               entry={entry}
-              size={isFirst ? "podium-first" : "podium-other"}
+              size={
+                isSummit ? "summit" : rank === 2 ? "ridge" : "foothill"
+              }
             />
+          </div>
           </div>
         </SketchCard>
       </Link>
-      <PodiumStep rank={rank} college={entry.college} />
     </li>
   );
 }
 
-function LeaderboardPodium({ entries }: { entries: LeaderboardEntry[] }) {
+function mountainGridClass(count: number): string {
+  if (count === 1) {
+    return "md:grid-cols-1 md:mx-auto md:max-w-sm md:justify-items-center";
+  }
+  if (count === 2) {
+    return "md:grid-cols-2 md:mx-auto md:max-w-2xl";
+  }
+  return "md:grid-cols-3";
+}
+
+function LeaderboardMountain({ entries }: { entries: LeaderboardEntry[] }) {
   const byRank = new Map(entries.map((e) => [e.rank, e]));
+  const orderedMobile: (1 | 2 | 3)[] = [1, 2, 3];
 
   return (
-    <section aria-label="Top 3 colleges">
-      <ol className="flex flex-col gap-3 md:grid md:grid-cols-3 md:items-end md:gap-4">
-        {[1, 2, 3].map((rank) => {
+    <section
+      aria-label="Top 3 colleges"
+      className="rankings-mountain relative"
+    >
+      <ol
+        className={`relative z-10 flex flex-col gap-0 md:grid md:items-end md:gap-4 ${mountainGridClass(entries.length)}`}
+      >
+        {orderedMobile.flatMap((rank, index) => {
           const entry = byRank.get(rank);
-          if (!entry) return null;
-          return (
-            <PodiumCard
-              key={entry.college}
-              entry={entry}
-              variant={rank === 1 ? "first" : "other"}
-            />
-          );
+          if (!entry) return [];
+          const trail =
+            index > 0 ? (
+              <li
+                key={`trail-${rank}`}
+                className="list-none md:hidden"
+                aria-hidden
+              >
+                <MountainTrail />
+              </li>
+            ) : null;
+          const peakAccent =
+            rank === 1 ? (
+              <li
+                key="summit-peak"
+                className="list-none md:hidden"
+                aria-hidden
+              >
+                <SummitPeakAccent />
+              </li>
+            ) : null;
+          return [
+            ...(peakAccent ? [peakAccent] : []),
+            <MountainRankCard key={entry.college} entry={entry} />,
+            ...(trail ? [trail] : []),
+          ];
         })}
       </ol>
+      <MountainSilhouette className="hidden md:block" />
     </section>
   );
 }
@@ -222,7 +294,7 @@ export function CollegeLeaderboard() {
             key={tab.key}
             type="button"
             onClick={() => setCategory(tab.key)}
-            className={`rounded-full border-[2px] px-4 py-1.5 text-sm transition-colors ${
+            className={`cursor-pointer rounded-full border-[2px] px-4 py-1.5 text-sm transition-colors ${
               category === tab.key
                 ? "border-[var(--ink)] bg-[var(--ink)] text-[var(--bg)]"
                 : "border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)]"
@@ -238,7 +310,7 @@ export function CollegeLeaderboard() {
       ) : (
         <div className="flex flex-col gap-6">
           {topThree.length > 0 ? (
-            <LeaderboardPodium entries={topThree} />
+            <LeaderboardMountain entries={topThree} />
           ) : null}
 
           {rest.length > 0 ? (

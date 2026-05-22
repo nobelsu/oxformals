@@ -10,6 +10,7 @@ import {
   scheduleFormalCompletion,
   syncListingAttendanceGuests,
 } from "./collegeStats";
+import { normalizeCollegeName } from "../lib/data/colleges";
 import {
   countReservedSwapsForOffering,
   declinePendingRequestsForListing,
@@ -33,6 +34,36 @@ const listingTypeValidator = v.union(
 const requestTypeValidator = v.union(v.literal("swap"), v.literal("pay"));
 
 const menuPdfIdOrClear = v.optional(v.union(v.id("_storage"), v.null()));
+
+const listingStatusValidator = v.union(
+  v.literal("active"),
+  v.literal("confirmed"),
+  v.literal("closed"),
+  v.literal("expired"),
+);
+
+const enrichedListingValidator = v.object({
+  _id: v.id("listings"),
+  _creationTime: v.number(),
+  ownerUserId: v.id("users"),
+  college: v.string(),
+  dateTime: v.string(),
+  groupSize: groupSizeValidator,
+  seatsAvailable: v.number(),
+  members: v.array(v.id("users")),
+  year: v.string(),
+  role: v.string(),
+  message: v.string(),
+  menu: v.optional(v.string()),
+  menuPdfId: v.optional(v.id("_storage")),
+  status: listingStatusValidator,
+  listingType: v.optional(listingTypeValidator),
+  price: v.optional(v.number()),
+  attendanceAppliedAt: v.optional(v.number()),
+  attendanceGuestCount: v.optional(v.number()),
+  menuPdfUrl: v.union(v.string(), v.null()),
+  menuFileContentType: v.union(v.string(), v.null()),
+});
 
 function resolveListingType(
   listing: Doc<"listings">,
@@ -106,6 +137,24 @@ export const listMyListings = query({
       .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", userId))
       .order("desc")
       .take(200);
+    return Promise.all(listings.map((listing) => enrichListing(ctx, listing)));
+  },
+});
+
+export const listActiveListingsForCollege = query({
+  args: {
+    college: v.string(),
+  },
+  returns: v.array(enrichedListingValidator),
+  handler: async (ctx, args) => {
+    const college = normalizeCollegeName(args.college);
+    const listings = await ctx.db
+      .query("listings")
+      .withIndex("by_college_and_status", (q) =>
+        q.eq("college", college).eq("status", "active"),
+      )
+      .order("desc")
+      .take(50);
     return Promise.all(listings.map((listing) => enrichListing(ctx, listing)));
   },
 });
@@ -647,6 +696,10 @@ export const updateListing = mutation({
       throw new Error(
         "Cannot edit listing while there are pending requests.",
       );
+    }
+
+    if (listingIsPast(listing.dateTime, Date.now())) {
+      throw new Error("Cannot edit a completed listing.");
     }
 
     const patch: Partial<Doc<"listings">> = {};

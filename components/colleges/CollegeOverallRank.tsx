@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import {
-  PodiumRankBadge,
-  PodiumRankIcon,
-  podiumRankVariant,
-  podiumWinnerEmphasis,
-  podiumWinnerSurface,
-} from "@/components/colleges/PodiumRankArt";
+  MountainRankIcon,
+  RankBadge,
+  rankMountainVariant,
+  rankSummitEmphasis,
+  rankSummitMuted,
+  rankSummitSurface,
+} from "@/components/colleges/RankMountainArt";
 
 function ordinal(n: number): string {
   const mod100 = n % 100;
@@ -40,30 +41,32 @@ export function CollegeOverallRank({ rank }: Props) {
   }
 
   if (rank <= 3) {
-    const podiumRank = rank as 1 | 2 | 3;
-    const isFirst = rank === 1;
+    const mountainRank = rank as 1 | 2 | 3;
+    const isSummit = rank === 1;
 
     return (
       <div
         className={`relative mt-4 overflow-hidden rounded-[20px] px-4 py-3 ${
-          isFirst
-            ? podiumWinnerSurface
+          isSummit
+            ? `${rankSummitSurface} border-[2px] border-[var(--accent)]`
             : `border-[2px] ${
-                rank === 2
-                  ? "border-[var(--ink)] bg-[var(--accent)]/12"
-                  : "border-[var(--ink)] bg-[var(--accent)]/8"
+                rank === 3
+                  ? "border-[var(--ink)] bg-[var(--accent)]/8"
+                  : "border-[var(--ink)] bg-[var(--accent)]/12"
               }`
         }`}
       >
         <div className="relative flex flex-wrap items-center gap-3">
-          <PodiumRankIcon
-            variant={podiumRankVariant(podiumRank)}
-            className={isFirst ? podiumWinnerEmphasis : ""}
+          <MountainRankIcon
+            variant={rankMountainVariant(mountainRank)}
+            className={isSummit ? rankSummitEmphasis : ""}
           />
           <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
-            <PodiumRankBadge rank={podiumRank} />
-            <p className="text-sm text-[var(--ink-muted)]">
-              {isFirst
+            <RankBadge rank={mountainRank} onSummitBg={isSummit} />
+            <p
+              className={`text-sm ${isSummit ? rankSummitMuted : "text-[var(--ink-muted)]"}`}
+            >
+              {isSummit
                 ? "Top of the overall league table"
                 : `${ordinal(rank)} on the overall league table`}
             </p>

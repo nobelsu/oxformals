@@ -1,5 +1,6 @@
 "use client";
 
+import { ListingTag } from "@/components/swap/ListingTag";
 import { formatListingStatusLabel } from "@/lib/data/format";
 import type { ListingStatus } from "@/lib/data/types";
 
@@ -7,22 +8,18 @@ type Props = {
   status: ListingStatus;
   seatsAvailable?: number;
   className?: string;
-  compact?: boolean;
+  size?: "sm" | "md";
 };
 
 export function ListingStatusTag({
   status,
   seatsAvailable,
   className,
-  compact = false,
+  size = "sm",
 }: Props) {
   return (
-    <span
-      className={`rounded-full border-[2px] border-[var(--ink)] ${
-        compact ? "px-2 py-0 text-[0.65rem]" : "px-3 py-0.5 text-xs"
-      } ${className ?? ""}`.trim()}
-    >
+    <ListingTag size={size} className={className}>
       {formatListingStatusLabel(status, seatsAvailable)}
-    </span>
+    </ListingTag>
   );
 }

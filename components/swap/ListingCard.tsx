@@ -8,6 +8,7 @@ import type { User } from "@/lib/auth/types";
 import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
 import type { Listing } from "@/lib/data/types";
 import { ListingMenu } from "@/components/swap/ListingMenu";
+import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
 import { listingRequestCta } from "@/lib/data/listingType";
 
@@ -20,6 +21,8 @@ type Props = {
   disabled?: boolean;
   disabledLabel?: string;
   hideInterests?: boolean;
+  /** On a college page — use date as the headline instead of repeating the college name. */
+  hideCollege?: boolean;
   requestLabel?: string;
 };
 
@@ -32,6 +35,7 @@ export function ListingCard({
   disabled,
   disabledLabel,
   hideInterests,
+  hideCollege,
   requestLabel,
 }: Props) {
   const ctaLabel = requestLabel ?? listingRequestCta(listing.listingType);
@@ -56,13 +60,23 @@ export function ListingCard({
       <header className="shrink-0 min-w-0">
         <div className="flex flex-wrap items-start gap-2">
           <h3 className="line-clamp-3 min-w-0 flex-1 break-words font-display text-[2.31rem] uppercase leading-tight tracking-wide">
-            {listing.college}
+            {hideCollege ? formatListingDate(listing.dateTime) : listing.college}
           </h3>
           <ListingTypeTag listingType={listing.listingType} />
         </div>
         <div className="mt-2 truncate text-[0.924rem] text-[var(--ink-muted)]">
-          {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} · {seatsLabel}
-          {listing.price !== undefined ? ` · ${formatPrice(listing.price)}` : ""}
+          {hideCollege ? (
+            <>
+              Group of {listing.groupSize} · {seatsLabel}
+              {listing.price !== undefined ? ` · ${formatPrice(listing.price)}` : ""}
+            </>
+          ) : (
+            <>
+              {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} ·{" "}
+              {seatsLabel}
+              {listing.price !== undefined ? ` · ${formatPrice(listing.price)}` : ""}
+            </>
+          )}
         </div>
       </header>
 
@@ -128,14 +142,14 @@ export function ListingCard({
       )}
 
       <div className="flex shrink-0 justify-center pt-4" onClick={(e) => e.stopPropagation()}>
-        {listing.status === "expired" ? (
-          <span className="rounded-full bg-[var(--paper)] border-[2px] border-[var(--ink)] px-5 py-2 text-[0.77rem] text-[var(--ink)]">
-            Past
-          </span>
-        ) : listing.status === "confirmed" || listing.status === "closed" ? (
-          <span className="rounded-full bg-[var(--paper)] border-[2px] border-[var(--ink)] px-5 py-2 text-[0.77rem] text-[var(--ink)]">
-            {listing.seatsAvailable === 0 ? "Group full" : "Listing full"}
-          </span>
+        {listing.status === "expired" ||
+        listing.status === "confirmed" ||
+        listing.status === "closed" ? (
+          <ListingStatusTag
+            status={listing.status}
+            seatsAvailable={listing.seatsAvailable}
+            size="md"
+          />
         ) : disabled ? (
           <button
             type="button"

@@ -11,10 +11,14 @@ import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { ReviewFormalSection } from "@/components/colleges/ReviewFormalSection";
 import { ListingFormalBadges } from "@/components/colleges/ListingFormalBadges";
 import { ListingMenu } from "@/components/swap/ListingMenu";
+import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
 import { useAuth } from "@/components/auth/useAuth";
 import type { Id } from "@/convex/_generated/dataModel";
-import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
+import {
+  formatListingMetaLine,
+  formatYearLabel,
+} from "@/lib/data/format";
 import { listingRequestCta } from "@/lib/data/listingType";
 import type { User } from "@/lib/auth/types";
 import type { Listing } from "@/lib/data/types";
@@ -79,10 +83,7 @@ export function ListingDetailModal({
     .filter(Boolean)
     .join(" · ");
 
-  const seatsLabel =
-    listing.seatsAvailable === 0
-      ? "Group full"
-      : `${listing.seatsAvailable} ${listing.seatsAvailable === 1 ? "seat" : "seats"} left`;
+  const isPast = listingIsPast(listing.dateTime, nowMs);
 
   const allMembers = [owner, ...memberUsers.filter((m) => m.id !== owner.id)];
   const ctaLabel = listingRequestCta(listing.listingType);
@@ -101,22 +102,27 @@ export function ListingDetailModal({
             </h2>
             <ListingTypeTag listingType={listing.listingType} />
             <ListingFormalBadges
-              isPast={listingIsPast(listing.dateTime, nowMs)}
+              isPast={isPast}
               canRate={!!(isGuestMember && reviewState?.canReview)}
             />
-            {listing.status === "expired" ? (
-              <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
-                Past
-              </span>
-            ) : (listing.status === "confirmed" || listing.status === "closed") ? (
-              <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
-                {listing.seatsAvailable === 0 ? "Group full" : "Listing full"}
-              </span>
+            {!isPast &&
+            (listing.status === "expired" ||
+              listing.status === "confirmed" ||
+              listing.status === "closed") ? (
+              <ListingStatusTag
+                status={listing.status}
+                seatsAvailable={listing.seatsAvailable}
+              />
             ) : null}
           </div>
           <p className="mt-1.5 text-sm text-[var(--ink-muted)]">
-            {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} · {seatsLabel}
-            {listing.price !== undefined ? ` · ${formatPrice(listing.price)}` : ""}
+            {formatListingMetaLine({
+              dateTime: listing.dateTime,
+              groupSize: listing.groupSize,
+              seatsAvailable: listing.seatsAvailable,
+              isPast,
+              price: listing.price,
+            })}
           </p>
           <p className="mt-0.5 text-sm text-[var(--ink-soft)]">
             {[formatYearLabel(listing.year) || listing.year, listing.role]
@@ -219,14 +225,15 @@ export function ListingDetailModal({
               onBeforeNavigate={onClose}
             />
           ) : null}
-          {listing.status === "expired" ? (
-            <span className="rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-5 py-2 text-sm text-[var(--ink)]">
-              Past
-            </span>
-          ) : listing.status === "confirmed" || listing.status === "closed" ? (
-            <span className="rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-5 py-2 text-sm text-[var(--ink)]">
-              {listing.seatsAvailable === 0 ? "Group full" : "Listing full"}
-            </span>
+          {!isPast &&
+          (listing.status === "expired" ||
+            listing.status === "confirmed" ||
+            listing.status === "closed") ? (
+            <ListingStatusTag
+              status={listing.status}
+              seatsAvailable={listing.seatsAvailable}
+              size="md"
+            />
           ) : onRequest ? (
             disabled ? (
               <button

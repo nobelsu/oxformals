@@ -1,21 +1,52 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { ProfileEditor } from "./ProfileEditor";
+import { ProfileView } from "./ProfileView";
 import { WishlistChips } from "./WishlistChips";
 
 export function MineTab() {
   const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlEditing = searchParams.get("edit") === "1";
+  const [editing, setEditing] = useState(urlEditing);
   const { wishlist, saveWishlist } = useData();
   const [profileDirty, setProfileDirty] = useState(false);
   const [wishlistDirty, setWishlistDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [profileSave, setProfileSave] = useState<(() => Promise<void>) | null>(null);
+  const [profileSave, setProfileSave] = useState<(() => Promise<void>) | null>(
+    null,
+  );
   const [profileCancel, setProfileCancel] = useState<(() => void) | null>(null);
-  const [wishlistSave, setWishlistSave] = useState<(() => Promise<void>) | null>(null);
+  const [wishlistSave, setWishlistSave] = useState<(() => Promise<void>) | null>(
+    null,
+  );
+
+  useEffect(() => {
+    setEditing(urlEditing);
+  }, [urlEditing]);
+
+  const setEditingMode = useCallback(
+    (next: boolean) => {
+      setEditing(next);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", "mine");
+      if (next) {
+        params.set("edit", "1");
+      } else {
+        params.delete("edit");
+      }
+      const qs = params.toString();
+      router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+    },
+    [router, searchParams],
+  );
+
   const registerProfileSave = useCallback((saveFn: () => Promise<void>) => {
     setProfileSave(() => saveFn);
   }, []);
@@ -44,10 +75,41 @@ export function MineTab() {
     }
   }, [hasUnsavedChanges, saving, profileSave, wishlistSave]);
 
+  const exitEditMode = useCallback(() => {
+    if (hasUnsavedChanges) {
+      const discard = window.confirm(
+        "Discard unsaved changes and return to your profile?",
+      );
+      if (!discard) return;
+      profileCancel?.();
+    }
+    setEditingMode(false);
+  }, [hasUnsavedChanges, profileCancel, setEditingMode]);
+
   if (!user) return null;
+
+  if (!editing) {
+    return (
+      <ProfileView
+        userId={user.id}
+        embedded
+        onEditProfile={() => setEditingMode(true)}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-10">
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={exitEditMode}
+          className="cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+        >
+          Back
+        </button>
+      </div>
+
       <ProfileEditor
         onDirtyChange={setProfileDirty}
         registerSave={registerProfileSave}

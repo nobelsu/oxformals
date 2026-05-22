@@ -2,11 +2,14 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
-import type { QueryCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import {
+  deleteReviewImagesIfPresent,
   getReviewEligibility,
   MAX_REVIEW_COMMENT_LENGTH,
   normalizeRatings,
+  reviewImageIdsRemoved,
+  validateReviewImageIds,
 } from "./collegeReviewHelpers";
 import {
   getCollegeAggregatesFromStats,
@@ -17,6 +20,7 @@ import {
 import { normalizeCollegeName, OXFORD_COLLEGES } from "../lib/data/colleges";
 import {
   buildLeaderboardEntries,
+  sortCollegeReviewRows,
   type CollegeReviewCategory,
 } from "../lib/data/collegeReviews";
 
@@ -55,6 +59,10 @@ const publicReviewValidator = v.object({
   formalDateTime: v.string(),
   createdAt: v.number(),
   updatedAt: v.number(),
+  voteScore: v.number(),
+  viewerVote: v.union(v.null(), v.literal(1), v.literal(-1)),
+  imageIds: v.optional(v.array(v.id("_storage"))),
+  imageUrls: v.array(v.string()),
 });
 
 const aggregatesValidator = v.object({
@@ -75,7 +83,7 @@ const leaderboardEntryValidator = v.object({
   completedFormalCount: v.number(),
 });
 
-async function requireUser(ctx: QueryCtx) {
+async function requireUser(ctx: QueryCtx | MutationCtx) {
   const userId = await getAuthUserId(ctx);
   if (!userId) throw new Error("Not authenticated.");
   const user = await ctx.db.get(userId);
@@ -93,12 +101,34 @@ async function enrichReview(
   const showAuthor =
     !review.isAnonymous || (viewerId !== null && viewerId === review.userId);
 
+  let viewerVote: 1 | -1 | null = null;
+  if (viewerId) {
+    const vote = await ctx.db
+      .query("collegeReviewVotes")
+      .withIndex("by_reviewId_and_userId", (q) =>
+        q.eq("reviewId", review._id).eq("userId", viewerId),
+      )
+      .unique();
+    viewerVote = vote?.value ?? null;
+  }
+
+  const imageIds = review.imageIds;
+  const imageUrls: string[] = [];
+  if (imageIds) {
+    for (const imageId of imageIds) {
+      const url = await ctx.storage.getUrl(imageId);
+      if (url) imageUrls.push(url);
+    }
+  }
+
   return {
     id: review._id,
     listingId: review.listingId,
     college: review.college,
     ratings: normalizeRatings(review.ratings),
     comment: review.comment,
+    imageIds,
+    imageUrls,
     isAnonymous: review.isAnonymous,
     author:
       showAuthor && authorUser
@@ -112,24 +142,9 @@ async function enrichReview(
     formalDateTime: listing?.dateTime ?? "",
     createdAt: review._creationTime,
     updatedAt: review.updatedAt,
+    voteScore: review.voteScore ?? 0,
+    viewerVote,
   };
-}
-
-function sortReviews(
-  reviews: Doc<"collegeReviews">[],
-  sort: "recent" | "top",
-): Doc<"collegeReviews">[] {
-  const copy = [...reviews];
-  if (sort === "recent") {
-    copy.sort((a, b) => b._creationTime - a._creationTime);
-    return copy;
-  }
-  copy.sort((a, b) => {
-    const diff = b.ratings.overall - a.ratings.overall;
-    if (diff !== 0) return diff;
-    return b._creationTime - a._creationTime;
-  });
-  return copy;
 }
 
 export const getReviewForListing = query({
@@ -211,6 +226,7 @@ export const submitReview = mutation({
     nowMs: v.number(),
     ratings: ratingsValidator,
     comment: v.optional(v.string()),
+    imageIds: v.optional(v.array(v.id("_storage"))),
     isAnonymous: v.boolean(),
   },
   returns: v.id("collegeReviews"),
@@ -239,12 +255,14 @@ export const submitReview = mutation({
 
     const college = normalizeCollegeName(listing.college);
     const ratings = normalizeRatings(args.ratings);
+    const imageIds = await validateReviewImageIds(ctx, args.imageIds);
     const reviewId = await ctx.db.insert("collegeReviews", {
       userId,
       listingId: args.listingId,
       college,
       ratings,
       comment: comment || undefined,
+      ...(imageIds ? { imageIds } : {}),
       isAnonymous: args.isAnonymous,
       updatedAt: args.nowMs,
     });
@@ -259,6 +277,7 @@ export const updateReview = mutation({
     nowMs: v.number(),
     ratings: ratingsValidator,
     comment: v.optional(v.string()),
+    imageIds: v.optional(v.array(v.id("_storage"))),
     isAnonymous: v.boolean(),
   },
   returns: v.null(),
@@ -274,9 +293,16 @@ export const updateReview = mutation({
     }
 
     const newRatings = normalizeRatings(args.ratings);
+    const imageIds = await validateReviewImageIds(ctx, args.imageIds);
+    const removed = reviewImageIdsRemoved(review.imageIds, imageIds);
+    if (removed.length > 0) {
+      await deleteReviewImagesIfPresent(ctx, removed);
+    }
+
     await ctx.db.patch(args.reviewId, {
       ratings: newRatings,
       comment: comment || undefined,
+      imageIds,
       isAnonymous: args.isAnonymous,
       updatedAt: args.nowMs,
     });
@@ -287,6 +313,63 @@ export const updateReview = mutation({
       newRatings,
       args.nowMs,
     );
+    return null;
+  },
+});
+
+export const voteReview = mutation({
+  args: {
+    reviewId: v.id("collegeReviews"),
+    direction: v.union(v.literal("up"), v.literal("down")),
+    nowMs: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { userId } = await requireUser(ctx);
+    const review = await ctx.db.get(args.reviewId);
+    if (!review) throw new Error("Review not found.");
+    if (review.userId === userId) {
+      throw new Error("You cannot vote on your own review.");
+    }
+
+    const targetValue = args.direction === "up" ? 1 : -1;
+    const existing = await ctx.db
+      .query("collegeReviewVotes")
+      .withIndex("by_reviewId_and_userId", (q) =>
+        q.eq("reviewId", args.reviewId).eq("userId", userId),
+      )
+      .unique();
+
+    const currentScore = review.voteScore ?? 0;
+
+    if (!existing) {
+      await ctx.db.insert("collegeReviewVotes", {
+        reviewId: args.reviewId,
+        userId,
+        value: targetValue,
+        updatedAt: args.nowMs,
+      });
+      await ctx.db.patch(args.reviewId, {
+        voteScore: currentScore + targetValue,
+      });
+      return null;
+    }
+
+    if (existing.value === targetValue) {
+      await ctx.db.delete(existing._id);
+      await ctx.db.patch(args.reviewId, {
+        voteScore: currentScore - targetValue,
+      });
+      return null;
+    }
+
+    await ctx.db.patch(existing._id, {
+      value: targetValue,
+      updatedAt: args.nowMs,
+    });
+    await ctx.db.patch(args.reviewId, {
+      voteScore: currentScore - existing.value + targetValue,
+    });
     return null;
   },
 });
@@ -341,7 +424,7 @@ export const listReviewsForCollege = query({
       .withIndex("by_college", (q) => q.eq("college", college))
       .collect();
 
-    const sorted = sortReviews(rows, args.sort).slice(0, limit);
+    const sorted = sortCollegeReviewRows(rows, args.sort).slice(0, limit);
     return Promise.all(sorted.map((r) => enrichReview(ctx, r, viewerId)));
   },
 });
@@ -384,7 +467,7 @@ export const listPublicReviewsForUser = query({
       .collect();
 
     const publicRows = rows.filter((r) => !r.isAnonymous);
-    const sorted = sortReviews(publicRows, "recent").slice(0, limit);
+    const sorted = sortCollegeReviewRows(publicRows, "recent").slice(0, limit);
     return Promise.all(sorted.map((r) => enrichReview(ctx, r, viewerId)));
   },
 });

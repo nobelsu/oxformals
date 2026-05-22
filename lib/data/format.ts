@@ -16,6 +16,35 @@ export function formatListingStatusLabel(
   }
 }
 
+/** Seat availability suffix for listing metadata; omitted once the formal is past. */
+export function formatListingSeatsSuffix(
+  seatsAvailable: number,
+  isPast: boolean,
+): string | null {
+  if (isPast) return null;
+  if (seatsAvailable === 0) return "Group full";
+  const unit = seatsAvailable === 1 ? "seat" : "seats";
+  return `${seatsAvailable} ${unit} left`;
+}
+
+/** `Thu 8 May · 7:15pm · Group of 3 · …` — drops seat availability for past formals. */
+export function formatListingMetaLine(args: {
+  dateTime: string;
+  groupSize: number;
+  seatsAvailable: number;
+  isPast: boolean;
+  price?: number;
+}): string {
+  const parts: string[] = [
+    formatListingDate(args.dateTime),
+    `Group of ${args.groupSize}`,
+  ];
+  const seats = formatListingSeatsSuffix(args.seatsAvailable, args.isPast);
+  if (seats) parts.push(seats);
+  if (args.price !== undefined) parts.push(formatPrice(args.price));
+  return parts.join(" · ");
+}
+
 // "Thu 8 May · 7:15pm"
 export function formatListingDate(iso: string): string {
   const d = new Date(iso);

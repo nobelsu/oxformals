@@ -30,10 +30,10 @@ export function MessageUserButton({
         onBeforeNavigate?.();
         void startChat(otherUserId);
       }}
-      className={
+      className={`cursor-pointer disabled:cursor-not-allowed ${
         className ??
         "rounded-full border-[2px] border-[var(--ink)] px-6 py-2.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
-      }
+      }`}
     >
       {starting ? "Opening…" : label}
     </button>

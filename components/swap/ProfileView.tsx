@@ -127,7 +127,23 @@ function AvatarLightbox({
   );
 }
 
-export function ProfileView({ userId }: { userId: string }) {
+type ProfileViewProps = {
+  userId: string;
+  /** When true, omit back link and outer page chrome (for Me tab). */
+  embedded?: boolean;
+  /** Own profile in Me tab: open in-tab edit instead of navigating away. */
+  onEditProfile?: () => void;
+};
+
+const STANDALONE_OUTER =
+  "mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6";
+const EMBEDDED_OUTER = "flex w-full flex-col gap-8";
+
+export function ProfileView({
+  userId,
+  embedded = false,
+  onEditProfile,
+}: ProfileViewProps) {
   const router = useRouter();
   const { user: currentUser, isAuthenticated } = useAuth();
   const { getUser, listings, requests, sendRequest, getListing } = useData();
@@ -231,9 +247,15 @@ export function ProfileView({ userId }: { userId: string }) {
     [typeChooserTarget, openRequestFlow],
   );
 
+  const Outer = embedded ? "div" : "main";
+  const outerClass = embedded ? EMBEDDED_OUTER : STANDALONE_OUTER;
+
   if (profile === undefined) {
+    const loadingClass = embedded
+      ? "flex min-h-[50vh] w-full items-center justify-center"
+      : "mx-auto flex min-h-[50vh] w-full max-w-5xl items-center justify-center px-4 py-8 sm:px-6";
     return (
-      <main className="mx-auto flex min-h-[50vh] w-full max-w-5xl items-center justify-center px-4 py-8 sm:px-6">
+      <Outer className={loadingClass}>
         <span className="inline-flex items-center gap-3 rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-6 py-3 text-base text-[var(--ink)]">
           <span
             aria-hidden="true"
@@ -241,13 +263,16 @@ export function ProfileView({ userId }: { userId: string }) {
           />
           Loading...
         </span>
-      </main>
+      </Outer>
     );
   }
 
   if (profile === null) {
+    const notFoundClass = embedded
+      ? "w-full"
+      : "mx-auto w-full max-w-5xl px-4 py-8 sm:px-6";
     return (
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+      <Outer className={notFoundClass}>
         <SketchCard seed={3} className="p-8">
           <h2 className="font-display text-3xl uppercase tracking-wide">
             User not found
@@ -255,14 +280,16 @@ export function ProfileView({ userId }: { userId: string }) {
           <p className="mt-2 text-[var(--ink-muted)]">
             This profile does not exist.
           </p>
-          <Link
-            href="/"
-            className="mt-5 inline-flex rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-          >
-            Back to Browse
-          </Link>
+          {!embedded ? (
+            <Link
+              href="/"
+              className="mt-5 inline-flex rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+            >
+              Back to Browse
+            </Link>
+          ) : null}
         </SketchCard>
-      </main>
+      </Outer>
     );
   }
 
@@ -303,16 +330,21 @@ export function ProfileView({ userId }: { userId: string }) {
     avatar,
   };
 
+  const editProfileClass =
+    "shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]";
+
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/"
-          className="rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-        >
-          Back to Browse
-        </Link>
-      </div>
+    <Outer className={outerClass}>
+      {!embedded ? (
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+          >
+            Back to Browse
+          </Link>
+        </div>
+      ) : null}
 
       <SketchCard seed={userId.length} className="overflow-hidden p-6">
         <div className="flex flex-col gap-5">
@@ -347,26 +379,38 @@ export function ProfileView({ userId }: { userId: string }) {
             )}
               </div>
             </div>
-            {!isOwnProfile ? (
-              isAuthenticated ? (
-                <MessageUserButton
-                  otherUserId={userId as Id<"users">}
-                  className="shrink-0 rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
-                />
-              ) : (
+            {isOwnProfile ? (
+              onEditProfile ? (
                 <button
                   type="button"
-                  onClick={() =>
-                    router.push(
-                      `/login?next=${encodeURIComponent(`/profile/${userId}`)}`,
-                    )
-                  }
-                  className="shrink-0 rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                  onClick={onEditProfile}
+                  className={editProfileClass}
                 >
-                  Message
+                  Edit
                 </button>
+              ) : (
+                <Link href="/?tab=mine&edit=1" className={editProfileClass}>
+                  Edit
+                </Link>
               )
-            ) : null}
+            ) : isAuthenticated ? (
+              <MessageUserButton
+                otherUserId={userId as Id<"users">}
+                className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  router.push(
+                    `/login?next=${encodeURIComponent(`/profile/${userId}`)}`,
+                  )
+                }
+                className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+              >
+                Message
+              </button>
+            )}
           </div>
 
           {(instagramHandle || whatsappPhone) && (
@@ -427,14 +471,6 @@ export function ProfileView({ userId }: { userId: string }) {
           </p>
         )}
 
-        {isOwnProfile && (
-          <Link
-            href="/?tab=mine"
-            className="mt-5 inline-flex rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-          >
-            Edit profile
-          </Link>
-        )}
       </SketchCard>
 
       <section>
@@ -449,10 +485,10 @@ export function ProfileView({ userId }: { userId: string }) {
               role="tab"
               aria-selected={profileTab === "listings"}
               onClick={() => setProfileTab("listings")}
-              className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+              className={`cursor-pointer rounded-full px-4 py-1.5 text-sm transition-all duration-200 ease-out motion-reduce:transition-none ${
                 profileTab === "listings"
                   ? "bg-[var(--ink)] text-[var(--bg)]"
-                  : "text-[var(--ink)] hover:bg-[var(--paper)]"
+                  : "text-[var(--ink)] hover:bg-[var(--paper)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 active:scale-[0.98]"
               }`}
             >
               Listings
@@ -465,10 +501,10 @@ export function ProfileView({ userId }: { userId: string }) {
               role="tab"
               aria-selected={profileTab === "reviews"}
               onClick={() => setProfileTab("reviews")}
-              className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+              className={`cursor-pointer rounded-full px-4 py-1.5 text-sm transition-all duration-200 ease-out motion-reduce:transition-none ${
                 profileTab === "reviews"
                   ? "bg-[var(--ink)] text-[var(--bg)]"
-                  : "text-[var(--ink)] hover:bg-[var(--paper)]"
+                  : "text-[var(--ink)] hover:bg-[var(--paper)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 active:scale-[0.98]"
               }`}
             >
               Reviews
@@ -673,6 +709,6 @@ export function ProfileView({ userId }: { userId: string }) {
           + List my formal
         </Link>
       </Modal>
-    </main>
+    </Outer>
   );
 }

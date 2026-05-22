@@ -26,7 +26,12 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
 import type { Id } from "@/convex/_generated/dataModel";
-import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
+import {
+  formatListingDate,
+  formatListingMetaLine,
+  formatYearLabel,
+} from "@/lib/data/format";
+import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import { listingSupportsSwap } from "@/lib/data/listingType";
 import {
   findBlockingOutgoingRequestForTarget,
@@ -190,9 +195,9 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
           </p>
           <Link
             href="/?tab=requests"
-            className="mt-5 inline-flex rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+            className="mt-5 inline-flex w-fit self-start rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
           >
-            Back to Listings
+            Back to Activity
           </Link>
         </SketchCard>
       </main>
@@ -231,17 +236,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     );
   }
 
-  const seatsLabel =
-    listing.seatsAvailable === 0
-      ? "Group full"
-      : `${listing.seatsAvailable} ${listing.seatsAvailable === 1 ? "seat" : "seats"} left`;
-
-  const statusMap: Record<Listing["status"], string> = {
-    active: "Active",
-    confirmed: "Listing full",
-    closed: listing.seatsAvailable === 0 ? "Group full" : "Closed",
-    expired: "Past",
-  };
+  const isPast = listingIsPast(listing.dateTime, nowMs);
 
   function openOutboundRequest(target: Listing, requestType: RequestType) {
     if (user) {
@@ -293,27 +288,32 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
               </h1>
               <div className="flex flex-wrap items-center gap-2">
                 <ListingTypeTag listingType={listing.listingType} />
-                <ListingFormalBadges isPast={listingIsPast(listing.dateTime, nowMs)} />
-                <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
-                  {statusMap[listing.status]}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (pendingIncoming.length > 0) {
-                      setEditBlockedOpen(true);
-                      return;
-                    }
-                    setEditModalOpen(true);
-                  }}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-                  aria-label="Edit listing"
-                >
-                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                    <path d="m15 5 4 4" />
-                  </svg>
-                </button>
+                <ListingFormalBadges isPast={isPast} />
+                {!isPast ? (
+                  <ListingStatusTag
+                    status={listing.status}
+                    seatsAvailable={listing.seatsAvailable}
+                  />
+                ) : null}
+                {!isPast ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pendingIncoming.length > 0) {
+                        setEditBlockedOpen(true);
+                        return;
+                      }
+                      setEditModalOpen(true);
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                    aria-label="Edit listing"
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                      <path d="m15 5 4 4" />
+                    </svg>
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setDeleteDialogOpen(true)}
@@ -329,8 +329,13 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
               </div>
             </div>
             <p className="mt-2 text-[var(--ink-muted)]">
-              {formatListingDate(listing.dateTime)} · Group of {listing.groupSize} · {seatsLabel}
-              {listing.price !== undefined ? ` · ${formatPrice(listing.price)}` : ""}
+              {formatListingMetaLine({
+                dateTime: listing.dateTime,
+                groupSize: listing.groupSize,
+                seatsAvailable: listing.seatsAvailable,
+                isPast,
+                price: listing.price,
+              })}
             </p>
             <p className="mt-1 text-sm text-[var(--ink-soft)]">
               {[formatYearLabel(listing.year) || listing.year, listing.role]
@@ -662,6 +667,10 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             }}
             minGroupSize={listing.members.length}
             onSubmit={(input) => {
+              if (listingIsPast(listing.dateTime, nowMs)) {
+                setEditModalOpen(false);
+                return;
+              }
               if (pendingIncoming.length > 0) {
                 setEditModalOpen(false);
                 setEditBlockedOpen(true);

@@ -1,4 +1,4 @@
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Id } from "../../convex/_generated/dataModel";
 
 export const MENU_FILE_MAX_BYTES = 5 * 1024 * 1024;
 

@@ -33,18 +33,66 @@ export type CollegeReviewAuthor = {
   year: string;
 };
 
+export type CollegeReviewVoteValue = 1 | -1;
+
 export type CollegeReviewPublic = {
   id: string;
   listingId: string;
   college: string;
   ratings: CollegeReviewRatings;
   comment?: string;
+  imageIds?: string[];
+  imageUrls?: string[];
   isAnonymous: boolean;
   author: CollegeReviewAuthor | null;
   formalDateTime: string;
   createdAt: number;
   updatedAt: number;
+  voteScore: number;
+  viewerVote: CollegeReviewVoteValue | null;
 };
+
+export type CollegeReviewVoteState = {
+  voteScore: number;
+  viewerVote: CollegeReviewVoteValue | null;
+};
+
+/** Optimistic vote toggle; mirrors convex/collegeReviews voteReview. */
+export function applyVoteToggle(
+  state: CollegeReviewVoteState,
+  direction: "up" | "down",
+): CollegeReviewVoteState {
+  const targetValue: CollegeReviewVoteValue = direction === "up" ? 1 : -1;
+  const { voteScore, viewerVote } = state;
+
+  if (viewerVote === null) {
+    return { voteScore: voteScore + targetValue, viewerVote: targetValue };
+  }
+  if (viewerVote === targetValue) {
+    return { voteScore: voteScore - targetValue, viewerVote: null };
+  }
+  return {
+    voteScore: voteScore - viewerVote + targetValue,
+    viewerVote: targetValue,
+  };
+}
+
+/** Sort college review rows for list queries. */
+export function sortCollegeReviewRows<
+  T extends { voteScore?: number; _creationTime: number },
+>(rows: T[], sort: CollegeReviewSort): T[] {
+  const copy = [...rows];
+  if (sort === "recent") {
+    copy.sort((a, b) => b._creationTime - a._creationTime);
+    return copy;
+  }
+  copy.sort((a, b) => {
+    const diff = (b.voteScore ?? 0) - (a.voteScore ?? 0);
+    if (diff !== 0) return diff;
+    return b._creationTime - a._creationTime;
+  });
+  return copy;
+}
 
 export type CollegeAggregates = {
   college: string;

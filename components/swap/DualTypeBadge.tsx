@@ -8,7 +8,7 @@ type Props = {
 };
 
 const SIZE = {
-  sm: { root: "text-xs", segment: "px-2.5 py-0.5" },
+  sm: { root: "text-xs", segment: "px-3 py-0.5" },
   md: { root: "text-sm", segment: "px-3 py-1" },
 } as const;
 

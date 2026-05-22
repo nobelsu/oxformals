@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  applyVoteToggle,
   buildLeaderboardEntries,
   compareOverallLeaderboardEntries,
   compareRatingLeaderboardEntries,
   isOverallLeaderboardRanked,
   leaderboardRankForCollege,
+  sortCollegeReviewRows,
   type LeaderboardCollegeInput,
 } from "./collegeReviews";
 
@@ -16,6 +18,77 @@ function entry(
 ) {
   return { college, average, attendanceCount };
 }
+
+describe("applyVoteToggle", () => {
+  it("adds an upvote when none exists", () => {
+    assert.deepEqual(
+      applyVoteToggle({ voteScore: 2, viewerVote: null }, "up"),
+      { voteScore: 3, viewerVote: 1 },
+    );
+  });
+
+  it("adds a downvote when none exists", () => {
+    assert.deepEqual(
+      applyVoteToggle({ voteScore: 2, viewerVote: null }, "down"),
+      { voteScore: 1, viewerVote: -1 },
+    );
+  });
+
+  it("removes vote when clicking the same direction again", () => {
+    assert.deepEqual(
+      applyVoteToggle({ voteScore: 3, viewerVote: 1 }, "up"),
+      { voteScore: 2, viewerVote: null },
+    );
+    assert.deepEqual(
+      applyVoteToggle({ voteScore: 1, viewerVote: -1 }, "down"),
+      { voteScore: 2, viewerVote: null },
+    );
+  });
+
+  it("flips from up to down and down to up", () => {
+    assert.deepEqual(
+      applyVoteToggle({ voteScore: 3, viewerVote: 1 }, "down"),
+      { voteScore: 1, viewerVote: -1 },
+    );
+    assert.deepEqual(
+      applyVoteToggle({ voteScore: 1, viewerVote: -1 }, "up"),
+      { voteScore: 3, viewerVote: 1 },
+    );
+  });
+});
+
+describe("sortCollegeReviewRows", () => {
+  function row(voteScore: number, createdAt: number) {
+    return { voteScore, _creationTime: createdAt };
+  }
+
+  it("sorts recent by creation time descending", () => {
+    const sorted = sortCollegeReviewRows(
+      [row(0, 100), row(5, 300), row(2, 200)],
+      "recent",
+    );
+    assert.deepEqual(
+      sorted.map((r) => r._creationTime),
+      [300, 200, 100],
+    );
+  });
+
+  it("sorts top by vote score then creation time", () => {
+    const sorted = sortCollegeReviewRows(
+      [row(1, 100), row(5, 200), row(5, 300), row(0, 400)],
+      "top",
+    );
+    assert.deepEqual(
+      sorted.map((r) => [r.voteScore, r._creationTime]),
+      [
+        [5, 300],
+        [5, 200],
+        [1, 100],
+        [0, 400],
+      ],
+    );
+  });
+});
 
 describe("compareRatingLeaderboardEntries", () => {
   it("ranks higher average first regardless of attendance", () => {

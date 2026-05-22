@@ -36,7 +36,6 @@ export function ListingReferenceCard({ listing, href, onPress, compact }: Props)
         <ListingStatusTag
           status={listing.status}
           seatsAvailable={listing.seatsAvailable}
-          compact={compact}
         />
       </div>
       <p className={`mt-1 text-[var(--ink-muted)] ${compact ? "text-xs" : "text-sm"}`}>

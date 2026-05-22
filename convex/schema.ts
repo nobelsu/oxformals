@@ -153,12 +153,22 @@ export default defineSchema({
       overall: v.number(),
     }),
     comment: v.optional(v.string()),
+    imageIds: v.optional(v.array(v.id("_storage"))),
     isAnonymous: v.boolean(),
     updatedAt: v.number(),
+    voteScore: v.optional(v.number()),
   })
     .index("by_listingId_and_userId", ["listingId", "userId"])
     .index("by_college", ["college"])
     .index("by_userId", ["userId"]),
+  collegeReviewVotes: defineTable({
+    reviewId: v.id("collegeReviews"),
+    userId: v.id("users"),
+    value: v.union(v.literal(1), v.literal(-1)),
+    updatedAt: v.number(),
+  })
+    .index("by_reviewId_and_userId", ["reviewId", "userId"])
+    .index("by_reviewId", ["reviewId"]),
   collegeReviewReports: defineTable({
     reviewId: v.id("collegeReviews"),
     reporterUserId: v.id("users"),

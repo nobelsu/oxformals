@@ -13,7 +13,7 @@ import { NavSettingsModal } from "./NavSettingsModal";
 const TABS = [
   { id: "browse", label: "Browse" },
   { id: "rankings", label: "Rankings" },
-  { id: "requests", label: "Listings" },
+  { id: "requests", label: "Activity" },
   { id: "chats", label: "Chats" },
   { id: "mine", label: "Me" },
 ] as const;

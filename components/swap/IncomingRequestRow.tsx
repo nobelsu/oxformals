@@ -5,6 +5,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
 import type { User } from "@/lib/auth/types";
 import { formatListingDate, formatPrice, formatRelativeTime } from "@/lib/data/format";
+import { ListingTag } from "@/components/swap/ListingTag";
 import type { Listing, SwapRequest } from "@/lib/data/types";
 import { resolveRequestType } from "@/lib/data/requestFilters";
 import { MessageUserButton } from "@/components/chat/MessageUserButton";
@@ -57,9 +58,7 @@ export function IncomingRequestRow({
             </Link>
             <div className="flex shrink-0 flex-wrap items-center gap-1.5">
               <RequestTypeTag requestType={requestType} />
-              <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs whitespace-nowrap">
-                {statusLabel}
-              </span>
+              <ListingTag className="whitespace-nowrap">{statusLabel}</ListingTag>
             </div>
           </div>
           {requestType === "pay" ? (
