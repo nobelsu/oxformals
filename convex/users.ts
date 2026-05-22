@@ -238,7 +238,7 @@ export const patchProfile = mutation({
     subject: v.optional(v.string()),
     uiFont: v.optional(uiFontValidator),
     avatar: avatarOrClear,
-    emailWishlistAlerts: v.optional(v.boolean()),
+    emailNotifications: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -258,7 +258,7 @@ export const patchProfile = mutation({
         | "subject"
         | "uiFont"
         | "avatar"
-        | "emailWishlistAlerts"
+        | "emailNotifications"
       >
     >;
 
@@ -298,8 +298,8 @@ export const patchProfile = mutation({
       patch.avatar =
         args.avatar === null ? undefined : (args.avatar as Doc<"users">["avatar"]);
     }
-    if (args.emailWishlistAlerts !== undefined) {
-      patch.emailWishlistAlerts = args.emailWishlistAlerts;
+    if (args.emailNotifications !== undefined) {
+      patch.emailNotifications = args.emailNotifications;
     }
 
     if (Object.keys(patch).length === 0) {
@@ -406,16 +406,17 @@ export const saveWishlistColleges = mutation({
   },
 });
 
-export const backfillEmailWishlistAlerts = internalMutation({
+export const backfillEmailNotifications = internalMutation({
   args: {},
+  returns: v.object({ patched: v.number(), total: v.number() }),
   handler: async (ctx) => {
     const users = await ctx.db.query("users").collect();
     let patched = 0;
     for (const user of users) {
-      if (user.emailWishlistAlerts !== true) {
-        await ctx.db.patch(user._id, { emailWishlistAlerts: true });
-        patched++;
-      }
+      if (user.emailNotifications !== undefined) continue;
+      const enabled = user.emailWishlistAlerts !== false;
+      await ctx.db.patch(user._id, { emailNotifications: enabled });
+      patched++;
     }
     return { patched, total: users.length };
   },

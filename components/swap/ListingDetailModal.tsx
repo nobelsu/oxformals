@@ -10,6 +10,8 @@ import { ListingGroupChatButton } from "@/components/chat/ListingGroupChatButton
 import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { ReviewFormalSection } from "@/components/colleges/ReviewFormalSection";
 import { ListingFormalBadges } from "@/components/colleges/ListingFormalBadges";
+import { ConfirmAttendanceIndicator } from "@/components/colleges/ConfirmAttendanceIndicator";
+import { RateFormalIndicator } from "@/components/colleges/RateFormalIndicator";
 import { ListingMenu } from "@/components/swap/ListingMenu";
 import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
@@ -84,6 +86,12 @@ export function ListingDetailModal({
     .join(" · ");
 
   const isPast = listingIsPast(listing.dateTime, nowMs);
+  const canConfirmAttendance = !!(
+    isGuestMember &&
+    reviewState?.canConfirmAttendance &&
+    !reviewState.hasConfirmedAttendance
+  );
+  const canRate = !!(isGuestMember && reviewState?.canReview);
 
   const allMembers = [owner, ...memberUsers.filter((m) => m.id !== owner.id)];
   const ctaLabel = listingRequestCta(listing.listingType);
@@ -103,7 +111,7 @@ export function ListingDetailModal({
             <ListingTypeTag listingType={listing.listingType} />
             <ListingFormalBadges
               isPast={isPast}
-              canRate={!!(isGuestMember && reviewState?.canReview)}
+              showCompleted={!isGuestMember}
             />
             {!isPast &&
             (listing.status === "expired" ||
@@ -129,6 +137,15 @@ export function ListingDetailModal({
               .filter(Boolean)
               .join(" · ")}
           </p>
+          {canConfirmAttendance && isPast ? (
+            <div className="mt-2 flex justify-end">
+              <ConfirmAttendanceIndicator />
+            </div>
+          ) : canRate && isPast ? (
+            <div className="mt-2 flex justify-end">
+              <RateFormalIndicator />
+            </div>
+          ) : null}
         </header>
 
         <div className="flex shrink-0 items-center gap-4">

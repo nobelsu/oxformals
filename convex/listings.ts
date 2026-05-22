@@ -10,6 +10,7 @@ import {
   scheduleFormalCompletion,
   syncListingAttendanceGuests,
 } from "./collegeStats";
+import { removeUserFromListingGroup } from "./listingMembership";
 import { normalizeCollegeName } from "../lib/data/colleges";
 import {
   countReservedSwapsForOffering,
@@ -574,46 +575,7 @@ export const leaveGroup = mutation({
   args: { listingId: v.id("listings") },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    const listing = await getListingOrThrow(ctx, args.listingId);
-
-    if (listing.ownerUserId === userId) {
-      throw new Error("The owner cannot leave their own group.");
-    }
-    if (!listing.members.includes(userId)) {
-      throw new Error("You are not a member of this group.");
-    }
-
-    const newMembers = listing.members.filter((m) => m !== userId);
-    const newSeats = listing.seatsAvailable + 1;
-    const nowMs = Date.now();
-    const reopened =
-      listing.status === "closed" &&
-      newSeats > 0 &&
-      !listingIsPast(listing.dateTime, nowMs);
-    await ctx.db.patch(args.listingId, {
-      members: newMembers,
-      seatsAvailable: newSeats,
-      ...(reopened ? { status: "active" as const } : {}),
-    });
-
-    const updated = await ctx.db.get(args.listingId);
-    if (updated) {
-      await syncListingAttendanceGuests(ctx, updated, Date.now());
-    }
-
-    const acceptedRequests = await ctx.db
-      .query("requests")
-      .withIndex("by_targetListingId_and_status", (q) =>
-        q.eq("targetListingId", args.listingId).eq("status", "accepted"),
-      )
-      .take(200);
-    for (const req of acceptedRequests) {
-      if (req.fromUserId === userId) {
-        await ctx.db.patch(req._id, { status: "declined" });
-      }
-    }
-
-    return args.listingId;
+    return await removeUserFromListingGroup(ctx, args.listingId, userId);
   },
 });
 

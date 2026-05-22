@@ -1,6 +1,9 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { canReviewCollegeListing } from "../lib/data/collegeReviewEligibility";
+import {
+  canConfirmAttendanceCollegeListing,
+  canReviewCollegeListing,
+} from "../lib/data/collegeReviewEligibility";
 import { normalizeCollegeName } from "../lib/data/colleges";
 import type { CollegeReviewCategory } from "../lib/data/collegeReviews";
 import { isImageContentType } from "../lib/upload/imageFile";
@@ -64,25 +67,62 @@ export function averageRatings(reviews: Doc<"collegeReviews">[]): ReviewRatings 
   };
 }
 
+function listingEligibilityInput(listing: Doc<"listings">) {
+  return {
+    college: listing.college,
+    dateTime: listing.dateTime,
+    members: listing.members.map(String),
+    ownerUserId: listing.ownerUserId,
+  };
+}
+
 export function getReviewEligibility(
   user: Doc<"users"> | null,
   listing: Doc<"listings">,
   userId: Id<"users"> | null,
   nowMs: number,
-  hasExistingReview: boolean,
+  options: {
+    hasExistingReview: boolean;
+    hasConfirmedAttendance: boolean;
+  },
 ): ReturnType<typeof canReviewCollegeListing> {
   if (!userId || !user) {
-    return canReviewCollegeListing(null, listing, nowMs, { hasExistingReview });
+    return canReviewCollegeListing(null, listingEligibilityInput(listing), nowMs, {
+      hasExistingReview: options.hasExistingReview,
+      hasConfirmedAttendance: options.hasConfirmedAttendance,
+    });
   }
   return canReviewCollegeListing(
     { id: userId, college: user.college },
-    {
-      college: listing.college,
-      dateTime: listing.dateTime,
-      members: listing.members.map(String),
-    },
+    listingEligibilityInput(listing),
     nowMs,
-    { hasExistingReview },
+    {
+      hasExistingReview: options.hasExistingReview,
+      hasConfirmedAttendance: options.hasConfirmedAttendance,
+    },
+  );
+}
+
+export function getConfirmAttendanceEligibility(
+  user: Doc<"users"> | null,
+  listing: Doc<"listings">,
+  userId: Id<"users"> | null,
+  nowMs: number,
+  hasRespondedToAttendance: boolean,
+): ReturnType<typeof canConfirmAttendanceCollegeListing> {
+  if (!userId || !user) {
+    return canConfirmAttendanceCollegeListing(
+      null,
+      listingEligibilityInput(listing),
+      nowMs,
+      { hasRespondedToAttendance },
+    );
+  }
+  return canConfirmAttendanceCollegeListing(
+    { id: userId, college: user.college },
+    listingEligibilityInput(listing),
+    nowMs,
+    { hasRespondedToAttendance },
   );
 }
 

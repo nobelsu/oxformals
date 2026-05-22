@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/SketchCard";
 import type { User } from "@/lib/auth/types";
 import { ListingFormalBadges } from "@/components/colleges/ListingFormalBadges";
+import { ConfirmAttendanceIndicator } from "@/components/colleges/ConfirmAttendanceIndicator";
+import { RateFormalIndicator } from "@/components/colleges/RateFormalIndicator";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
 import { formatListingMetaLine, formatYearLabel } from "@/lib/data/format";
 import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
@@ -30,6 +32,11 @@ type Props = {
   onViewRequests?: () => void;
   compact?: boolean;
   canRate?: boolean;
+  canConfirmAttendance?: boolean;
+  /** Skip group chat (e.g. UI preview listing with no Convex id). */
+  hideGroupChat?: boolean;
+  /** Omit completed badge (e.g. formals attended section). */
+  showCompletedBadge?: boolean;
 };
 
 export function MyListingCard({
@@ -40,6 +47,9 @@ export function MyListingCard({
   onViewRequests,
   compact = false,
   canRate = false,
+  canConfirmAttendance = false,
+  hideGroupChat = false,
+  showCompletedBadge = true,
 }: Props) {
   const [opening, setOpening] = useState(false);
   const nowMs = useNowMs();
@@ -66,7 +76,10 @@ export function MyListingCard({
         </h3>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
           <ListingTypeTag listingType={listing.listingType} />
-          <ListingFormalBadges isPast={isPast} canRate={canRate} />
+          <ListingFormalBadges
+            isPast={isPast}
+            showCompleted={showCompletedBadge}
+          />
           {!isPast ? (
             <ListingStatusTag
               status={listing.status}
@@ -91,28 +104,43 @@ export function MyListingCard({
       </div>
 
       <div className={`${compact ? "mt-3" : "mt-auto"} flex shrink-0 flex-col gap-3`}>
-        {memberUsers.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-[var(--ink-soft)]">Dining with:</span>
-              <div className="flex flex-wrap -space-x-1.5">
-                {memberUsers.map((m) => (
-                  <Link
-                    key={m.id}
-                    href={`/profile/${m.id}`}
-                    title={m.name}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Avatar name={m.name} size="sm" source={m.avatar} />
-                  </Link>
-                ))}
+        {(memberUsers.length > 0 ||
+          (canConfirmAttendance && isPast) ||
+          (canRate && isPast)) && (
+          <div className="flex items-end justify-between gap-3">
+            {memberUsers.length > 0 ? (
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-[var(--ink-soft)]">Dining with:</span>
+                  <div className="flex flex-wrap -space-x-1.5">
+                    {memberUsers.map((m) => (
+                      <Link
+                        key={m.id}
+                        href={`/profile/${m.id}`}
+                        title={m.name}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Avatar name={m.name} size="sm" source={m.avatar} />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+                {!hideGroupChat ? (
+                  <ListingGroupChatButton
+                    listingId={listing.id as Id<"listings">}
+                    memberCount={listing.members.length}
+                    className="w-fit text-xs"
+                  />
+                ) : null}
               </div>
-            </div>
-            <ListingGroupChatButton
-              listingId={listing.id as Id<"listings">}
-              memberCount={listing.members.length}
-              className="w-fit text-xs"
-            />
+            ) : (
+              <span className="min-w-0 flex-1" />
+            )}
+            {canConfirmAttendance && isPast ? (
+              <ConfirmAttendanceIndicator className="shrink-0 self-end" />
+            ) : canRate && isPast ? (
+              <RateFormalIndicator className="shrink-0 self-end" />
+            ) : null}
           </div>
         )}
 

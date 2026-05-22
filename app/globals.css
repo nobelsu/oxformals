@@ -394,21 +394,16 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
   opacity: 0.95;
 }
 
-.mountain-rank-item {
-  transition: transform 0.25s cubic-bezier(0.34, 1.2, 0.64, 1);
-}
-
-.mountain-rank-item:hover,
-.mountain-rank-item:focus-within {
-  transform: translateY(-6px);
-}
-
-.mountain-rank-item--summit:hover,
-.mountain-rank-item--summit:focus-within {
-  transform: translateY(-10px) scale(1.03);
-}
-
 @media (min-width: 768px) {
+  .mountain-rank-item {
+    transition: transform 0.25s cubic-bezier(0.34, 1.2, 0.64, 1);
+  }
+
+  .mountain-rank-item:hover,
+  .mountain-rank-item:focus-within {
+    transform: translateY(-6px);
+  }
+
   .mountain-rank-item--summit:hover,
   .mountain-rank-item--summit:focus-within {
     transform: translateY(-8px) scale(1.04);
@@ -433,21 +428,25 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
   opacity: 1;
 }
 
-.mountain-rank-item:hover .mountain-rank-icon,
-.mountain-rank-item:focus-within .mountain-rank-icon {
-  animation: mountain-rank-icon-pop 0.38s ease-out;
+@media (min-width: 768px) {
+  .mountain-rank-item:hover .mountain-rank-icon,
+  .mountain-rank-item:focus-within .mountain-rank-icon {
+    animation: mountain-rank-icon-pop 0.38s ease-out;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mountain-rank-item:hover,
-  .mountain-rank-item:focus-within,
-  .mountain-rank-item--summit:hover,
-  .mountain-rank-item--summit:focus-within {
-    transform: none;
-  }
+  @media (min-width: 768px) {
+    .mountain-rank-item:hover,
+    .mountain-rank-item:focus-within,
+    .mountain-rank-item--summit:hover,
+    .mountain-rank-item--summit:focus-within {
+      transform: none;
+    }
 
-  .mountain-rank-item:hover .mountain-rank-icon,
-  .mountain-rank-item:focus-within .mountain-rank-icon {
-    animation: none;
+    .mountain-rank-item:hover .mountain-rank-icon,
+    .mountain-rank-item:focus-within .mountain-rank-icon {
+      animation: none;
+    }
   }
 }

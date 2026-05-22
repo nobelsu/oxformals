@@ -4,7 +4,13 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import {
+  hasConfirmedAttendance,
+  hasDeclinedAttendance,
+  hasRespondedToAttendance,
+} from "./formalAttendance";
+import {
   deleteReviewImagesIfPresent,
+  getConfirmAttendanceEligibility,
   getReviewEligibility,
   MAX_REVIEW_COMMENT_LENGTH,
   normalizeRatings,
@@ -174,6 +180,10 @@ export const getListingReviewState = query({
   returns: v.object({
     isPast: v.boolean(),
     canReview: v.boolean(),
+    canConfirmAttendance: v.boolean(),
+    hasConfirmedAttendance: v.boolean(),
+    hasRespondedToAttendance: v.boolean(),
+    hasDeclinedAttendance: v.boolean(),
     reason: v.optional(v.string()),
     existingReview: v.union(v.null(), publicReviewValidator),
   }),
@@ -184,12 +194,19 @@ export const getListingReviewState = query({
       return {
         isPast: false,
         canReview: false,
+        canConfirmAttendance: false,
+        hasConfirmedAttendance: false,
+        hasRespondedToAttendance: false,
+        hasDeclinedAttendance: false,
         reason: "Listing not found.",
         existingReview: null,
       };
     }
 
     let existingReview = null;
+    let confirmed = false;
+    let responded = false;
+    let declined = false;
     if (userId) {
       const row = await ctx.db
         .query("collegeReviews")
@@ -200,21 +217,36 @@ export const getListingReviewState = query({
       if (row) {
         existingReview = await enrichReview(ctx, row, userId);
       }
+      responded = await hasRespondedToAttendance(ctx, args.listingId, userId);
+      confirmed = await hasConfirmedAttendance(ctx, args.listingId, userId);
+      declined = await hasDeclinedAttendance(ctx, args.listingId, userId);
     }
 
     const user = userId ? await ctx.db.get(userId) : null;
-    const eligibility = getReviewEligibility(
+    const eligibility = getReviewEligibility(user, listing, userId, args.nowMs, {
+      hasExistingReview: existingReview !== null,
+      hasConfirmedAttendance: confirmed,
+    });
+    const confirmEligibility = getConfirmAttendanceEligibility(
       user,
       listing,
       userId,
       args.nowMs,
-      existingReview !== null,
+      responded,
     );
 
     return {
       isPast: eligibility.isPast,
       canReview: eligibility.canReview,
-      reason: eligibility.reason,
+      canConfirmAttendance: confirmEligibility.canConfirm,
+      hasConfirmedAttendance: confirmed,
+      hasRespondedToAttendance: responded,
+      hasDeclinedAttendance: declined,
+      reason: eligibility.canReview
+        ? eligibility.reason
+        : confirmEligibility.canConfirm
+          ? confirmEligibility.reason
+          : eligibility.reason ?? confirmEligibility.reason,
       existingReview,
     };
   },
@@ -243,7 +275,11 @@ export const submitReview = mutation({
       .unique();
     if (existing) throw new Error("You already reviewed this formal.");
 
-    const eligibility = getReviewEligibility(user, listing, userId, args.nowMs, false);
+    const confirmed = await hasConfirmedAttendance(ctx, args.listingId, userId);
+    const eligibility = getReviewEligibility(user, listing, userId, args.nowMs, {
+      hasExistingReview: false,
+      hasConfirmedAttendance: confirmed,
+    });
     if (!eligibility.canReview) {
       throw new Error(eligibility.reason ?? "You cannot review this formal.");
     }
@@ -493,7 +529,11 @@ export const getPendingReviewListingIds = query({
       const host = normalizeCollegeName(listing.college);
       if (home && host && home === host) continue;
 
-      const eligibility = getReviewEligibility(user, listing, userId, args.nowMs, false);
+      const confirmed = await hasConfirmedAttendance(ctx, listing._id, userId);
+      const eligibility = getReviewEligibility(user, listing, userId, args.nowMs, {
+        hasExistingReview: false,
+        hasConfirmedAttendance: confirmed,
+      });
       if (!eligibility.canReview) continue;
 
       const existing = await ctx.db

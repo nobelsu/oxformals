@@ -100,3 +100,17 @@ export function applyAttendanceGuestDelta(
     attendanceCount: stats.attendanceCount + delta,
   };
 }
+
+/** One guest confirmed attendance; optionally the first confirmation for this formal. */
+export function applyAttendanceConfirmation(
+  stats: CollegeStatsSnapshot,
+  isFirstConfirmationForListing: boolean,
+): CollegeStatsSnapshot {
+  return {
+    ...stats,
+    attendanceCount: stats.attendanceCount + 1,
+    completedFormalCount: isFirstConfirmationForListing
+      ? stats.completedFormalCount + 1
+      : stats.completedFormalCount,
+  };
+}

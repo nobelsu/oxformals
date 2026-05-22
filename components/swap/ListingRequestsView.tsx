@@ -44,6 +44,8 @@ import { placeholderUser } from "@/lib/data/users";
 import type { Listing, RequestType } from "@/lib/data/types";
 import { listingIsPast } from "@/lib/data/collegeReviewEligibility";
 import { useNowMs } from "@/lib/hooks/useNowMs";
+import { AttendedFormalPreviewView } from "@/components/preview/AttendedFormalPreviewView";
+import { isAttendedFormalPreviewListingId } from "@/lib/preview/attendedFormalPreview";
 
 export function ListingRequestsView({ listingId }: { listingId: string }) {
   const router = useRouter();
@@ -183,6 +185,10 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     );
   }
 
+  if (isAttendedFormalPreviewListingId(listingId)) {
+    return <AttendedFormalPreviewView />;
+  }
+
   if (!canViewListing || !listing) {
     return (
       <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
@@ -220,7 +226,6 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             <h1 className="font-display text-3xl uppercase tracking-wide">
               {listing.college}
             </h1>
-            <ListingFormalBadges isPast={listingIsPast(listing.dateTime, nowMs)} />
           </div>
           <p className="mt-2 text-[var(--ink-muted)]">
             {formatListingDate(listing.dateTime)} · Group of {listing.groupSize}

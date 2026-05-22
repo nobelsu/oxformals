@@ -43,9 +43,11 @@ function mapDocToUser(doc: Doc<"users">): User {
     uiFont: doc.uiFont ?? DEFAULT_UI_FONT,
     ...(doc.avatar ? { avatar: doc.avatar } : {}),
     agreedToRules: doc.agreedToRules ?? false,
-    ...(doc.emailWishlistAlerts !== undefined
-      ? { emailWishlistAlerts: doc.emailWishlistAlerts }
-      : {}),
+    ...(doc.emailNotifications !== undefined
+      ? { emailNotifications: doc.emailNotifications }
+      : doc.emailWishlistAlerts !== undefined
+        ? { emailNotifications: doc.emailWishlistAlerts }
+        : {}),
   };
 }
 
@@ -219,7 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         subject?: string;
         uiFont?: User["uiFont"];
         avatar?: User["avatar"] | null;
-        emailWishlistAlerts?: boolean;
+        emailNotifications?: boolean;
       } = {};
 
       if (patch.name !== undefined) payload.name = patch.name;
@@ -245,8 +247,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (Object.prototype.hasOwnProperty.call(patch, "avatar")) {
         payload.avatar = patch.avatar ?? null;
       }
-      if (patch.emailWishlistAlerts !== undefined) {
-        payload.emailWishlistAlerts = patch.emailWishlistAlerts;
+      if (patch.emailNotifications !== undefined) {
+        payload.emailNotifications = patch.emailNotifications;
       }
 
       if (Object.keys(payload).length === 0) {
@@ -263,8 +265,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         avatar: Object.prototype.hasOwnProperty.call(patch, "avatar")
           ? patch.avatar
           : user.avatar,
-        emailWishlistAlerts:
-          patch.emailWishlistAlerts ?? user.emailWishlistAlerts,
+        emailNotifications:
+          patch.emailNotifications ?? user.emailNotifications,
       };
     },
     [user, patchProfileMut],

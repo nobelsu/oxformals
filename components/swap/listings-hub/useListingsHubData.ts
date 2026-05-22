@@ -14,6 +14,10 @@ export type ListingNeedingReview = {
   listing: Listing;
 };
 
+export type ListingNeedingAttendance = {
+  listing: Listing;
+};
+
 export type ListingNeedingRequests = {
   listing: Listing;
   pendingCount: number;
@@ -29,9 +33,19 @@ export function useListingsHubData() {
     user ? { nowMs } : "skip",
   );
 
+  const pendingAttendanceListingIds = useQuery(
+    api.formalAttendance.getPendingAttendanceListingIds,
+    user ? { nowMs } : "skip",
+  );
+
   const pendingReviewSet = useMemo(
     () => new Set((pendingReviewListingIds ?? []).map(String)),
     [pendingReviewListingIds],
+  );
+
+  const pendingAttendanceSet = useMemo(
+    () => new Set((pendingAttendanceListingIds ?? []).map(String)),
+    [pendingAttendanceListingIds],
   );
 
   const myListings = useMemo(
@@ -100,6 +114,19 @@ export function useListingsHubData() {
       .sort((a, b) => +new Date(b.dateTime) - +new Date(a.dateTime));
   }, [listings, user, nowMs]);
 
+  const listingsNeedingAttendance = useMemo((): ListingNeedingAttendance[] => {
+    if (pendingAttendanceSet.size === 0) return [];
+    const byId = new Map(listings.map((l) => [l.id, l]));
+    const rows: ListingNeedingAttendance[] = [];
+    for (const id of pendingAttendanceSet) {
+      const listing = byId.get(id);
+      if (listing) rows.push({ listing });
+    }
+    return rows.sort(
+      (a, b) => +new Date(b.listing.dateTime) - +new Date(a.listing.dateTime),
+    );
+  }, [listings, pendingAttendanceSet]);
+
   const listingsNeedingReview = useMemo((): ListingNeedingReview[] => {
     if (pendingReviewSet.size === 0) return [];
     const byId = new Map(listings.map((l) => [l.id, l]));
@@ -123,10 +150,14 @@ export function useListingsHubData() {
   }, [myActiveListings, pendingCountByListing]);
 
   const hasNeedsAttention =
-    listingsNeedingReview.length > 0 || listingsNeedingRequests.length > 0;
+    listingsNeedingAttendance.length > 0 ||
+    listingsNeedingReview.length > 0 ||
+    listingsNeedingRequests.length > 0;
 
   const overviewAttentionCount =
-    listingsNeedingReview.length + totalPendingIncoming;
+    listingsNeedingAttendance.length +
+    listingsNeedingReview.length +
+    totalPendingIncoming;
 
   const myListingsUnreadCount = useMemo(() => {
     const ownedReviews = myBookedListings.filter((l) =>
@@ -137,8 +168,10 @@ export function useListingsHubData() {
 
   const attendedUnreadCount = useMemo(
     () =>
-      attendedPastListings.filter((l) => pendingReviewSet.has(l.id)).length,
-    [attendedPastListings, pendingReviewSet],
+      attendedPastListings.filter(
+        (l) => pendingAttendanceSet.has(l.id) || pendingReviewSet.has(l.id),
+      ).length,
+    [attendedPastListings, pendingAttendanceSet, pendingReviewSet],
   );
 
   const myListingsCount = myActiveListings.length + myBookedListings.length;
@@ -146,6 +179,7 @@ export function useListingsHubData() {
   return {
     user,
     pendingReviewSet,
+    pendingAttendanceSet,
     myActiveListings,
     myBookedListings,
     myPayRequests,
@@ -153,6 +187,7 @@ export function useListingsHubData() {
     pendingCountByListing,
     totalPendingIncoming,
     pendingPayRequestCount,
+    listingsNeedingAttendance,
     listingsNeedingReview,
     listingsNeedingRequests,
     hasNeedsAttention,

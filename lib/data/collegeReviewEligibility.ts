@@ -4,6 +4,7 @@ export type ReviewEligibilityListing = {
   college: string;
   dateTime: string;
   members: string[];
+  ownerUserId?: string;
 };
 
 export type ReviewEligibilityUser = {
@@ -13,6 +14,12 @@ export type ReviewEligibilityUser = {
 
 export type ReviewEligibilityResult = {
   canReview: boolean;
+  isPast: boolean;
+  reason?: string;
+};
+
+export type ConfirmAttendanceResult = {
+  canConfirm: boolean;
   isPast: boolean;
   reason?: string;
 };
@@ -34,11 +41,69 @@ export function isGuestForCollegeListing(
   return !(home && host && home === host);
 }
 
+function baseGuestEligibility(
+  user: ReviewEligibilityUser | null | undefined,
+  listing: ReviewEligibilityListing,
+  nowMs: number,
+): { isPast: boolean; reason?: string } | { ok: true; isPast: boolean } {
+  const isPast = listingIsPast(listing.dateTime, nowMs);
+  if (!user) {
+    return { isPast, reason: "Sign in to continue." };
+  }
+  if (!listing.members.includes(user.id)) {
+    return {
+      isPast,
+      reason: "Only group members can confirm attendance for this formal.",
+    };
+  }
+  if (listing.ownerUserId && listing.ownerUserId === user.id) {
+    return {
+      isPast,
+      reason: "Hosts do not need to confirm attendance.",
+    };
+  }
+  if (!isPast) {
+    return {
+      isPast,
+      reason: "You can confirm attendance after the formal has taken place.",
+    };
+  }
+  const home = normalizeCollegeName(user.college ?? "");
+  const host = normalizeCollegeName(listing.college);
+  if (home && host && home === host) {
+    return {
+      isPast,
+      reason: "You cannot confirm attendance for your own college's formal.",
+    };
+  }
+  return { ok: true, isPast };
+}
+
+export function canConfirmAttendanceCollegeListing(
+  user: ReviewEligibilityUser | null | undefined,
+  listing: ReviewEligibilityListing,
+  nowMs: number,
+  options?: { hasRespondedToAttendance?: boolean },
+): ConfirmAttendanceResult {
+  const base = baseGuestEligibility(user, listing, nowMs);
+  if (!("ok" in base)) {
+    return { canConfirm: false, isPast: base.isPast, reason: base.reason };
+  }
+  if (options?.hasRespondedToAttendance) {
+    return {
+      canConfirm: false,
+      isPast: base.isPast,
+      reason: "You already responded about this formal.",
+    };
+  }
+  return { canConfirm: true, isPast: base.isPast };
+}
+
 export function canReviewCollegeListing(
   user: ReviewEligibilityUser | null | undefined,
   listing: ReviewEligibilityListing,
   nowMs: number,
-  options?: { hasExistingReview?: boolean },
+  options?: { hasExistingReview?: boolean; hasConfirmedAttendance?: boolean },
 ): ReviewEligibilityResult {
   const isPast = listingIsPast(listing.dateTime, nowMs);
   if (!user) {
@@ -69,6 +134,13 @@ export function canReviewCollegeListing(
   }
   if (options?.hasExistingReview) {
     return { canReview: false, isPast, reason: "You already reviewed this formal." };
+  }
+  if (!options?.hasConfirmedAttendance) {
+    return {
+      canReview: false,
+      isPast,
+      reason: "Confirm that you attended this formal before leaving a review.",
+    };
   }
   return { canReview: true, isPast };
 }

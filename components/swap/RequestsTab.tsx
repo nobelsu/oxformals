@@ -61,6 +61,7 @@ export function RequestsTab() {
               totalPendingIncoming={data.totalPendingIncoming}
               payRequestCount={data.myPayRequests.length}
               formalsToReviewCount={data.formalsToReviewCount}
+              listingsNeedingAttendance={data.listingsNeedingAttendance}
               listingsNeedingReview={data.listingsNeedingReview}
               listingsNeedingRequests={data.listingsNeedingRequests}
               hasNeedsAttention={data.hasNeedsAttention}
@@ -93,6 +94,7 @@ export function RequestsTab() {
             <AttendedFormalsSection
               attendedPastListings={data.attendedPastListings}
               pendingReviewSet={data.pendingReviewSet}
+              pendingAttendanceSet={data.pendingAttendanceSet}
               getUser={getUser}
             />
           ) : null}

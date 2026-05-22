@@ -4,6 +4,7 @@ import Link from "next/link";
 import { SketchCard, seedFrom } from "@/components/ui/SketchCard";
 import { formatListingDate } from "@/lib/data/format";
 import type {
+  ListingNeedingAttendance,
   ListingNeedingRequests,
   ListingNeedingReview,
 } from "./useListingsHubData";
@@ -13,6 +14,7 @@ type Props = {
   totalPendingIncoming: number;
   payRequestCount: number;
   formalsToReviewCount: number;
+  listingsNeedingAttendance: ListingNeedingAttendance[];
   listingsNeedingReview: ListingNeedingReview[];
   listingsNeedingRequests: ListingNeedingRequests[];
   hasNeedsAttention: boolean;
@@ -95,6 +97,7 @@ export function ListingsOverview({
   totalPendingIncoming,
   payRequestCount,
   formalsToReviewCount,
+  listingsNeedingAttendance,
   listingsNeedingReview,
   listingsNeedingRequests,
   hasNeedsAttention,
@@ -136,6 +139,15 @@ export function ListingsOverview({
         </h3>
         {hasNeedsAttention ? (
           <div className="mt-3 flex flex-col gap-2">
+            {listingsNeedingAttendance.map(({ listing }) => (
+              <AttentionRow
+                key={`confirm-${listing.id}`}
+                href={`/requests/${listing.id}`}
+                typeLabel="Confirm"
+                title={`Confirm you attended ${listing.college} · ${formatListingDate(listing.dateTime)}`}
+                accent
+              />
+            ))}
             {listingsNeedingReview.map(({ listing }) => (
               <AttentionRow
                 key={`review-${listing.id}`}

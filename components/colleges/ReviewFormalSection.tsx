@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/components/auth/useAuth";
+import { ConfirmAttendanceSection } from "@/components/colleges/ConfirmAttendanceSection";
+import { CollegeReviewEditor } from "@/components/colleges/CollegeReviewEditor";
 import { ReviewImageGallery } from "@/components/colleges/ReviewImageGallery";
 import { StarRating } from "@/components/colleges/StarRating";
 import { Modal } from "@/components/ui/Modal";
@@ -21,6 +23,7 @@ import {
   uploadImageFile,
   validateImageFile,
 } from "@/lib/upload/imageFile";
+
 const MAX_REVIEW_IMAGES = 3;
 
 const EMPTY_RATINGS: CollegeReviewRatings = {
@@ -87,7 +90,6 @@ export function ReviewFormalSection({ listingId, college }: Props) {
   );
 
   const submitReview = useMutation(api.collegeReviews.submitReview);
-  const updateReview = useMutation(api.collegeReviews.updateReview);
   const reportReview = useMutation(api.collegeReviews.reportReview);
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -97,25 +99,6 @@ export function ReviewFormalSection({ listingId, college }: Props) {
   const [imageDrafts, setImageDrafts] = useState<ReviewImageDraft[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
-
-  const resetDraftFromReview = useCallback(
-    (review: NonNullable<typeof state>["existingReview"]) => {
-      if (!review) return;
-      setDraft(review.ratings);
-      setComment(review.comment ?? "");
-      const ids = review.imageIds ?? [];
-      const urls = review.imageUrls ?? [];
-      setImageDrafts(
-        ids.map((storageId, i) => ({
-          storageId: storageId as Id<"_storage">,
-          previewUrl: urls[i] ?? "",
-          fileName: `Photo ${i + 1}`,
-        })),
-      );
-      setImageError(null);
-    },
-    [],
-  );
 
   const ratingsComplete = useMemo(
     () => COLLEGE_REVIEW_CATEGORIES.every((c) => draft[c.key] >= 1),
@@ -188,7 +171,9 @@ export function ReviewFormalSection({ listingId, college }: Props) {
   }
 
   const existing = state.existingReview;
-  const showForm = state.canReview || (existing && editing);
+  const showNewReviewForm = state.canReview && !existing;
+  const needsAttendanceConfirm =
+    !existing && state.canConfirmAttendance && !state.hasRespondedToAttendance;
 
   function openSubmitConfirm() {
     if (!ratingsComplete) {
@@ -207,28 +192,15 @@ export function ReviewFormalSection({ listingId, college }: Props) {
     const imageIds =
       imageDrafts.length > 0 ? imageDrafts.map((d) => d.storageId) : undefined;
     try {
-      if (existing && editing) {
-        await updateReview({
-          reviewId: existing.id as Id<"collegeReviews">,
-          nowMs: Date.now(),
-          ratings: draft,
-          comment: comment || undefined,
-          imageIds,
-          isAnonymous: postAnonymously,
-        });
-        setSuccess("Review updated.");
-        setEditing(false);
-      } else {
-        await submitReview({
-          listingId: listingId as Id<"listings">,
-          nowMs: Date.now(),
-          ratings: draft,
-          comment: comment || undefined,
-          imageIds,
-          isAnonymous: postAnonymously,
-        });
-        setSuccess("Thanks for your review!");
-      }
+      await submitReview({
+        listingId: listingId as Id<"listings">,
+        nowMs: Date.now(),
+        ratings: draft,
+        comment: comment || undefined,
+        imageIds,
+        isAnonymous: postAnonymously,
+      });
+      setSuccess("Thanks for your review!");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -256,6 +228,12 @@ export function ReviewFormalSection({ listingId, college }: Props) {
 
   if (!state.isPast && !existing) {
     return null;
+  }
+
+  if (needsAttendanceConfirm) {
+    return (
+      <ConfirmAttendanceSection listingId={listingId} college={college} />
+    );
   }
 
   const imageUploadField = (
@@ -350,10 +328,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
           {existing.author?.userId === user?.id || !existing.author ? (
             <button
               type="button"
-              onClick={() => {
-                resetDraftFromReview(existing);
-                setEditing(true);
-              }}
+              onClick={() => setEditing(true)}
               className="w-fit rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
             >
               Edit review
@@ -369,7 +344,21 @@ export function ReviewFormalSection({ listingId, college }: Props) {
             </button>
           )}
         </div>
-      ) : showForm ? (
+      ) : existing && editing ? (
+        <div className="mt-5">
+          <CollegeReviewEditor
+            review={existing}
+            onSaved={() => {
+              setEditing(false);
+              setSuccess("Review updated.");
+            }}
+            onCancel={() => {
+              setEditing(false);
+              setError(null);
+            }}
+          />
+        </div>
+      ) : showNewReviewForm ? (
         <div className="mt-5 flex flex-col">
           <ReviewFormSection title="Ratings" className="pb-6">
             <div className="flex flex-col gap-2.5">
@@ -405,22 +394,8 @@ export function ReviewFormalSection({ listingId, college }: Props) {
               onClick={openSubmitConfirm}
               className="cursor-pointer rounded-full bg-[var(--accent)] px-5 py-2 text-sm text-white transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {submitting ? "Saving…" : existing ? "Save changes" : "Submit review"}
+              {submitting ? "Saving…" : "Submit review"}
             </button>
-            {editing && existing ? (
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={() => {
-                  resetDraftFromReview(existing);
-                  setEditing(false);
-                  setError(null);
-                }}
-                className="rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm"
-              >
-                Cancel
-              </button>
-            ) : null}
           </div>
         </div>
       ) : (
@@ -433,7 +408,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
       <Modal
         open={confirmSubmitOpen}
         onClose={() => setConfirmSubmitOpen(false)}
-        title={existing && editing ? "Save review?" : "Submit review?"}
+        title="Submit review?"
         panelClassName="max-w-sm"
       >
         <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">

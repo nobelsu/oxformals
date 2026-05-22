@@ -7,9 +7,7 @@ import { api } from "@/convex/_generated/api";
 import {
   MountainRankIcon,
   MountainSilhouette,
-  MountainTrail,
   RankBadge,
-  SummitPeakAccent,
   rankMountainVariant,
   rankSummitDivider,
   rankSummitEmphasis,
@@ -194,59 +192,19 @@ function MountainRankCard({ entry }: { entry: LeaderboardEntry }) {
 
 function mountainGridClass(count: number): string {
   if (count === 1) {
-    return "md:grid-cols-1 md:mx-auto md:max-w-sm md:justify-items-center";
+    return "grid-cols-1 mx-auto max-w-sm justify-items-center";
   }
   if (count === 2) {
-    return "md:grid-cols-2 md:mx-auto md:max-w-2xl";
+    return "grid-cols-2 mx-auto max-w-2xl";
   }
-  return "md:grid-cols-3";
+  return "grid-cols-3";
 }
 
-function LeaderboardMountain({ entries }: { entries: LeaderboardEntry[] }) {
+function sortTopThree(entries: LeaderboardEntry[]): LeaderboardEntry[] {
   const byRank = new Map(entries.map((e) => [e.rank, e]));
-  const orderedMobile: (1 | 2 | 3)[] = [1, 2, 3];
-
-  return (
-    <section
-      aria-label="Top 3 colleges"
-      className="rankings-mountain relative"
-    >
-      <ol
-        className={`relative z-10 flex flex-col gap-0 md:grid md:items-end md:gap-4 ${mountainGridClass(entries.length)}`}
-      >
-        {orderedMobile.flatMap((rank, index) => {
-          const entry = byRank.get(rank);
-          if (!entry) return [];
-          const trail =
-            index > 0 ? (
-              <li
-                key={`trail-${rank}`}
-                className="list-none md:hidden"
-                aria-hidden
-              >
-                <MountainTrail />
-              </li>
-            ) : null;
-          const peakAccent =
-            rank === 1 ? (
-              <li
-                key="summit-peak"
-                className="list-none md:hidden"
-                aria-hidden
-              >
-                <SummitPeakAccent />
-              </li>
-            ) : null;
-          return [
-            ...(peakAccent ? [peakAccent] : []),
-            <MountainRankCard key={entry.college} entry={entry} />,
-            ...(trail ? [trail] : []),
-          ];
-        })}
-      </ol>
-      <MountainSilhouette className="hidden md:block" />
-    </section>
-  );
+  return ([1, 2, 3] as const)
+    .map((rank) => byRank.get(rank))
+    .filter((e): e is LeaderboardEntry => e !== undefined);
 }
 
 function LeaderboardCompactRow({ entry }: { entry: LeaderboardEntry }) {
@@ -274,6 +232,39 @@ function LeaderboardCompactRow({ entry }: { entry: LeaderboardEntry }) {
         <LeaderboardScore entry={entry} size="compact" />
       </Link>
     </li>
+  );
+}
+
+function LeaderboardMountain({ entries }: { entries: LeaderboardEntry[] }) {
+  const sortedTopThree = sortTopThree(entries);
+
+  return (
+    <section aria-label="Top 3 colleges">
+      <div className="md:hidden">
+        <SketchCard
+          seed={seedFrom("leaderboard-top3")}
+          padded={false}
+          contentGutter
+        >
+          <ol className="flex flex-col">
+            {sortedTopThree.map((entry) => (
+              <LeaderboardCompactRow key={entry.college} entry={entry} />
+            ))}
+          </ol>
+        </SketchCard>
+      </div>
+
+      <div className="rankings-mountain relative hidden md:block">
+        <ol
+          className={`relative z-10 grid items-end gap-4 ${mountainGridClass(entries.length)}`}
+        >
+          {sortedTopThree.map((entry) => (
+            <MountainRankCard key={entry.college} entry={entry} />
+          ))}
+        </ol>
+        <MountainSilhouette />
+      </div>
+    </section>
   );
 }
 

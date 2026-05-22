@@ -22,7 +22,7 @@ export function NavSettingsModal({ open, onClose }: Props) {
     null,
   );
 
-  const notificationsOn = user?.emailWishlistAlerts !== false;
+  const notificationsOn = user?.emailNotifications !== false;
 
   const handleClose = useCallback(() => {
     setFontPickerOpen(false);
@@ -68,7 +68,7 @@ export function NavSettingsModal({ open, onClose }: Props) {
     setNotificationsError(null);
     setNotificationsBusy(true);
     try {
-      await updateProfile({ emailWishlistAlerts: next });
+      await updateProfile({ emailNotifications: next });
     } catch {
       setNotificationsError("Could not save notification preference — try again.");
     } finally {
@@ -156,11 +156,12 @@ export function NavSettingsModal({ open, onClose }: Props) {
                 aria-hidden
               />
               <p className="max-w-full break-words font-display text-lg uppercase tracking-[0.12em] text-[var(--ink)]">
-                Wishlist emails
+                Email notifications
               </p>
               <p className="mt-2 max-w-full text-pretty break-words text-sm leading-relaxed text-[var(--ink-muted)]">
                 We&apos;ll email you when someone posts a formal at a college on
-                your wishlist. Turn notifications off to unsubscribe.
+                your wishlist, and when it&apos;s time to rate a formal you
+                attended as a guest. Turn notifications off to unsubscribe.
               </p>
             </div>
           ) : null}

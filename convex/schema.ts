@@ -30,6 +30,8 @@ export default defineSchema({
     dietaryRequirements: v.optional(v.string()),
     subject: v.optional(v.string()),
     wishlistColleges: v.optional(v.array(v.string())),
+    emailNotifications: v.optional(v.boolean()),
+    /** @deprecated Migrated to emailNotifications; kept for backfill reads only */
     emailWishlistAlerts: v.optional(v.boolean()),
     pushChatAlerts: v.optional(v.boolean()),
     agreedToRules: v.optional(v.boolean()),
@@ -188,4 +190,16 @@ export default defineSchema({
     completedFormalCount: v.number(),
     updatedAt: v.number(),
   }).index("by_college", ["college"]),
+  formalAttendanceConfirmations: defineTable({
+    listingId: v.id("listings"),
+    userId: v.id("users"),
+    confirmedAt: v.number(),
+    /** Omitted on legacy rows — treated as attended. */
+    attended: v.optional(v.boolean()),
+    reasonPreset: v.optional(v.string()),
+    reasonOther: v.optional(v.string()),
+  })
+    .index("by_listingId_and_userId", ["listingId", "userId"])
+    .index("by_userId", ["userId"])
+    .index("by_listingId", ["listingId"]),
 });
