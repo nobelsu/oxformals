@@ -1,3 +1,4 @@
+import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { User } from "@/lib/auth/types";
 import type { Listing } from "@/lib/data/types";
 
@@ -17,7 +18,7 @@ export const attendedFormalPreviewOwner: User = {
   role: "Undergraduate",
   interests: [],
   subject: "History",
-  uiFont: "default",
+  uiFont: DEFAULT_UI_FONT,
 };
 
 export const attendedFormalPreviewListing: Listing = {
