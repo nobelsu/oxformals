@@ -3,8 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
+import { listingIsPast } from "@/lib/data/collegeReviewEligibility";
+import { useNowMs } from "@/lib/hooks/useNowMs";
 import { Modal } from "@/components/ui/Modal";
 import { outgoingPayRequests } from "@/lib/data/requestFilters";
 import { placeholderUser } from "@/lib/data/users";
@@ -74,6 +78,30 @@ export function RequestsTab() {
     [requests, user],
   );
 
+  const nowMs = useNowMs();
+
+  const pendingReviewListingIds = useQuery(
+    api.collegeReviews.getPendingReviewListingIds,
+    user ? { nowMs } : "skip",
+  );
+
+  const pendingReviewSet = useMemo(
+    () => new Set((pendingReviewListingIds ?? []).map(String)),
+    [pendingReviewListingIds],
+  );
+
+  const attendedPastListings = useMemo(() => {
+    if (!user) return [];
+    return listings
+      .filter(
+        (l) =>
+          l.members.includes(user.id) &&
+          l.ownerUserId !== user.id &&
+          listingIsPast(l.dateTime, nowMs),
+      )
+      .sort((a, b) => +new Date(b.dateTime) - +new Date(a.dateTime));
+  }, [listings, user, nowMs]);
+
   if (!user) return null;
 
   return (
@@ -109,6 +137,7 @@ export function RequestsTab() {
                   pendingRequestCount={pendingCountByListing.get(listing.id) ?? 0}
                   profile={{ year: user.year, role: user.role }}
                   memberUsers={members}
+                  canRate={pendingReviewSet.has(listing.id)}
                   onViewRequests={() => router.push(`/requests/${listing.id}`)}
                 />
               );
@@ -139,6 +168,34 @@ export function RequestsTab() {
         </section>
       )}
 
+      {attendedPastListings.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-display text-3xl uppercase tracking-wide">
+            Formals I attended
+          </h2>
+          <p className="mt-1 text-sm text-[var(--ink-muted)]">
+            Rate your experience at another college after the formal has passed.
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {attendedPastListings.map((listing) => {
+              const owner = getUser(listing.ownerUserId);
+              if (!owner) return null;
+              return (
+                <MyListingCard
+                  key={listing.id}
+                  listing={listing}
+                  pendingRequestCount={0}
+                  memberUsers={[owner]}
+                  canRate={pendingReviewSet.has(listing.id)}
+                  onViewRequests={() => router.push(`/requests/${listing.id}`)}
+                  compact
+                />
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {myBookedListings.length > 0 && (
         <section className="mt-10">
           <h2 className="font-display text-3xl uppercase tracking-wide">
@@ -156,6 +213,7 @@ export function RequestsTab() {
                   pendingRequestCount={0}
                   profile={{ year: user.year, role: user.role }}
                   memberUsers={members}
+                  canRate={pendingReviewSet.has(listing.id)}
                   onViewRequests={() => router.push(`/requests/${listing.id}`)}
                   compact
                 />

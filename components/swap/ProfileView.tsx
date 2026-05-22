@@ -13,6 +13,7 @@ import { Avatar, PRESET_AVATARS, PresetAvatarIcon, initialsFor } from "@/compone
 import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
+import { CollegeReviewCard } from "@/components/colleges/CollegeReviewCard";
 import { ListingCard } from "@/components/swap/ListingCard";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
 import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
@@ -147,9 +148,18 @@ export function ProfileView({ userId }: { userId: string }) {
     theirs: Listing | null;
     otherUserId: string | null;
   } | null>(null);
+  const [profileTab, setProfileTab] = useState<"listings" | "reviews">("listings");
   const closeAvatar = useCallback(() => setAvatarOpen(false), []);
 
+  useEffect(() => {
+    setProfileTab("listings");
+  }, [userId]);
+
   const profile = useQuery(api.users.getPublicProfile, {
+    userId: userId as Id<"users">,
+  });
+
+  const publicReviews = useQuery(api.collegeReviews.listPublicReviewsForUser, {
     userId: userId as Id<"users">,
   });
 
@@ -428,44 +438,104 @@ export function ProfileView({ userId }: { userId: string }) {
       </SketchCard>
 
       <section>
-        <h2 className="font-display text-3xl uppercase tracking-wide">
-          Active listings
-        </h2>
-        {activeListings.length === 0 ? (
-          <p className="mt-2 text-[var(--ink-muted)]">
+        <div className="flex flex-wrap items-center gap-3">
+          <div
+            className="inline-flex rounded-full border-[2px] border-[var(--ink)] p-0.5"
+            role="tablist"
+            aria-label="Profile content"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={profileTab === "listings"}
+              onClick={() => setProfileTab("listings")}
+              className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+                profileTab === "listings"
+                  ? "bg-[var(--ink)] text-[var(--bg)]"
+                  : "text-[var(--ink)] hover:bg-[var(--paper)]"
+              }`}
+            >
+              Listings
+              {activeListings.length > 0 ? (
+                <span className="ml-1.5 opacity-80">({activeListings.length})</span>
+              ) : null}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={profileTab === "reviews"}
+              onClick={() => setProfileTab("reviews")}
+              className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+                profileTab === "reviews"
+                  ? "bg-[var(--ink)] text-[var(--bg)]"
+                  : "text-[var(--ink)] hover:bg-[var(--paper)]"
+              }`}
+            >
+              Reviews
+              {publicReviews && publicReviews.length > 0 ? (
+                <span className="ml-1.5 opacity-80">({publicReviews.length})</span>
+              ) : null}
+            </button>
+          </div>
+        </div>
+
+        {profileTab === "listings" ? (
+          <>
+            {activeListings.length === 0 ? (
+              <p className="mt-4 text-[var(--ink-muted)]">
+                {isOwnProfile
+                  ? "You don\u2019t have any active listings."
+                  : `${name.split(" ")[0]} doesn\u2019t have any active listings right now.`}
+              </p>
+            ) : (
+              <div className="mt-4 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {activeListings.map((l) => {
+                  const members = l.members
+                    .filter((mid) => mid !== l.ownerUserId)
+                    .map(getUser)
+                    .filter((u): u is NonNullable<typeof u> => !!u);
+                  return (
+                    <ListingCard
+                      key={l.id}
+                      listing={l}
+                      owner={ownerAsUser}
+                      memberUsers={members}
+                      onPress={() => setDetailListing(l)}
+                      onRequest={
+                        isOwnProfile ? undefined : () => handleRequestClick(l)
+                      }
+                      disabled={listingDisabled}
+                      hideInterests
+                      disabledLabel={
+                        isOwnProfile
+                          ? "Your listing"
+                          : !isAuthenticated
+                            ? "Sign in to request"
+                            : undefined
+                      }
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </>
+        ) : publicReviews === undefined ? (
+          <p className="mt-4 text-[var(--ink-muted)]">Loading reviews…</p>
+        ) : publicReviews.length === 0 ? (
+          <p className="mt-4 text-[var(--ink-muted)]">
             {isOwnProfile
-              ? "You don\u2019t have any active listings."
-              : `${name.split(" ")[0]} doesn\u2019t have any active listings right now.`}
+              ? "You haven\u2019t posted any public reviews yet. Reviews marked anonymous won\u2019t appear here."
+              : `${name.split(" ")[0]} hasn\u2019t posted any public reviews yet.`}
           </p>
         ) : (
-          <div className="mt-4 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {activeListings.map((l) => {
-              const members = l.members
-                .filter((mid) => mid !== l.ownerUserId)
-                .map(getUser)
-                .filter((u): u is NonNullable<typeof u> => !!u);
-              return (
-                <ListingCard
-                  key={l.id}
-                  listing={l}
-                  owner={ownerAsUser}
-                  memberUsers={members}
-                  onPress={() => setDetailListing(l)}
-                  onRequest={
-                    isOwnProfile ? undefined : () => handleRequestClick(l)
-                  }
-                  disabled={listingDisabled}
-                  hideInterests
-                  disabledLabel={
-                    isOwnProfile
-                      ? "Your listing"
-                      : !isAuthenticated
-                        ? "Sign in to request"
-                        : undefined
-                  }
-                />
-              );
-            })}
+          <div className="mt-4 flex flex-col gap-4">
+            {publicReviews.map((review) => (
+              <CollegeReviewCard
+                key={review.id}
+                review={review}
+                variant="profile"
+              />
+            ))}
           </div>
         )}
       </section>
@@ -512,8 +582,6 @@ export function ProfileView({ userId }: { userId: string }) {
         }}
         targetListing={requestTarget}
         myListings={myActiveListings}
-        requests={requests}
-        userId={currentUser?.id}
         onSubmit={async ({ offeringListingId, message }) => {
           if (!requestTarget) return;
           const result = await sendRequest({

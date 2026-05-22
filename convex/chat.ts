@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -8,6 +9,7 @@ import {
   validateMentionStructure,
   validateMentionUsers,
 } from "./chatMentions";
+import { assertVerifiedEmail } from "./userVerification";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -50,9 +52,15 @@ const messageReplySnapshotValidator = v.object({
   unavailable: v.optional(v.boolean()),
 });
 
+const avatarValue = v.union(
+  v.object({ kind: v.literal("preset"), id: v.string() }),
+  v.object({ kind: v.literal("image"), dataUrl: v.string() }),
+);
+
 const groupMemberPreviewValidator = v.object({
   id: v.id("users"),
   name: v.string(),
+  avatar: v.optional(avatarValue),
 });
 
 const dmConversationPreviewValidator = v.object({
@@ -60,6 +68,7 @@ const dmConversationPreviewValidator = v.object({
   id: v.id("conversations"),
   otherUserId: v.id("users"),
   otherUserName: v.string(),
+  otherUserAvatar: v.optional(avatarValue),
   otherUserCollege: v.optional(v.string()),
   lastMessageAt: v.number(),
   lastMessageBody: v.optional(v.string()),
@@ -427,6 +436,7 @@ async function buildDmConversationPreview(
   id: Id<"conversations">;
   otherUserId: Id<"users">;
   otherUserName: string;
+  otherUserAvatar?: Doc<"users">["avatar"];
   otherUserCollege?: string;
   lastMessageAt: number;
   lastMessageBody?: string;
@@ -446,6 +456,7 @@ async function buildDmConversationPreview(
     id: convo._id,
     otherUserId,
     otherUserName: otherUser.name?.trim() || "User",
+    ...(otherUser.avatar ? { otherUserAvatar: otherUser.avatar } : {}),
     ...(otherUser.college?.trim()
       ? { otherUserCollege: otherUser.college.trim() }
       : {}),
@@ -470,7 +481,11 @@ async function buildGroupConversationPreview(
   title: string;
   name?: string;
   memberCount: number;
-  memberPreview: { id: Id<"users">; name: string }[];
+  memberPreview: {
+    id: Id<"users">;
+    name: string;
+    avatar?: Doc<"users">["avatar"];
+  }[];
   createdByUserId: Id<"users">;
   isCreator: boolean;
   lastMessageAt: number;
@@ -488,19 +503,28 @@ async function buildGroupConversationPreview(
   if (!memberRows.some((r) => r.userId === viewerId)) return null;
 
   const sorted = [...memberRows].sort((a, b) => a.joinedAt - b.joinedAt);
-  const memberPreview: { id: Id<"users">; name: string }[] = [];
-  for (const row of sorted.slice(0, 3)) {
+  const others = sorted.filter((r) => r.userId !== viewerId);
+
+  const otherMembers: {
+    id: Id<"users">;
+    name: string;
+    avatar?: Doc<"users">["avatar"];
+  }[] = [];
+  for (const row of others) {
     const u = await ctx.db.get(row.userId);
-    memberPreview.push({
+    otherMembers.push({
       id: row.userId,
       name: u?.name?.trim() || "User",
+      ...(u?.avatar ? { avatar: u.avatar } : {}),
     });
   }
+
+  const memberPreview = otherMembers.slice(0, 3);
 
   const customName = convo.name?.trim();
   const title =
     customName ||
-    memberPreview.map((m) => m.name).join(", ") ||
+    otherMembers.map((m) => m.name).join(", ") ||
     "Group chat";
 
   const lastMsg = await getLastMessage(ctx, convo._id);
@@ -595,6 +619,7 @@ export const getOrCreateConversation = mutation({
     }
     const otherUser = await ctx.db.get(args.otherUserId);
     if (!otherUser) throw new Error("User not found");
+    assertVerifiedEmail(otherUser);
 
     const [participantLow, participantHigh] = orderParticipants(
       viewerId,
@@ -650,6 +675,7 @@ export const createGroupConversation = mutation({
     for (const id of uniqueIds) {
       const u = await ctx.db.get(id);
       if (!u) throw new Error("User not found");
+      if (id !== viewerId) assertVerifiedEmail(u);
     }
 
     const now = Date.now();
@@ -726,6 +752,7 @@ export const addGroupMember = mutation({
 
     const u = await ctx.db.get(args.userId);
     if (!u) throw new Error("User not found");
+    assertVerifiedEmail(u);
 
     await ctx.db.insert("conversationMembers", {
       conversationId: args.conversationId,
@@ -1432,6 +1459,12 @@ export const sendMessage = mutation({
     await ctx.db.patch(args.conversationId, {
       lastMessageAt: message._creationTime,
     });
+
+    await ctx.scheduler.runAfter(
+      0,
+      internal.pushNotifications.sendChatMessagePush,
+      { messageId },
+    );
 
     return messageId;
   },

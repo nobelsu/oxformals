@@ -24,6 +24,7 @@ import {
 } from "./BrowseDateCalendar";
 import { isoToLocalDateKey } from "@/lib/data/format";
 import { findBlockingOutgoingRequestForTarget } from "@/lib/data/requestFilters";
+import { ROLE_OPTIONS } from "@/lib/data/roles";
 import type { Listing } from "@/lib/data/types";
 
 type Props = {
@@ -74,7 +75,7 @@ const CHIP_ON = `${CHIP_BASE} border-[var(--accent)] bg-[var(--accent)] text-whi
 const CHIP_MORE_META =
   "inline-flex select-none items-center rounded-full border-2 border-[var(--ink)]/30 bg-[var(--bg)] px-3 py-1.5 text-xs font-medium tabular-nums text-[var(--ink)]";
 
-function CalendarIcon({ className }: { className?: string }) {
+function FilterIcon({ className }: { className?: string }) {
   return (
     <svg
       className={className}
@@ -86,7 +87,7 @@ function CalendarIcon({ className }: { className?: string }) {
       strokeLinejoin="round"
       aria-hidden
     >
-      <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+      <path d="M4 6h16M7 12h10M10 18h4" />
     </svg>
   );
 }
@@ -128,6 +129,7 @@ export function BrowseTab({
   } = useData();
 
   const [collegeFilter, setCollegeFilter] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [pickedCalendarDates, setPickedCalendarDates] = useState<string[]>(
     [],
   );
@@ -237,8 +239,9 @@ export function BrowseTab({
           if (effectiveCollegeFilter === MY_FORMALS_SENTINEL)
             return wishlistSet.has(l.college);
           return l.college === effectiveCollegeFilter;
-        }),
-    [listings, user, effectiveCollegeFilter, wishlistSet],
+        })
+        .filter((l) => !roleFilter || l.role === roleFilter),
+    [listings, user, effectiveCollegeFilter, wishlistSet, roleFilter],
   );
 
   const browseListings = useMemo(() => {
@@ -269,7 +272,13 @@ export function BrowseTab({
       .sort((a, b) => +new Date(a.dateTime) - +new Date(b.dateTime));
   }, [collegeFilteredListings, pickedCalendarDates, searchQuery, getUser]);
 
-  const hasActiveFilters = pickedCalendarDates.length > 0;
+  const hasActiveFilters =
+    pickedCalendarDates.length > 0 || roleFilter !== null;
+
+  function clearAllFilters() {
+    setPickedCalendarDates([]);
+    setRoleFilter(null);
+  }
 
   const hasCollegeMatches = collegeFilteredListings.length > 0;
 
@@ -362,8 +371,8 @@ export function BrowseTab({
                       enterKeyHint="search"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search for college, menu, host..."
-                      aria-label="Search for college, menu, host"
+                      placeholder="Search for college, menu, role, host..."
+                      aria-label="Search for college, menu, role, host"
                       autoComplete="off"
                       className={`w-full min-w-0 ${FILTER_FIELD_CLS} ${
                         searchQuery !== "" ? "pr-11" : ""
@@ -384,10 +393,10 @@ export function BrowseTab({
                     type="button"
                     onClick={() => setFiltersModalOpen(true)}
                     className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30"
-                    aria-label="Open date filter"
+                    aria-label="Open filters"
                     aria-expanded={filtersModalOpen}
                   >
-                    <CalendarIcon className="h-5 w-5" />
+                    <FilterIcon className="h-5 w-5" />
                     {hasActiveFilters ? (
                       <span
                         className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--accent)] ring-2 ring-[var(--bg)]"
@@ -462,7 +471,7 @@ export function BrowseTab({
             {hasCollegeMatches ? (
               <>
                 Nothing matches your filters. Try another college above, open
-                the calendar to choose dates, or clear your search.
+                filters to choose dates or role, or clear your search.
               </>
             ) : (
               <>
@@ -505,27 +514,73 @@ export function BrowseTab({
       <Modal
         open={filtersModalOpen}
         onClose={() => setFiltersModalOpen(false)}
-        title="Dates"
+        title="Filters"
         compact
         panelClassName="max-w-lg"
         bodyScrollable={false}
       >
         <div className="flex flex-col gap-4">
-          <p className="text-left text-[0.7rem] leading-snug text-[var(--ink-muted)] sm:text-xs">
-            {BROWSE_DATE_CALENDAR_INSTRUCTIONS}
-          </p>
-          <BrowseDateCalendar
-            embedded
-            value={pickedCalendarDates}
-            onChange={setPickedCalendarDates}
-          />
-          <button
-            type="button"
-            onClick={() => setFiltersModalOpen(false)}
-            className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-6 py-2.5 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+          <div className="flex flex-col gap-2">
+            <h3 className="font-display text-sm uppercase tracking-wide text-[var(--ink)]">
+              Dates
+            </h3>
+            <p className="text-left text-[0.7rem] leading-snug text-[var(--ink-muted)] sm:text-xs">
+              {BROWSE_DATE_CALENDAR_INSTRUCTIONS}
+            </p>
+            <BrowseDateCalendar
+              embedded
+              value={pickedCalendarDates}
+              onChange={setPickedCalendarDates}
+            />
+          </div>
+          <div
+            className="flex flex-col gap-2 border-t border-[var(--ink)]/15 pt-4"
+            role="group"
+            aria-label="Role"
           >
-            Done
-          </button>
+            <h3 className="font-display text-sm uppercase tracking-wide text-[var(--ink)]">
+              Role
+            </h3>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                aria-pressed={roleFilter === null}
+                onClick={() => setRoleFilter(null)}
+                className={roleFilter === null ? CHIP_ON : CHIP_IDLE}
+              >
+                All roles
+              </button>
+              {ROLE_OPTIONS.map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  aria-pressed={roleFilter === role}
+                  onClick={() => setRoleFilter(role)}
+                  className={roleFilter === role ? CHIP_ON : CHIP_IDLE}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="w-full cursor-pointer rounded-full border-2 border-[var(--ink)] bg-[var(--bg)] px-6 py-2.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)]/5"
+              >
+                Clear filters
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setFiltersModalOpen(false)}
+              className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-6 py-2.5 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+            >
+              Done
+            </button>
+          </div>
         </div>
       </Modal>
 
@@ -565,8 +620,6 @@ export function BrowseTab({
         }}
         targetListing={requestTarget}
         myListings={myActiveListings}
-        requests={requests}
-        userId={user?.id}
         onSubmit={async ({ offeringListingId, message }) => {
           if (!requestTarget) return;
           const result = await sendRequest({

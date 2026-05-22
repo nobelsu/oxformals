@@ -4,12 +4,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { MessagesTab } from "@/components/chat/MessagesTab";
+import { RankingsTab } from "@/components/colleges/RankingsTab";
 import { BrowseTab } from "@/components/swap/BrowseTab";
 import { MineTab } from "@/components/swap/MineTab";
 import { RequestsTab } from "@/components/swap/RequestsTab";
 import { SignInGate } from "@/components/swap/SignInGate";
 
-const TABS = ["browse", "requests", "chats", "mine"] as const;
+const TABS = ["browse", "rankings", "requests", "chats", "mine"] as const;
 type Tab = (typeof TABS)[number];
 
 function isTab(x: string | null): x is Tab {
@@ -62,6 +63,9 @@ export function HomeClient() {
           onSignInRequired={() => router.push("/login?next=/")}
         />
       );
+    }
+    if (tab === "rankings") {
+      return <RankingsTab />;
     }
     if (!isAuthenticated) {
       return <SignInGate />;

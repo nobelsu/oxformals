@@ -1,11 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { Avatar } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
 import { ListingGroupChatButton } from "@/components/chat/ListingGroupChatButton";
 import { MessageUserButton } from "@/components/chat/MessageUserButton";
+import { ReviewFormalSection } from "@/components/colleges/ReviewFormalSection";
+import { ListingFormalBadges } from "@/components/colleges/ListingFormalBadges";
 import { ListingMenu } from "@/components/swap/ListingMenu";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
 import { useAuth } from "@/components/auth/useAuth";
@@ -14,6 +18,11 @@ import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/form
 import { listingRequestCta } from "@/lib/data/listingType";
 import type { User } from "@/lib/auth/types";
 import type { Listing } from "@/lib/data/types";
+import {
+  isGuestForCollegeListing,
+  listingIsPast,
+} from "@/lib/data/collegeReviewEligibility";
+import { useNowMs } from "@/lib/hooks/useNowMs";
 
 type Props = {
   open: boolean;
@@ -39,6 +48,18 @@ export function ListingDetailModal({
   hideInterests,
 }: Props) {
   const { user, isAuthenticated } = useAuth();
+  const nowMs = useNowMs();
+
+  const reviewState = useQuery(
+    api.collegeReviews.getListingReviewState,
+    listing && isAuthenticated
+      ? {
+          listingId: listing.id as Id<"listings">,
+          nowMs,
+        }
+      : "skip",
+  );
+
   if (!listing || !owner) return null;
 
   const showMessage =
@@ -46,6 +67,9 @@ export function ListingDetailModal({
 
   const isListingMember =
     isAuthenticated && user && listing.members.includes(user.id);
+
+  const isGuestMember =
+    isListingMember && isGuestForCollegeListing(user, listing.college);
 
   const profileLine = [
     owner.college,
@@ -76,6 +100,10 @@ export function ListingDetailModal({
               {listing.college}
             </h2>
             <ListingTypeTag listingType={listing.listingType} />
+            <ListingFormalBadges
+              isPast={listingIsPast(listing.dateTime, nowMs)}
+              canRate={!!(isGuestMember && reviewState?.canReview)}
+            />
             {listing.status === "expired" ? (
               <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
                 Past
@@ -179,6 +207,10 @@ export function ListingDetailModal({
           menuPdfUrl={listing.menuPdfUrl}
           menuFileContentType={listing.menuFileContentType}
         />
+
+        {isGuestMember || reviewState?.existingReview ? (
+          <ReviewFormalSection listingId={listing.id} college={listing.college} />
+        ) : null}
 
         <div className="flex shrink-0 flex-col items-center justify-center gap-2 pt-2 sm:flex-row">
           {showMessage ? (

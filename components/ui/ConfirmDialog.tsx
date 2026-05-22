@@ -8,7 +8,7 @@ type ConfirmDialogProps = {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: "default" | "destructive";
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
 };
 
@@ -34,7 +34,7 @@ export function ConfirmDialog({
         </button>
         <button
           type="button"
-          onClick={onConfirm}
+          onClick={() => void onConfirm()}
           className={[
             "rounded-full border-[2px] px-4 py-1.5 text-sm transition-colors",
             variant === "destructive"

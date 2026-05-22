@@ -5,19 +5,13 @@ import { Modal } from "@/components/ui/Modal";
 import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
 import { formatListingDate } from "@/lib/data/format";
 import { listingSupportsSwap } from "@/lib/data/listingType";
-import {
-  canSendSwapWithOffering,
-  OFFERING_NO_SWAP_CAPACITY_MESSAGE,
-} from "@/lib/data/requestFilters";
-import type { Listing, SwapRequest } from "@/lib/data/types";
+import type { Listing } from "@/lib/data/types";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   targetListing: Listing | null;
   myListings: Listing[];
-  requests: SwapRequest[];
-  userId: string | undefined;
   onSubmit: (args: {
     offeringListingId: string;
     message: string;
@@ -29,8 +23,6 @@ export function RequestSwapModal({
   onClose,
   targetListing,
   myListings,
-  requests,
-  userId,
   onSubmit,
 }: Props) {
   const activeMine = useMemo(
@@ -40,19 +32,13 @@ export function RequestSwapModal({
       ),
     [myListings],
   );
-  const listingsWithCapacity = useMemo(() => {
-    if (!userId) return activeMine;
-    return activeMine.filter((l) =>
-      canSendSwapWithOffering(requests, userId, l.id, l.seatsAvailable),
-    );
-  }, [activeMine, requests, userId]);
   const offeringOptions = useMemo(
     () =>
-      listingsWithCapacity.map((l) => ({
+      activeMine.map((l) => ({
         value: l.id,
         label: `${l.college} — ${formatListingDate(l.dateTime)}`,
       })),
-    [listingsWithCapacity],
+    [activeMine],
   );
   const [offeringId, setOfferingId] = useState<string>("");
   const [offeringPickerOpen, setOfferingPickerOpen] = useState(false);
@@ -61,17 +47,12 @@ export function RequestSwapModal({
   const [submitting, setSubmitting] = useState(false);
 
   const effectiveOfferingId = useMemo(() => {
-    if (
-      offeringId &&
-      listingsWithCapacity.some((l) => l.id === offeringId)
-    ) {
+    if (offeringId && activeMine.some((l) => l.id === offeringId)) {
       return offeringId;
     }
-    return listingsWithCapacity[0]?.id ?? "";
-  }, [offeringId, listingsWithCapacity]);
-  const selectedOffering = listingsWithCapacity.find(
-    (l) => l.id === effectiveOfferingId,
-  );
+    return activeMine[0]?.id ?? "";
+  }, [offeringId, activeMine]);
+  const selectedOffering = activeMine.find((l) => l.id === effectiveOfferingId);
 
   useEffect(() => {
     if (!open) {
@@ -82,21 +63,6 @@ export function RequestSwapModal({
 
   async function handleSubmit() {
     if (!effectiveOfferingId || submitting) return;
-    if (!userId) return;
-
-    const offering = activeMine.find((l) => l.id === effectiveOfferingId);
-    if (
-      !offering ||
-      !canSendSwapWithOffering(
-        requests,
-        userId,
-        effectiveOfferingId,
-        offering.seatsAvailable,
-      )
-    ) {
-      setError(OFFERING_NO_SWAP_CAPACITY_MESSAGE);
-      return;
-    }
 
     setError(null);
     setSubmitting(true);
@@ -137,10 +103,6 @@ export function RequestSwapModal({
           <span className="font-medium text-[var(--ink)]"> Me </span>
           tab to list one.
         </div>
-      ) : listingsWithCapacity.length === 0 ? (
-        <p className="text-[var(--ink-muted)]">
-          {OFFERING_NO_SWAP_CAPACITY_MESSAGE}
-        </p>
       ) : (
         <>
           <label className="flex flex-col gap-2 mb-4">
@@ -165,7 +127,7 @@ export function RequestSwapModal({
             <p className="mb-4 text-xs text-[var(--ink-muted)]">
               {selectedOffering.seatsAvailable}{" "}
               {selectedOffering.seatsAvailable === 1 ? "seat" : "seats"} left
-              to offer on this listing
+              on this listing (checked when accepted)
             </p>
           )}
 

@@ -31,6 +31,7 @@ export default defineSchema({
     subject: v.optional(v.string()),
     wishlistColleges: v.optional(v.array(v.string())),
     emailWishlistAlerts: v.optional(v.boolean()),
+    pushChatAlerts: v.optional(v.boolean()),
     agreedToRules: v.optional(v.boolean()),
     uiFont: v.optional(uiFontValidator),
     avatar,
@@ -66,6 +67,8 @@ export default defineSchema({
       v.union(v.literal("swap"), v.literal("pay"), v.literal("both")),
     ),
     price: v.optional(v.number()),
+    attendanceAppliedAt: v.optional(v.number()),
+    attendanceGuestCount: v.optional(v.number()),
   })
     .index("by_ownerUserId", ["ownerUserId"])
     .index("by_status", ["status"])
@@ -131,4 +134,48 @@ export default defineSchema({
       ),
     ),
   }).index("by_conversationId", ["conversationId"]),
+  pushTokens: defineTable({
+    userId: v.id("users"),
+    token: v.string(),
+    platform: v.union(v.literal("ios"), v.literal("android")),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_token", ["token"]),
+  collegeReviews: defineTable({
+    userId: v.id("users"),
+    listingId: v.id("listings"),
+    college: v.string(),
+    ratings: v.object({
+      food: v.number(),
+      atmosphere: v.number(),
+      value: v.number(),
+      overall: v.number(),
+    }),
+    comment: v.optional(v.string()),
+    isAnonymous: v.boolean(),
+    updatedAt: v.number(),
+  })
+    .index("by_listingId_and_userId", ["listingId", "userId"])
+    .index("by_college", ["college"])
+    .index("by_userId", ["userId"]),
+  collegeReviewReports: defineTable({
+    reviewId: v.id("collegeReviews"),
+    reporterUserId: v.id("users"),
+    reason: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_reviewId", ["reviewId"]),
+  collegeStats: defineTable({
+    college: v.string(),
+    reviewCount: v.number(),
+    ratingSums: v.object({
+      food: v.number(),
+      atmosphere: v.number(),
+      value: v.number(),
+      overall: v.number(),
+    }),
+    attendanceCount: v.number(),
+    completedFormalCount: v.number(),
+    updatedAt: v.number(),
+  }).index("by_college", ["college"]),
 });

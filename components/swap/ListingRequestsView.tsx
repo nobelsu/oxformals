@@ -20,6 +20,8 @@ import { SentRequestRow } from "@/components/swap/SentRequestRow";
 import { SignInGate } from "@/components/swap/SignInGate";
 import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { ListingGroupChatButton } from "@/components/chat/ListingGroupChatButton";
+import { ReviewFormalSection } from "@/components/colleges/ReviewFormalSection";
+import { ListingFormalBadges } from "@/components/colleges/ListingFormalBadges";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
@@ -35,9 +37,12 @@ import {
 } from "@/lib/data/requestFilters";
 import { placeholderUser } from "@/lib/data/users";
 import type { Listing, RequestType } from "@/lib/data/types";
+import { listingIsPast } from "@/lib/data/collegeReviewEligibility";
+import { useNowMs } from "@/lib/hooks/useNowMs";
 
 export function ListingRequestsView({ listingId }: { listingId: string }) {
   const router = useRouter();
+  const nowMs = useNowMs();
   const { isAuthenticated, user } = useAuth();
   const {
     listings,
@@ -59,7 +64,9 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     [listings, listingId],
   );
 
-  const canViewListing = !!(user && listing && listing.ownerUserId === user.id);
+  const isOwner = !!(user && listing && listing.ownerUserId === user.id);
+  const isMember = !!(user && listing && listing.members.includes(user.id));
+  const canViewListing = isOwner || isMember;
 
   const myActiveListings = useMemo(
     () =>
@@ -141,10 +148,11 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     message: string;
     variant?: "default" | "destructive";
     confirmLabel?: string;
-    onConfirm: () => void;
+    onConfirm: () => void | Promise<void>;
   } | null>(null);
   const [blockingRequestOpen, setBlockingRequestOpen] = useState(false);
   const [blockingHasAccepted, setBlockingHasAccepted] = useState(false);
+  const [acceptError, setAcceptError] = useState<string | null>(null);
 
   const handleWithdraw = useCallback(
     (requestId: string) => {
@@ -178,7 +186,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             Listing not found
           </h2>
           <p className="mt-2 text-[var(--ink-muted)]">
-            That listing does not exist or is not yours.
+            That listing does not exist or you are not in the group.
           </p>
           <Link
             href="/?tab=requests"
@@ -187,6 +195,38 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             Back to Listings
           </Link>
         </SketchCard>
+      </main>
+    );
+  }
+
+  if (!isOwner && isMember && listing) {
+    return (
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/?tab=requests"
+            className="rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+          >
+            Back to listings
+          </Link>
+        </div>
+        <SketchCard seed={listing.id.length} className="p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <h1 className="font-display text-3xl uppercase tracking-wide">
+              {listing.college}
+            </h1>
+            <ListingFormalBadges isPast={listingIsPast(listing.dateTime, nowMs)} />
+          </div>
+          <p className="mt-2 text-[var(--ink-muted)]">
+            {formatListingDate(listing.dateTime)} · Group of {listing.groupSize}
+          </p>
+          {listing.message ? (
+            <p className="mt-4 text-sm italic text-[var(--ink-soft)]">
+              &ldquo;{listing.message}&rdquo;
+            </p>
+          ) : null}
+        </SketchCard>
+        <ReviewFormalSection listingId={listing.id} college={listing.college} />
       </main>
     );
   }
@@ -253,6 +293,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
               </h1>
               <div className="flex flex-wrap items-center gap-2">
                 <ListingTypeTag listingType={listing.listingType} />
+                <ListingFormalBadges isPast={listingIsPast(listing.dateTime, nowMs)} />
                 <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
                   {statusMap[listing.status]}
                 </span>
@@ -366,6 +407,9 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
           <h2 className="font-display text-3xl uppercase tracking-wide">
             Incoming requests
           </h2>
+          {acceptError ? (
+            <p className="mt-2 text-sm text-[var(--danger)]">{acceptError}</p>
+          ) : null}
           {incoming.length === 0 ? (
             <p className="mt-2 text-[var(--ink-muted)]">No requests for this listing yet.</p>
           ) : (
@@ -386,31 +430,40 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                     targetListing={listing}
                     onAccept={() => {
                       const isPay = resolveRequestType(r) === "pay";
+                      setAcceptError(null);
                       setConfirmDialog({
                         message: isPay
                           ? `Accept this pay request? ${fromUser.name} will join your group.`
                           : `Accept this swap? ${fromUser.name} will join your group.`,
                         confirmLabel: "Accept",
-                        onConfirm: () => {
+                        onConfirm: async () => {
                           setConfirmDialog(null);
-                          const updated = acceptRequest(r.id);
-                          if (!updated) return;
-                          if (isPay) {
-                            setConfirmed({
-                              requestType: "pay",
-                              mine: listing,
-                              theirs: null,
-                              otherUserId: r.fromUserId,
-                            });
-                          } else {
-                            setConfirmed({
-                              requestType: "swap",
-                              mine: getListing(r.targetListingId) ?? null,
-                              theirs: r.offeringListingId
-                                ? (getListing(r.offeringListingId) ?? null)
-                                : null,
-                              otherUserId: r.fromUserId,
-                            });
+                          try {
+                            const updated = await acceptRequest(r.id);
+                            if (!updated) return;
+                            if (isPay) {
+                              setConfirmed({
+                                requestType: "pay",
+                                mine: listing,
+                                theirs: null,
+                                otherUserId: r.fromUserId,
+                              });
+                            } else {
+                              setConfirmed({
+                                requestType: "swap",
+                                mine: getListing(r.targetListingId) ?? null,
+                                theirs: r.offeringListingId
+                                  ? (getListing(r.offeringListingId) ?? null)
+                                  : null,
+                                otherUserId: r.fromUserId,
+                              });
+                            }
+                          } catch (err) {
+                            setAcceptError(
+                              err instanceof Error
+                                ? err.message
+                                : "Could not accept request.",
+                            );
                           }
                         },
                       });
@@ -494,8 +547,6 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
         }}
         targetListing={requestTarget}
         myListings={myActiveListings.filter((l) => l.id !== listing.id)}
-        requests={requests}
-        userId={user?.id}
         onSubmit={async ({ offeringListingId, message }) => {
           if (!requestTarget) return;
           const result = await sendRequest({

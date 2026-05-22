@@ -10,10 +10,13 @@ import {
   sketchCardBlockyHover,
 } from "@/components/ui/SketchCard";
 import type { User } from "@/lib/auth/types";
+import { ListingFormalBadges } from "@/components/colleges/ListingFormalBadges";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
 import { formatListingDate, formatPrice, formatYearLabel } from "@/lib/data/format";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { Listing } from "@/lib/data/types";
+import { listingIsPast } from "@/lib/data/collegeReviewEligibility";
+import { useNowMs } from "@/lib/hooks/useNowMs";
 
 type Props = {
   listing: Listing;
@@ -25,6 +28,7 @@ type Props = {
   memberUsers?: User[];
   onViewRequests?: () => void;
   compact?: boolean;
+  canRate?: boolean;
 };
 
 export function MyListingCard({
@@ -34,8 +38,11 @@ export function MyListingCard({
   memberUsers = [],
   onViewRequests,
   compact = false,
+  canRate = false,
 }: Props) {
   const [opening, setOpening] = useState(false);
+  const nowMs = useNowMs();
+  const isPast = listingIsPast(listing.dateTime, nowMs);
   const statusMap: Record<Listing["status"], string> = {
     active: "Active",
     confirmed: "Listing full",
@@ -69,6 +76,7 @@ export function MyListingCard({
         </h3>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
           <ListingTypeTag listingType={listing.listingType} />
+          <ListingFormalBadges isPast={isPast} canRate={canRate} />
           <span className="rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-xs">
             {statusMap[listing.status]}
           </span>

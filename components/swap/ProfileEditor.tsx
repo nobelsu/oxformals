@@ -14,12 +14,12 @@ import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
 import { SketchCard } from "@/components/ui/SketchCard";
 import type { AvatarSource } from "@/lib/auth/types";
 import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
+import { ROLE_OPTIONS } from "@/lib/data/roles";
 
 const TARGET_SIZE = 256;
 const MAX_DATA_URL_BYTES = 250 * 1024;
 
 const COLLEGE_LIST = OXFORD_COLLEGES as readonly string[];
-const ROLE_OPTIONS = ["Undergrad", "Masters", "DPhil"] as const;
 
 const MAX_INTEREST_LENGTH = 40;
 

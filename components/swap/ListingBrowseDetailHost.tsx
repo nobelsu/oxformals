@@ -152,8 +152,6 @@ export function ListingBrowseDetailHost({ listingId, open, onClose }: Props) {
         }}
         targetListing={requestTarget}
         myListings={myActiveListings}
-        requests={requests}
-        userId={user?.id}
         onSubmit={async ({ offeringListingId, message }) => {
           if (!requestTarget) return;
           const result = await sendRequest({

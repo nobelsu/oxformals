@@ -13,6 +13,12 @@
   --accent-hover: #e3a9a2;
   --accent-ink: #1a140f;
   --danger: #c96360;
+  /* Podium winner — light: ink on blush; dark: accent pops on warm paper */
+  --podium-winner-bg: color-mix(in srgb, var(--accent) 16%, var(--paper));
+  --podium-winner-ring: color-mix(in srgb, var(--accent-hover) 70%, var(--ink));
+  --podium-winner-emphasis: var(--ink);
+  --podium-winner-score: var(--ink);
+  --podium-step-fill: color-mix(in srgb, var(--accent) 55%, var(--ink-soft));
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,6 +33,11 @@
     --accent: #edbfba;
     --accent-hover: #e3a9a2;
     --accent-ink: #1a140f;
+    --podium-winner-bg: color-mix(in srgb, var(--accent) 22%, var(--paper));
+    --podium-winner-ring: color-mix(in srgb, var(--accent) 55%, transparent);
+    --podium-winner-emphasis: var(--accent);
+    --podium-winner-score: var(--accent);
+    --podium-step-fill: var(--accent);
   }
 }
 

@@ -12,6 +12,7 @@ import { NavSettingsModal } from "./NavSettingsModal";
 
 const TABS = [
   { id: "browse", label: "Browse" },
+  { id: "rankings", label: "Rankings" },
   { id: "requests", label: "Listings" },
   { id: "chats", label: "Chats" },
   { id: "mine", label: "Me" },
@@ -44,9 +45,12 @@ function NavInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isRequestsDetail = pathname?.startsWith("/requests/") ?? false;
+  const isCollegeDetail = pathname?.startsWith("/college/") ?? false;
   const activeTab = isRequestsDetail
     ? "requests"
-    : searchParams.get("tab") ?? "browse";
+    : isCollegeDetail
+      ? "rankings"
+      : searchParams.get("tab") ?? "browse";
   const onTabbedPage = pathname === "/" || isRequestsDetail;
   const activeTabLabel =
     TABS.find((t) => t.id === activeTab)?.label ?? "Browse";
@@ -98,7 +102,11 @@ function NavInner() {
 
         <div className="flex min-w-0 items-center justify-center sm:col-start-2">
           <p className="min-w-0 truncate text-center font-display text-lg uppercase tracking-[0.2em] text-[var(--ink)] sm:hidden">
-            {onTabbedPage ? activeTabLabel : "Oxformals"}
+            {isCollegeDetail
+              ? "Rankings"
+              : onTabbedPage
+                ? activeTabLabel
+                : "Oxformals"}
           </p>
           <ul className="hidden min-w-0 max-w-full items-center justify-center gap-10 overflow-x-auto overflow-y-hidden sm:flex">
             {TABS.map((t) => (
@@ -106,7 +114,10 @@ function NavInner() {
                 key={t.id}
                 tab={t}
                 href={hrefFor(t.id)}
-                isActive={onTabbedPage && activeTab === t.id}
+                isActive={
+                  (onTabbedPage && activeTab === t.id) ||
+                  (isCollegeDetail && t.id === "rankings")
+                }
                 totalUnread={totalUnread}
               />
             ))}
@@ -179,7 +190,10 @@ function NavInner() {
                 <NavTabLink
                   tab={t}
                   href={hrefFor(t.id)}
-                  isActive={onTabbedPage && activeTab === t.id}
+                  isActive={
+                    (onTabbedPage && activeTab === t.id) ||
+                    (isCollegeDetail && t.id === "rankings")
+                  }
                   totalUnread={totalUnread}
                   onNavigate={() => setDrawerOpen(false)}
                   className="block w-full rounded-lg px-3 py-3 text-left text-xl"
@@ -265,7 +279,7 @@ function NavTabLink({
       >
         {tab.label}
       </span>
-      {tab.id === "chats" ? (
+      {tab.id === "rankings" ? (
         <span
           className="rounded-full border border-[var(--accent)] px-1.5 py-px text-[0.55rem] font-semibold normal-case tracking-normal text-[var(--accent)]"
           aria-hidden="true"

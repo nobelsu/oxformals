@@ -48,7 +48,7 @@ export type DataContextValue = {
     offeringListingId: string;
     message: string;
   }) => Promise<SwapRequest | null>;
-  acceptRequest: (requestId: string) => SwapRequest | null;
+  acceptRequest: (requestId: string) => Promise<SwapRequest | null>;
   declineRequest: (requestId: string) => void;
   withdrawRequest: (requestId: string) => boolean;
   updateListing: (
@@ -353,13 +353,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   );
 
   const acceptRequest = useCallback(
-    (requestId: string): SwapRequest | null => {
+    async (requestId: string): Promise<SwapRequest | null> => {
       if (!user) return null;
       const req = requests.find((r) => r.id === requestId);
       if (!req || req.toUserId !== user.id || req.status !== "pending") {
         return null;
       }
-      void acceptRequestMut({ requestId: requestId as Id<"requests"> });
+      await acceptRequestMut({ requestId: requestId as Id<"requests"> });
       return { ...req, status: "accepted" };
     },
     [user, requests, acceptRequestMut],

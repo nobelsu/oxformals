@@ -1,8 +1,5 @@
 import type { SwapRequest } from "./types";
 
-export const OFFERING_NO_SWAP_CAPACITY_MESSAGE =
-  "Your listing has no seats left to offer in new swaps.";
-
 /** Resolve request type; pay requests have no offering listing. */
 export function resolveRequestType(request: SwapRequest): SwapRequest["requestType"] {
   if (request.requestType) return request.requestType;
@@ -82,41 +79,4 @@ export function findBlockingOutgoingRequestForTarget(
     (r) =>
       isActiveOutgoing(r, userId) && r.targetListingId === targetListingId,
   );
-}
-
-/** Active outgoing swap requests that reserve capacity on an offering listing. */
-export function outgoingSwapsUsingOffering(
-  requests: SwapRequest[],
-  userId: string,
-  offeringListingId: string,
-): SwapRequest[] {
-  return requests.filter(
-    (r) =>
-      isActiveOutgoing(r, userId) &&
-      r.offeringListingId === offeringListingId &&
-      resolveRequestType(r) === "swap",
-  );
-}
-
-/** Whether the offering listing can support another outgoing swap request. */
-export function offeringHasSwapCapacity(
-  seatsAvailable: number,
-  reservedCount: number,
-): boolean {
-  return seatsAvailable > 0 && reservedCount < seatsAvailable;
-}
-
-/** Whether the user can send a new swap using this offering listing. */
-export function canSendSwapWithOffering(
-  requests: SwapRequest[],
-  userId: string,
-  offeringListingId: string,
-  seatsAvailable: number,
-): boolean {
-  const reserved = outgoingSwapsUsingOffering(
-    requests,
-    userId,
-    offeringListingId,
-  ).length;
-  return offeringHasSwapCapacity(seatsAvailable, reserved);
 }

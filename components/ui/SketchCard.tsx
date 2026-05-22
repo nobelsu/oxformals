@@ -7,9 +7,25 @@ type Props = HTMLAttributes<HTMLDivElement> & {
   children: ReactNode;
   seed?: number;
   padded?: boolean;
+  /** Inset unpadded content so row edges do not cross the hand-drawn border. */
+  contentGutter?: boolean;
   roughness?: number;
   strokeWidth?: number;
+  bowing?: number;
+  /** Hand-drawn accent wash inside the border. */
+  roughFill?: boolean;
+  /** SVG stroke/fill color when `roughFill` (keeps host `text-[var(--ink)]` readable). */
+  roughTintClassName?: string;
 };
+
+/** Space between the host edge and content so rough strokes do not overlap rows. */
+function sketchBorderGutter(
+  strokeWidth: number,
+  bowing: number,
+  roughness: number,
+): number {
+  return Math.ceil(strokeWidth * 1.5 + bowing * 2 + roughness);
+}
 
 // Renders an actual hand-drawn SVG rectangle behind its children using
 // roughjs. The border wobbles authentically rather than being a smooth CSS
@@ -18,8 +34,12 @@ export function SketchCard({
   children,
   seed,
   padded = true,
+  contentGutter = false,
   roughness = 2.2,
   strokeWidth = 2.5,
+  bowing = 1.6,
+  roughFill = false,
+  roughTintClassName = "text-[var(--accent)]",
   className = "",
   style,
   ...rest
@@ -28,6 +48,9 @@ export function SketchCard({
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   const effectiveSeed = typeof seed === "number" ? Math.abs(seed) || 1 : 1;
+  const gutter = sketchBorderGutter(strokeWidth, bowing, roughness);
+  const borderInset =
+    !padded && contentGutter ? gutter : strokeWidth + 1;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -47,7 +70,7 @@ export function SketchCard({
       while (svg.firstChild) svg.removeChild(svg.firstChild);
 
       const rc = rough.svg(svg);
-      const inset = strokeWidth + 1;
+      const inset = borderInset;
       const node = rc.rectangle(
         inset,
         inset,
@@ -57,9 +80,12 @@ export function SketchCard({
           stroke: "currentColor",
           strokeWidth,
           roughness,
-          bowing: 1.6,
+          bowing,
           seed: effectiveSeed,
-          fill: "none",
+          fill: roughFill ? "currentColor" : "none",
+          fillStyle: roughFill ? "solid" : undefined,
+          fillWeight: roughFill ? 0.5 : undefined,
+          preserveVertices: true,
         },
       );
       svg.appendChild(node);
@@ -78,7 +104,10 @@ export function SketchCard({
       cancelAnimationFrame(frame);
       ro.disconnect();
     };
-  }, [effectiveSeed, roughness, strokeWidth]);
+  }, [effectiveSeed, roughness, strokeWidth, bowing, borderInset, roughFill]);
+
+  const contentStyle =
+    !padded && contentGutter ? { padding: gutter } : undefined;
 
   return (
     <div
@@ -89,10 +118,15 @@ export function SketchCard({
     >
       <svg
         ref={svgRef}
-        className="pointer-events-none absolute inset-0 overflow-visible"
+        className={`pointer-events-none absolute inset-0 ${
+          roughFill ? roughTintClassName : ""
+        }`}
         aria-hidden
       />
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+      <div
+        className="relative flex min-h-0 min-w-0 flex-1 flex-col"
+        style={contentStyle}
+      >
         {children}
       </div>
     </div>

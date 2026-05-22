@@ -12,9 +12,9 @@ import {
 import { useAuth } from "@/components/auth/useAuth";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
+import { ROLE_OPTIONS } from "@/lib/data/roles";
 
 type Step = "email" | "code" | "profile";
-const ROLE_OPTIONS = ["Undergrad", "Masters", "DPhil"] as const;
 const COLLEGE_LIST = OXFORD_COLLEGES as readonly string[];
 const ADMIN_EMAIL = "admin@ox.ac.uk";
 

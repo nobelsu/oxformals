@@ -6,6 +6,14 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { enrichListing } from "./listingHelpers";
 import { DEFAULT_UI_FONT, uiFontValidator } from "./uiFont";
+import { hasVerifiedEmail } from "./userVerification";
+
+const chatPickerUserValidator = v.object({
+  _id: v.id("users"),
+  name: v.optional(v.string()),
+  college: v.optional(v.string()),
+  email: v.optional(v.string()),
+});
 
 const avatarValue = v.union(
   v.object({ kind: v.literal("preset"), id: v.string() }),
@@ -122,6 +130,26 @@ export const listPublic = query({
   handler: async (ctx) => {
     const users = await ctx.db.query("users").order("desc").take(500);
     return users.map(userWithoutPublicContact);
+  },
+});
+
+/** Verified users for the new-chat picker (minimal fields, auth required). */
+export const listForChatPicker = query({
+  args: {},
+  returns: v.array(chatPickerUserValidator),
+  handler: async (ctx) => {
+    const viewerId = await getAuthUserId(ctx);
+    if (!viewerId) return [];
+
+    const users = await ctx.db.query("users").order("desc").take(500);
+    return users
+      .filter((u) => u._id !== viewerId && hasVerifiedEmail(u))
+      .map((u) => ({
+        _id: u._id,
+        name: u.name,
+        college: u.college,
+        email: u.email,
+      }));
   },
 });
 

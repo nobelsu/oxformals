@@ -6,6 +6,11 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { groupSizeValidator } from "./groupSize";
 import {
+  applyCompletedFormalForListing,
+  scheduleFormalCompletion,
+  syncListingAttendanceGuests,
+} from "./collegeStats";
+import {
   countReservedSwapsForOffering,
   declinePendingRequestsForListing,
   deleteMenuPdfIfPresent,
@@ -186,6 +191,17 @@ export const createListing = mutation({
     await ctx.scheduler.runAfter(0, internal.emails.notifyWishlistForNewListing, {
       listingId,
     });
+
+    await ctx.scheduler.runAfter(
+      0,
+      internal.pushNotifications.sendWishlistListingPush,
+      { listingId },
+    );
+
+    const listing = await ctx.db.get(listingId);
+    if (listing) {
+      await scheduleFormalCompletion(ctx, listingId, listing.dateTime);
+    }
 
     return listingId;
   },
@@ -374,23 +390,60 @@ export const withdrawRequest = mutation({
   },
 });
 
+async function assertCanAcceptRequest(
+  ctx: MutationCtx,
+  req: Doc<"requests">,
+): Promise<{ target: Doc<"listings">; offering?: Doc<"listings"> }> {
+  const requestType = resolveRequestType(req);
+  const target = await getListingOrThrow(ctx, req.targetListingId);
+
+  if (target.status !== "active") {
+    throw new Error("Your listing is no longer active, so this request can't be accepted.");
+  }
+  if (listingIsPast(target.dateTime, Date.now())) {
+    throw new Error("This formal has passed, so this request can't be accepted.");
+  }
+  if (target.seatsAvailable <= 0) {
+    throw new Error(
+      "Your listing has no seats left, so this request can't be accepted.",
+    );
+  }
+
+  if (requestType === "pay") {
+    return { target };
+  }
+
+  if (!req.offeringListingId) {
+    throw new Error("Swap request is missing an offering listing.");
+  }
+
+  const offering = await getListingOrThrow(ctx, req.offeringListingId);
+  if (offering.status !== "active") {
+    throw new Error(
+      "Their offering listing is no longer active, so this swap can't be accepted.",
+    );
+  }
+  if (listingIsPast(offering.dateTime, Date.now())) {
+    throw new Error(
+      "Their offering formal has passed, so this swap can't be accepted.",
+    );
+  }
+  if (offering.seatsAvailable <= 0) {
+    throw new Error(
+      "Their offering listing has no seats left, so this swap can't be accepted.",
+    );
+  }
+
+  return { target, offering };
+}
+
 async function performAccept(
   ctx: MutationCtx,
   req: Doc<"requests">,
   skipIds: Id<"requests">[] = [],
 ) {
   const requestType = resolveRequestType(req);
-  const target = await getListingOrThrow(ctx, req.targetListingId);
-
-  if (target.status !== "active") {
-    throw new Error("Target listing is no longer active.");
-  }
-  if (listingIsPast(target.dateTime, Date.now())) {
-    throw new Error("This formal has passed.");
-  }
-  if (target.seatsAvailable <= 0) {
-    throw new Error("No seats available on target listing.");
-  }
+  const { target, offering } = await assertCanAcceptRequest(ctx, req);
 
   await ctx.db.patch(req._id, { status: "accepted" });
 
@@ -401,6 +454,11 @@ async function performAccept(
     members: newMembers,
     ...(newSeats === 0 ? { status: "closed" as const } : {}),
   });
+
+  const updatedTarget = await ctx.db.get(req.targetListingId);
+  if (updatedTarget) {
+    await syncListingAttendanceGuests(ctx, updatedTarget, Date.now());
+  }
 
   const idsToSkip = new Set([req._id, ...skipIds]);
 
@@ -417,23 +475,8 @@ async function performAccept(
     }
   }
 
-  if (requestType === "pay") {
+  if (requestType === "pay" || !offering || !req.offeringListingId) {
     return;
-  }
-
-  if (!req.offeringListingId) {
-    throw new Error("Swap request is missing an offering listing.");
-  }
-
-  const offering = await getListingOrThrow(ctx, req.offeringListingId);
-  if (offering.status !== "active") {
-    throw new Error("Offering listing is no longer active.");
-  }
-  if (listingIsPast(offering.dateTime, Date.now())) {
-    throw new Error("This formal has passed.");
-  }
-  if (offering.seatsAvailable <= 0) {
-    throw new Error("No seats available on offering listing.");
   }
 
   const newOfferingSeats = offering.seatsAvailable - 1;
@@ -443,6 +486,11 @@ async function performAccept(
     members: newOfferingMembers,
     ...(newOfferingSeats === 0 ? { status: "confirmed" as const } : {}),
   });
+
+  const updatedOffering = await ctx.db.get(req.offeringListingId);
+  if (updatedOffering) {
+    await syncListingAttendanceGuests(ctx, updatedOffering, Date.now());
+  }
 
   if (newOfferingSeats === 0) {
     const pendingForOffering = await ctx.db
@@ -499,6 +547,11 @@ export const leaveGroup = mutation({
       ...(reopened ? { status: "active" as const } : {}),
     });
 
+    const updated = await ctx.db.get(args.listingId);
+    if (updated) {
+      await syncListingAttendanceGuests(ctx, updated, Date.now());
+    }
+
     const acceptedRequests = await ctx.db
       .query("requests")
       .withIndex("by_targetListingId_and_status", (q) =>
@@ -543,6 +596,11 @@ export const removeMember = mutation({
       seatsAvailable: newSeats,
       ...(reopened ? { status: "active" as const } : {}),
     });
+
+    const updated = await ctx.db.get(args.listingId);
+    if (updated) {
+      await syncListingAttendanceGuests(ctx, updated, Date.now());
+    }
 
     const acceptedRequests = await ctx.db
       .query("requests")
@@ -671,6 +729,12 @@ export const updateListing = mutation({
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(args.listingId, patch);
     }
+
+    const updated = await ctx.db.get(args.listingId);
+    if (updated && args.dateTime !== undefined && updated.attendanceAppliedAt === undefined) {
+      await scheduleFormalCompletion(ctx, args.listingId, updated.dateTime);
+    }
+
     return args.listingId;
   },
 });
@@ -694,6 +758,7 @@ async function expirePastListingsBatch(
   for (const listing of result.page) {
     if (listingIsPast(listing.dateTime, nowMs)) {
       await expireListing(ctx, listing._id);
+      await applyCompletedFormalForListing(ctx, listing._id, nowMs);
       expired++;
     }
   }
