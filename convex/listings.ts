@@ -13,13 +13,11 @@ import {
 import { removeUserFromListingGroup } from "./listingMembership";
 import { normalizeCollegeName } from "../lib/data/colleges";
 import {
-  countReservedSwapsForOffering,
   declinePendingRequestsForListing,
   deleteMenuPdfIfPresent,
   enrichListing,
   expireListing,
   listingIsPast,
-  OFFERING_NO_SWAP_CAPACITY_MESSAGE,
   resolveStatusAfterEdit,
   validateMenuPdfId,
 } from "./listingHelpers";
@@ -350,16 +348,6 @@ export const createRequest = mutation({
     }
     if (!listingSupportsSwap(resolveListingType(offering))) {
       throw new Error("Pay listings cannot be used in a swap.");
-    }
-    if (offering.seatsAvailable <= 0) {
-      throw new Error(OFFERING_NO_SWAP_CAPACITY_MESSAGE);
-    }
-    const reservedForOffering = countReservedSwapsForOffering(
-      mine,
-      args.offeringListingId,
-    );
-    if (reservedForOffering >= offering.seatsAvailable) {
-      throw new Error(OFFERING_NO_SWAP_CAPACITY_MESSAGE);
     }
 
     const existingSwap = mine.find(
