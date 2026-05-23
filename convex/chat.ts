@@ -947,6 +947,7 @@ export const listGroupMembers = query({
       id: Id<"users">;
       name: string;
       college?: string;
+      avatar?: Doc<"users">["avatar"];
       joinedAt: number;
     }[] = [];
 

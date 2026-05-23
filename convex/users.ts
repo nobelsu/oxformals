@@ -344,6 +344,7 @@ export const getPublicProfile = query({
             }
           : {}),
         subject: user.subject ?? "",
+        dietaryRequirements: user.dietaryRequirements ?? "",
         uiFont: user.uiFont ?? DEFAULT_UI_FONT,
         avatar: user.avatar,
       },
