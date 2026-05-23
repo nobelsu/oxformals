@@ -24,6 +24,7 @@ import type * as emailNotifications from "../emailNotifications.js";
 import type * as emails from "../emails.js";
 import type * as formalAttendance from "../formalAttendance.js";
 import type * as groupSize from "../groupSize.js";
+import type * as guards from "../guards.js";
 import type * as http from "../http.js";
 import type * as listingFormat from "../listingFormat.js";
 import type * as listingHelpers from "../listingHelpers.js";
@@ -33,6 +34,7 @@ import type * as pushNotifications from "../pushNotifications.js";
 import type * as storage from "../storage.js";
 import type * as testAuth from "../testAuth.js";
 import type * as uiFont from "../uiFont.js";
+import type * as uploadOwnership from "../uploadOwnership.js";
 import type * as userVerification from "../userVerification.js";
 import type * as users from "../users.js";
 
@@ -59,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   emails: typeof emails;
   formalAttendance: typeof formalAttendance;
   groupSize: typeof groupSize;
+  guards: typeof guards;
   http: typeof http;
   listingFormat: typeof listingFormat;
   listingHelpers: typeof listingHelpers;
@@ -68,6 +71,7 @@ declare const fullApi: ApiFromModules<{
   storage: typeof storage;
   testAuth: typeof testAuth;
   uiFont: typeof uiFont;
+  uploadOwnership: typeof uploadOwnership;
   userVerification: typeof userVerification;
   users: typeof users;
 }>;

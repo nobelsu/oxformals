@@ -147,7 +147,7 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
                   className="flex items-center gap-2.5 rounded-2xl border-[2px] border-[var(--ink)]/15 px-3 py-2"
                 >
                   <Link href={`/profile/${m.id}`} onClick={onClose}>
-                    <Avatar name={m.name} size="sm" />
+                    <Avatar name={m.name} source={m.avatar} size="sm" />
                   </Link>
                   <div className="min-w-0 flex-1">
                     <Link
@@ -209,6 +209,7 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
                         <ChatUserPickRow
                           name={u.name}
                           college={u.college}
+                          avatar={u.avatar}
                           onClick={() => void handleAdd(u.id)}
                         />
                       </li>

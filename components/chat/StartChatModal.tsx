@@ -72,6 +72,7 @@ export function StartChatModal({ open, onClose }: Props) {
                 <ChatUserPickRow
                   name={user.name}
                   college={user.college}
+                  avatar={user.avatar}
                   disabled={starting}
                   onClick={() => void selectUser(user.id)}
                 />

@@ -177,7 +177,12 @@ export function MessagesTab() {
                     {isGroup ? (
                       <div className="flex shrink-0 -space-x-1.5">
                         {convo.memberPreview.map((m) => (
-                          <Avatar key={m.id} name={m.name} size="md" />
+                          <Avatar
+                            key={m.id}
+                            name={m.name}
+                            source={m.avatar}
+                            size="md"
+                          />
                         ))}
                         {convo.memberCount > convo.memberPreview.length ? (
                           <span className="flex h-10 w-10 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] text-xs font-medium">
@@ -186,7 +191,11 @@ export function MessagesTab() {
                         ) : null}
                       </div>
                     ) : (
-                      <Avatar name={convo.otherUserName} size="md" />
+                      <Avatar
+                        name={convo.otherUserName}
+                        source={convo.otherUserAvatar}
+                        size="md"
+                      />
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">

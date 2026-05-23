@@ -21,6 +21,7 @@ import {
   resolveStatusAfterEdit,
   validateMenuPdfId,
 } from "./listingHelpers";
+import { requireActiveUser } from "./guards";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -104,8 +105,7 @@ function listingSupportsSwap(
 }
 
 async function requireUserId(ctx: Ctx): Promise<Id<"users">> {
-  const userId = await getAuthUserId(ctx);
-  if (!userId) throw new Error("Not authenticated");
+  const { userId } = await requireActiveUser(ctx);
   return userId;
 }
 
@@ -214,7 +214,7 @@ export const createListing = mutation({
     validateListingTypeAndPrice(args.listingType, args.price);
 
     if (args.menuPdfId !== undefined) {
-      await validateMenuPdfId(ctx, args.menuPdfId);
+      await validateMenuPdfId(ctx, args.menuPdfId, userId);
     }
 
     const listingId = await ctx.db.insert("listings", {
@@ -687,7 +687,7 @@ export const updateListing = mutation({
         }
         patch.menuPdfId = undefined;
       } else {
-        await validateMenuPdfId(ctx, args.menuPdfId);
+        await validateMenuPdfId(ctx, args.menuPdfId, userId);
         if (listing.menuPdfId && listing.menuPdfId !== args.menuPdfId) {
           await deleteMenuPdfIfPresent(ctx, listing.menuPdfId);
         }
@@ -786,27 +786,6 @@ export const expirePastListings = internalMutation({
     }
 
     return { expired: batch.expired, scanned: batch.scanned };
-  },
-});
-
-export const syncExpiredListings = mutation({
-  args: {},
-  handler: async (ctx) => {
-    await requireUserId(ctx);
-
-    let totalExpired = 0;
-    let totalScanned = 0;
-    let cursor: string | undefined;
-
-    for (;;) {
-      const batch = await expirePastListingsBatch(ctx, cursor);
-      totalExpired += batch.expired;
-      totalScanned += batch.scanned;
-      if (batch.isDone) break;
-      cursor = batch.continueCursor;
-    }
-
-    return { expired: totalExpired, scanned: totalScanned };
   },
 });
 

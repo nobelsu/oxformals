@@ -1,10 +1,12 @@
 "use client";
 
 import { Avatar } from "@/components/ui/Avatar";
+import type { AvatarSource } from "@/lib/auth/types";
 
 type Props = {
   name: string;
   college?: string;
+  avatar?: AvatarSource;
   selected?: boolean;
   trailing?: React.ReactNode;
   disabled?: boolean;
@@ -14,6 +16,7 @@ type Props = {
 export function ChatUserPickRow({
   name,
   college,
+  avatar,
   selected = false,
   trailing,
   disabled,
@@ -31,7 +34,7 @@ export function ChatUserPickRow({
           : "border-transparent hover:border-[var(--ink)]/15 hover:bg-[var(--ink)]/5",
       ].join(" ")}
     >
-      <Avatar name={name} size="sm" />
+      <Avatar name={name} source={avatar} size="sm" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-[var(--ink)]">{name}</p>
         {college ? (

@@ -12,11 +12,13 @@ import { OutlineTextField } from "@/components/ui/OutlineTextField";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { MAX_GROUP_SIZE } from "@/lib/chat/constants";
+import type { AvatarSource } from "@/lib/auth/types";
 
 type SelectedMember = {
   id: Id<"users">;
   name: string;
   college?: string;
+  avatar?: AvatarSource;
 };
 
 type Props = {
@@ -135,6 +137,7 @@ export function CreateGroupModal({ open, onClose }: Props) {
                   <ChatUserPickRow
                     name={u.name}
                     college={u.college}
+                    avatar={u.avatar}
                     selected={isSelected}
                     disabled={disabled}
                     trailing={
@@ -149,6 +152,7 @@ export function CreateGroupModal({ open, onClose }: Props) {
                         id: u.id,
                         name: u.name,
                         ...(u.college ? { college: u.college } : {}),
+                        ...(u.avatar ? { avatar: u.avatar } : {}),
                       })
                     }
                   />

@@ -7,6 +7,7 @@ import {
 import { normalizeCollegeName } from "../lib/data/colleges";
 import type { CollegeReviewCategory } from "../lib/data/collegeReviews";
 import { isImageContentType } from "../lib/upload/imageFile";
+import { claimStorageOwnership, deleteStorageAndOwnership } from "./uploadOwnership";
 
 export { normalizeCollegeName };
 
@@ -132,6 +133,7 @@ export const MAX_REVIEW_IMAGES = 3;
 export async function validateReviewImageIds(
   ctx: MutationCtx,
   imageIds: Id<"_storage">[] | undefined,
+  ownerUserId: Id<"users">,
 ): Promise<Id<"_storage">[] | undefined> {
   if (!imageIds || imageIds.length === 0) return undefined;
 
@@ -151,6 +153,7 @@ export async function validateReviewImageIds(
     if (!isImageContentType(metadata.contentType)) {
       throw new Error("Review images must be JPEG, PNG, WebP, or GIF.");
     }
+    await claimStorageOwnership(ctx, imageId, ownerUserId);
   }
 
   return unique;
@@ -162,7 +165,7 @@ export async function deleteReviewImagesIfPresent(
 ): Promise<void> {
   if (!imageIds) return;
   for (const imageId of imageIds) {
-    await ctx.storage.delete(imageId);
+    await deleteStorageAndOwnership(ctx, imageId);
   }
 }
 

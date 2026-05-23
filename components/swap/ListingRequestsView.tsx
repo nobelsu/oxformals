@@ -44,8 +44,6 @@ import { placeholderUser } from "@/lib/data/users";
 import type { Listing, RequestType } from "@/lib/data/types";
 import { listingIsPast } from "@/lib/data/collegeReviewEligibility";
 import { useNowMs } from "@/lib/hooks/useNowMs";
-import { AttendedFormalPreviewView } from "@/components/preview/AttendedFormalPreviewView";
-import { isAttendedFormalPreviewListingId } from "@/lib/preview/attendedFormalPreview";
 
 export function ListingRequestsView({ listingId }: { listingId: string }) {
   const router = useRouter();
@@ -183,10 +181,6 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
         <SignInGate />
       </main>
     );
-  }
-
-  if (isAttendedFormalPreviewListingId(listingId)) {
-    return <AttendedFormalPreviewView />;
   }
 
   if (!canViewListing || !listing) {

@@ -1,4 +1,5 @@
 import type { Id } from "@/convex/_generated/dataModel";
+import type { AvatarSource } from "@/lib/auth/types";
 import type { ListingType } from "@/lib/data/types";
 
 export type ListingSummary = {
@@ -43,6 +44,7 @@ export type ChatMessage = {
 export type GroupMemberPreview = {
   id: Id<"users">;
   name: string;
+  avatar?: AvatarSource;
 };
 
 export type DmConversationPreview = {
@@ -50,6 +52,7 @@ export type DmConversationPreview = {
   id: Id<"conversations">;
   otherUserId: Id<"users">;
   otherUserName: string;
+  otherUserAvatar?: AvatarSource;
   otherUserCollege?: string;
   lastMessageAt: number;
   lastMessageBody?: string;

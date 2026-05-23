@@ -1,8 +1,7 @@
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
-import type { MutationCtx, QueryCtx } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
 import {
   hasConfirmedAttendance,
   hasDeclinedAttendance,
@@ -29,6 +28,7 @@ import {
   sortCollegeReviewRows,
   type CollegeReviewCategory,
 } from "../lib/data/collegeReviews";
+import { optionalUserId, requireActiveUser } from "./guards";
 
 const ratingsValidator = v.object({
   food: v.number(),
@@ -88,14 +88,6 @@ const leaderboardEntryValidator = v.object({
   attendanceCount: v.number(),
   completedFormalCount: v.number(),
 });
-
-async function requireUser(ctx: QueryCtx | MutationCtx) {
-  const userId = await getAuthUserId(ctx);
-  if (!userId) throw new Error("Not authenticated.");
-  const user = await ctx.db.get(userId);
-  if (!user) throw new Error("User not found.");
-  return { userId, user };
-}
 
 async function enrichReview(
   ctx: QueryCtx,
@@ -159,7 +151,7 @@ export const getReviewForListing = query({
   },
   returns: v.union(v.null(), publicReviewValidator),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = await optionalUserId(ctx);
     if (!userId) return null;
     const review = await ctx.db
       .query("collegeReviews")
@@ -188,7 +180,7 @@ export const getListingReviewState = query({
     existingReview: v.union(v.null(), publicReviewValidator),
   }),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = await optionalUserId(ctx);
     const listing = await ctx.db.get(args.listingId);
     if (!listing) {
       return {
@@ -263,7 +255,7 @@ export const submitReview = mutation({
   },
   returns: v.id("collegeReviews"),
   handler: async (ctx, args) => {
-    const { userId, user } = await requireUser(ctx);
+    const { userId, user } = await requireActiveUser(ctx);
     const listing = await ctx.db.get(args.listingId);
     if (!listing) throw new Error("Listing not found.");
 
@@ -291,7 +283,7 @@ export const submitReview = mutation({
 
     const college = normalizeCollegeName(listing.college);
     const ratings = normalizeRatings(args.ratings);
-    const imageIds = await validateReviewImageIds(ctx, args.imageIds);
+    const imageIds = await validateReviewImageIds(ctx, args.imageIds, userId);
     const reviewId = await ctx.db.insert("collegeReviews", {
       userId,
       listingId: args.listingId,
@@ -318,7 +310,7 @@ export const updateReview = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { userId } = await requireUser(ctx);
+    const { userId } = await requireActiveUser(ctx);
     const review = await ctx.db.get(args.reviewId);
     if (!review) throw new Error("Review not found.");
     if (review.userId !== userId) throw new Error("You can only edit your own review.");
@@ -329,7 +321,7 @@ export const updateReview = mutation({
     }
 
     const newRatings = normalizeRatings(args.ratings);
-    const imageIds = await validateReviewImageIds(ctx, args.imageIds);
+    const imageIds = await validateReviewImageIds(ctx, args.imageIds, userId);
     const removed = reviewImageIdsRemoved(review.imageIds, imageIds);
     if (removed.length > 0) {
       await deleteReviewImagesIfPresent(ctx, removed);
@@ -361,7 +353,7 @@ export const voteReview = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { userId } = await requireUser(ctx);
+    const { userId } = await requireActiveUser(ctx);
     const review = await ctx.db.get(args.reviewId);
     if (!review) throw new Error("Review not found.");
     if (review.userId === userId) {
@@ -418,7 +410,7 @@ export const reportReview = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { userId } = await requireUser(ctx);
+    const { userId } = await requireActiveUser(ctx);
     const review = await ctx.db.get(args.reviewId);
     if (!review) throw new Error("Review not found.");
     if (review.userId === userId) {
@@ -453,7 +445,7 @@ export const listReviewsForCollege = query({
   handler: async (ctx, args) => {
     const college = normalizeCollegeName(args.college);
     const limit = Math.min(args.limit ?? 50, 100);
-    const viewerId = await getAuthUserId(ctx);
+    const viewerId = await optionalUserId(ctx);
 
     const rows = await ctx.db
       .query("collegeReviews")
@@ -495,7 +487,7 @@ export const listPublicReviewsForUser = query({
   returns: v.array(publicReviewValidator),
   handler: async (ctx, args) => {
     const limit = Math.min(args.limit ?? 50, 100);
-    const viewerId = await getAuthUserId(ctx);
+    const viewerId = await optionalUserId(ctx);
 
     const rows = await ctx.db
       .query("collegeReviews")
@@ -514,7 +506,7 @@ export const getPendingReviewListingIds = query({
   },
   returns: v.array(v.id("listings")),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = await optionalUserId(ctx);
     if (!userId) return [];
 
     const user = await ctx.db.get(userId);

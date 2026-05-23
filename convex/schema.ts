@@ -144,6 +144,13 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_token", ["token"]),
+  uploadedFiles: defineTable({
+    storageId: v.id("_storage"),
+    ownerUserId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_storageId", ["storageId"])
+    .index("by_ownerUserId", ["ownerUserId"]),
   collegeReviews: defineTable({
     userId: v.id("users"),
     listingId: v.id("listings"),

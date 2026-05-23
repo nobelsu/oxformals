@@ -3,7 +3,6 @@
 import {
   createContext,
   useCallback,
-  useEffect,
   useMemo,
   type ReactNode,
 } from "react";
@@ -72,7 +71,22 @@ export type DataContextValue = {
 
 export const DataContext = createContext<DataContextValue | null>(null);
 
-function mapUser(doc: Doc<"users">): User {
+type PublicUserDoc = {
+  _id: Id<"users">;
+  name?: string;
+  email?: string;
+  college?: string;
+  year?: string;
+  role?: string;
+  interests?: string[];
+  subject?: string;
+  uiFont?: Doc<"users">["uiFont"];
+  instagramHandle?: string;
+  whatsappPhone?: string;
+  avatar?: Doc<"users">["avatar"];
+};
+
+function mapUser(doc: PublicUserDoc): User {
   return {
     id: doc._id,
     email: doc.email ?? "",
@@ -182,15 +196,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const deleteListingMut = useMutation(api.listings.deleteListing);
   const leaveGroupMut = useMutation(api.listings.leaveGroup);
   const removeMemberMut = useMutation(api.listings.removeMember);
-  const syncExpiredListingsMut = useMutation(api.listings.syncExpiredListings);
   const saveWishlistMut = useMutation(api.users.saveWishlistColleges);
   const getOrCreateConversationMut = useMutation(api.chat.getOrCreateConversation);
   const sendChatMessageMut = useMutation(api.chat.sendMessage);
-
-  useEffect(() => {
-    if (!user) return;
-    void syncExpiredListingsMut({});
-  }, [user, syncExpiredListingsMut]);
 
   const users = useMemo<User[]>(() => {
     if (!ready || convexUsers === undefined) return [];

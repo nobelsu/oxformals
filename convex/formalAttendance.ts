@@ -1,5 +1,4 @@
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -15,6 +14,7 @@ import {
 import { applyAttendanceConfirmation } from "../lib/data/collegeStats";
 import { removeUserFromListingGroup } from "./listingMembership";
 import { getOrCreateCollegeStatsDoc } from "./collegeStats";
+import { optionalUserId, requireActiveUser } from "./guards";
 
 const declinePresetValidator = v.string();
 
@@ -56,14 +56,6 @@ export async function hasDeclinedAttendance(
 ): Promise<boolean> {
   const row = await getAttendanceResponse(ctx, listingId, userId);
   return row !== null && row.attended === false;
-}
-
-async function requireUser(ctx: QueryCtx | MutationCtx) {
-  const userId = await getAuthUserId(ctx);
-  if (!userId) throw new Error("Not authenticated.");
-  const user = await ctx.db.get(userId);
-  if (!user) throw new Error("User not found.");
-  return { userId, user };
 }
 
 function listingEligibilityInput(listing: Doc<"listings">) {
@@ -123,7 +115,7 @@ export const confirmAttendance = mutation({
   },
   returns: v.id("formalAttendanceConfirmations"),
   handler: async (ctx, args) => {
-    const { userId, user } = await requireUser(ctx);
+    const { userId, user } = await requireActiveUser(ctx);
     const listing = await ctx.db.get(args.listingId);
     if (!listing) throw new Error("Listing not found.");
 
@@ -155,7 +147,7 @@ export const declineAttendance = mutation({
   },
   returns: v.id("formalAttendanceConfirmations"),
   handler: async (ctx, args) => {
-    const { userId, user } = await requireUser(ctx);
+    const { userId, user } = await requireActiveUser(ctx);
     const listing = await ctx.db.get(args.listingId);
     if (!listing) throw new Error("Listing not found.");
 
@@ -201,7 +193,7 @@ export const getPendingAttendanceListingIds = query({
   },
   returns: v.array(v.id("listings")),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = await optionalUserId(ctx);
     if (!userId) return [];
 
     const user = await ctx.db.get(userId);

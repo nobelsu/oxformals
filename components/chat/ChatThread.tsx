@@ -314,7 +314,7 @@ export function ChatThread({ conversation, onBack }: Props) {
             aria-label="View group members"
           >
             {conversation.memberPreview.map((m) => (
-              <Avatar key={m.id} name={m.name} size="sm" />
+              <Avatar key={m.id} name={m.name} source={m.avatar} size="sm" />
             ))}
             {conversation.memberCount > conversation.memberPreview.length ? (
               <span className="flex h-8 w-8 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] text-[0.65rem] font-medium">
@@ -327,7 +327,11 @@ export function ChatThread({ conversation, onBack }: Props) {
             href={`/profile/${conversation.otherUserId}`}
             className="shrink-0"
           >
-            <Avatar name={conversation.otherUserName} size="md" />
+            <Avatar
+              name={conversation.otherUserName}
+              source={conversation.otherUserAvatar}
+              size="md"
+            />
           </Link>
         )}
       </header>

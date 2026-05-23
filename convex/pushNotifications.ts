@@ -1,4 +1,3 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -13,6 +12,7 @@ import {
   formatListingDate,
   formatListingTypeLabel,
 } from "./listingFormat";
+import { requireActiveUser } from "./guards";
 
 const PUSH_PREVIEW_MAX_LENGTH = 120;
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
@@ -224,8 +224,7 @@ export const registerPushToken = mutation({
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return false;
+    const { userId } = await requireActiveUser(ctx);
 
     const rows = await getPushTokenRowsByToken(ctx, args.token);
     const existing = await dedupePushTokenRows(ctx, rows);
@@ -235,11 +234,12 @@ export const registerPushToken = mutation({
       if (existing.userId === userId && existing.platform === args.platform) {
         return true;
       }
-      await ctx.db.patch(existing._id, {
-        userId,
-        platform: args.platform,
-        updatedAt: now,
-      });
+      if (existing.userId !== userId) {
+        throw new Error(
+          "That push token is already linked to another account. Remove it there first.",
+        );
+      }
+      await ctx.db.patch(existing._id, { platform: args.platform, updatedAt: now });
     } else {
       await ctx.db.insert("pushTokens", {
         userId,
@@ -257,8 +257,7 @@ export const removePushToken = mutation({
   args: { token: v.string() },
   returns: v.boolean(),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return false;
+    const { userId } = await requireActiveUser(ctx);
 
     const rows = await getPushTokenRowsByToken(ctx, args.token);
     const existing = await dedupePushTokenRows(ctx, rows);
@@ -275,8 +274,7 @@ export const setPushChatAlerts = mutation({
   args: { enabled: v.boolean() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const { userId } = await requireActiveUser(ctx);
 
     await ctx.db.patch(userId, { pushChatAlerts: args.enabled });
     return null;
