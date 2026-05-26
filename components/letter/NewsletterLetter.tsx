@@ -9,7 +9,6 @@ import {
   NEWSLETTER_FEATURES,
   NEWSLETTER_DATE,
   NEWSLETTER_GREETING,
-  NEWSLETTER_INTRO_OPENING,
   NEWSLETTER_INTRO_STATS,
   NEWSLETTER_MISSION_LINE,
   NEWSLETTER_SERIOUS,
@@ -59,7 +58,6 @@ export function NewsletterLetter({ animateIn = true }: Props) {
             <p className="text-xl text-[var(--ink)]">{NEWSLETTER_GREETING}</p>
 
             <div className="space-y-4 break-words text-[var(--ink-muted)]">
-              <p className="leading-relaxed">{NEWSLETTER_INTRO_OPENING}</p>
               <p className="leading-relaxed">
                 {NEWSLETTER_INTRO_STATS.before}
                 <Stat value={NEWSLETTER_STATS.users} label="users" />

@@ -28,9 +28,6 @@ export const NEWSLETTER_DATE = "26 May 2026";
 export const NEWSLETTER_GREETING =
   "Hey! I'm Nobel, the other guy behind oxformals.";
 
-export const NEWSLETTER_INTRO_OPENING =
-  "Unfortunately, Juyeon's busy trying not to fail her prelims, so she won't be able to join us today. Hopefully I'd be a sufficiently acceptable replacement (just for now, of course!) 😬";
-
 export const NEWSLETTER_INTRO_STATS = {
   before:
     "oxformals is two weeks old! The level of support you guys have shown has honestly been overwhelming. We've hit over ",
