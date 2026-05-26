@@ -61,6 +61,9 @@ Create a `.env.local` file in the project root:
 NEXT_PUBLIC_CONVEX_URL=<your Convex deployment URL>
 AUTH_RESEND_KEY=<your Resend API key>
 CONVEX_SITE_URL=<your app's domain, e.g. http://localhost:3000>
+
+# Optional: /letter newsletter CTAs (iOS + Android links are hardcoded in lib/letter/newsletterLinks.ts)
+NEXT_PUBLIC_NEWSLETTER_INSTAGRAM_URL=
 ```
 
 ### Install and run

@@ -20,7 +20,9 @@ const TABS = [
 
 export function Nav() {
   const pathname = usePathname();
-  if (pathname?.startsWith("/login")) return null;
+  if (pathname?.startsWith("/login") || pathname?.startsWith("/letter")) {
+    return null;
+  }
 
   return (
     <Suspense fallback={<NavShell />}>

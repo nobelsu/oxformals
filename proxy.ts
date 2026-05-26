@@ -13,6 +13,7 @@ import {
 const isPublicRoute = createRouteMatcher([
   "/",
   "/login",
+  "/letter",
   "/colleges",
   "/college/:slug",
   "/api/auth(.*)",

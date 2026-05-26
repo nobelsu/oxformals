@@ -49,8 +49,7 @@ export function SketchCard({
 
   const effectiveSeed = typeof seed === "number" ? Math.abs(seed) || 1 : 1;
   const gutter = sketchBorderGutter(strokeWidth, bowing, roughness);
-  const borderInset =
-    !padded && contentGutter ? gutter : strokeWidth + 1;
+  const borderInset = contentGutter ? gutter : strokeWidth + 1;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -124,7 +123,7 @@ export function SketchCard({
         aria-hidden
       />
       <div
-        className="relative flex min-h-0 min-w-0 flex-1 flex-col"
+        className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col"
         style={contentStyle}
       >
         {children}

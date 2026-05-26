@@ -450,3 +450,237 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
     }
   }
 }
+
+/* --- Newsletter letter page (always warm parchment, not system dark) --- */
+
+.newsletter-page {
+  color-scheme: light;
+  --bg: #e5d9c4;
+  --paper: #faf6ee;
+  --ink: #1a140f;
+  --ink-muted: #5a4d40;
+  --ink-soft: #b5a48f;
+  --tag: #20140d;
+  --tag-ink: #f6efe0;
+  --accent: #e8b4ae;
+  --accent-hover: #dfa099;
+  --accent-ink: #1a140f;
+  --danger: #c96360;
+  --newsletter-shadow: 0 18px 48px rgba(26, 20, 15, 0.14);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(
+      ellipse 120% 80% at 50% -20%,
+      color-mix(in srgb, var(--accent) 45%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 85% 90%,
+      color-mix(in srgb, var(--paper) 80%, var(--accent)),
+      transparent 45%
+    );
+}
+
+.newsletter-letter-paper {
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  background: var(--paper);
+  box-shadow: var(--newsletter-shadow);
+}
+
+.newsletter-letter-inner {
+  position: relative;
+}
+
+.newsletter-feature-item {
+  border: 2px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--paper) 92%, var(--accent) 8%);
+}
+
+.newsletter-mobile-highlight {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--accent) 55%, var(--paper)) 0%,
+    color-mix(in srgb, var(--accent) 28%, var(--paper)) 55%,
+    var(--paper) 100%
+  );
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent),
+    0 14px 32px color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.newsletter-mobile-badge {
+  animation: newsletter-mobile-badge-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes newsletter-mobile-badge-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+.newsletter-cta {
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.newsletter-cta:hover {
+  background: color-mix(in srgb, var(--accent) 25%, var(--paper));
+  border-color: var(--ink);
+}
+
+.newsletter-cta--primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 4px 0 var(--ink);
+}
+
+.newsletter-cta--primary:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 var(--ink);
+}
+
+.newsletter-cta--primary:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+
+@keyframes letter-seal-wiggle {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes letter-flap-open {
+  from {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+  to {
+    transform: rotateX(-125deg);
+    opacity: 0.25;
+  }
+}
+
+@keyframes letter-invite-vanish {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+}
+
+@keyframes letter-unfold {
+  from {
+    opacity: 0;
+    transform: scale(0.72) translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes newsletter-stat-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes newsletter-hint-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.letter-invite-card {
+  box-shadow: var(--newsletter-shadow);
+}
+
+.letter-invite-envelope {
+  perspective: 520px;
+}
+
+.letter-invite-flap {
+  transform-origin: 124px 88px;
+  transform-style: preserve-3d;
+}
+
+.letter-seal-wiggle {
+  animation: letter-seal-wiggle 2.2s ease-in-out infinite;
+}
+
+.letter-invite--opening .letter-invite-seal {
+  animation: none;
+  opacity: 0;
+  transform: scale(0.4);
+  transition:
+    opacity 0.35s ease-out,
+    transform 0.35s ease-out;
+}
+
+.letter-invite--opening .letter-invite-flap {
+  animation: letter-flap-open 0.5s ease-in forwards;
+}
+
+.letter-invite--opening .letter-invite-stage {
+  animation: letter-invite-vanish 0.55s ease-in 0.15s forwards;
+}
+
+.letter-reveal-enter {
+  animation: letter-unfold 0.7s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+}
+
+.newsletter-stat-pop {
+  display: inline-block;
+  animation: newsletter-stat-pop 0.55s ease-out 0.15s both;
+}
+
+.newsletter-hint-pulse {
+  animation: newsletter-hint-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .letter-seal-wiggle,
+  .newsletter-hint-pulse,
+  .newsletter-stat-pop,
+  .newsletter-mobile-badge {
+    animation: none;
+  }
+
+  .letter-invite--opening .letter-invite-flap,
+  .letter-invite--opening .letter-invite-stage,
+  .letter-reveal-enter {
+    animation: none;
+  }
+
+  .letter-invite--opening .letter-invite-seal {
+    opacity: 0;
+    transition: none;
+  }
+}
