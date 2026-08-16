@@ -102,6 +102,7 @@ export function ListingRow({
           <Link
             href={`/profile/${owner.id}`}
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
             className="flex items-center gap-2 hover:underline"
           >
             <Avatar name={owner.name} size="sm" source={owner.avatar} />
@@ -122,6 +123,7 @@ export function ListingRow({
                     href={`/profile/${m.id}`}
                     title={m.name}
                     onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
                   >
                     <Avatar name={m.name} size="sm" source={m.avatar} />
                   </Link>
@@ -160,6 +162,7 @@ export function ListingRow({
       <div
         className="flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-end"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         <ListingTypeTag listingType={listing.listingType} />
         {showStatusInsteadOfCta ? (
