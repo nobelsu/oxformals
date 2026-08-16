@@ -27,6 +27,20 @@ export function formatListingSeatsSuffix(
   return `${seatsAvailable} ${unit} left`;
 }
 
+/** `Group of 3 · 2 seats left · £28` — no date; the day rail carries it. */
+export function formatListingRowMeta(args: {
+  groupSize: number;
+  seatsAvailable: number;
+  isPast: boolean;
+  price?: number;
+}): string {
+  const parts: string[] = [`Group of ${args.groupSize}`];
+  const seats = formatListingSeatsSuffix(args.seatsAvailable, args.isPast);
+  if (seats) parts.push(seats);
+  if (args.price !== undefined) parts.push(formatPrice(args.price));
+  return parts.join(" · ");
+}
+
 /** `Thu 8 May · 7:15pm · Group of 3 · …` — drops seat availability for past formals. */
 export function formatListingMetaLine(args: {
   dateTime: string;
@@ -35,31 +49,39 @@ export function formatListingMetaLine(args: {
   isPast: boolean;
   price?: number;
 }): string {
-  const parts: string[] = [
-    formatListingDate(args.dateTime),
-    `Group of ${args.groupSize}`,
-  ];
-  const seats = formatListingSeatsSuffix(args.seatsAvailable, args.isPast);
-  if (seats) parts.push(seats);
-  if (args.price !== undefined) parts.push(formatPrice(args.price));
-  return parts.join(" · ");
+  return `${formatListingDate(args.dateTime)} · ${formatListingRowMeta(args)}`;
 }
 
-// "Thu 8 May · 7:15pm"
-export function formatListingDate(iso: string): string {
+/** `7:15pm`, or `7pm` on the hour. */
+export function formatListingTime(iso: string): string {
   const d = new Date(iso);
-  const day = new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  }).format(d);
   let hours = d.getHours();
   const minutes = d.getMinutes().toString().padStart(2, "0");
   const suffix = hours >= 12 ? "pm" : "am";
   hours = hours % 12 || 12;
-  const time =
-    minutes === "00" ? `${hours}${suffix}` : `${hours}:${minutes}${suffix}`;
-  return `${day} · ${time}`;
+  return minutes === "00" ? `${hours}${suffix}` : `${hours}:${minutes}${suffix}`;
+}
+
+/** `{ day: "8 May", weekday: "Friday" }` for the day rail. */
+export function formatDayLabel(iso: string): { day: string; weekday: string } {
+  const d = new Date(iso);
+  return {
+    day: new Intl.DateTimeFormat("en-GB", {
+      day: "numeric",
+      month: "short",
+    }).format(d),
+    weekday: new Intl.DateTimeFormat("en-GB", { weekday: "long" }).format(d),
+  };
+}
+
+// "Thu 8 May · 7:15pm"
+export function formatListingDate(iso: string): string {
+  const day = new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(iso));
+  return `${day} · ${formatListingTime(iso)}`;
 }
 
 export function formatShortDate(iso: string): string {
