@@ -14,7 +14,8 @@ import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { CollegeReviewCard } from "@/components/colleges/CollegeReviewCard";
-import { ListingCard } from "@/components/swap/ListingCard";
+import { ListingDayList } from "@/components/swap/ListingDayList";
+import { ListingRow } from "@/components/swap/ListingRow";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
 import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
 import { RequestPayModal } from "@/components/swap/RequestPayModal";
@@ -524,22 +525,21 @@ export function ProfileView({
                   : `${name.split(" ")[0]} doesn\u2019t have any active listings right now.`}
               </p>
             ) : (
-              <div className="mt-4 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {activeListings.map((l) => {
+              <ListingDayList
+                className="mt-4"
+                listings={activeListings}
+                renderRow={(l) => {
                   const members = l.members
                     .filter((mid) => mid !== l.ownerUserId)
                     .map(getUser)
                     .filter((u): u is NonNullable<typeof u> => !!u);
                   return (
-                    <ListingCard
-                      key={l.id}
+                    <ListingRow
                       listing={l}
                       owner={ownerAsUser}
                       memberUsers={members}
                       onPress={() => setDetailListing(l)}
-                      onRequest={
-                        isOwnProfile ? undefined : () => handleRequestClick(l)
-                      }
+                      onRequest={isOwnProfile ? undefined : () => handleRequestClick(l)}
                       disabled={listingDisabled}
                       hideInterests
                       disabledLabel={
@@ -551,8 +551,8 @@ export function ProfileView({
                       }
                     />
                   );
-                })}
-              </div>
+                }}
+              />
             )}
           </>
         ) : publicReviews === undefined ? (

@@ -8,7 +8,8 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Modal } from "@/components/ui/Modal";
-import { ListingCard } from "@/components/swap/ListingCard";
+import { ListingDayList } from "@/components/swap/ListingDayList";
+import { ListingRow } from "@/components/swap/ListingRow";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
 import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
 import { RequestPayModal } from "@/components/swap/RequestPayModal";
@@ -146,8 +147,9 @@ export function CollegeListingsSection({ college }: Props) {
 
   return (
     <>
-      <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2">
-        {openListings.map((l) => {
+      <ListingDayList
+        listings={openListings}
+        renderRow={(l) => {
           const owner = getUser(l.ownerUserId);
           if (!owner) return null;
           const members = l.members
@@ -155,23 +157,20 @@ export function CollegeListingsSection({ college }: Props) {
             .map(getUser)
             .filter((u): u is NonNullable<typeof u> => !!u);
           return (
-            <ListingCard
-              key={l.id}
+            <ListingRow
               listing={l}
               owner={owner}
               memberUsers={members}
+              title={`${owner.name.split(" ")[0]}’s table`}
               onPress={() => setDetailListing(l)}
               onRequest={() => handleRequestClick(l)}
               disabled={listingDisabled}
-              hideCollege
               hideInterests
-              disabledLabel={
-                !isAuthenticated ? "Sign in to request" : undefined
-              }
+              disabledLabel={!isAuthenticated ? "Sign in to request" : undefined}
             />
           );
-        })}
-      </div>
+        }}
+      />
 
       <ListingDetailModal
         open={!!detailListing}

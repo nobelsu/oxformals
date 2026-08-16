@@ -3,7 +3,8 @@
 import { Modal } from "@/components/ui/Modal";
 import type { User } from "@/lib/auth/types";
 import type { Listing } from "@/lib/data/types";
-import { ListingCard } from "./ListingCard";
+import { ListingDayList } from "./ListingDayList";
+import { ListingRow } from "./ListingRow";
 
 type Props = {
   open: boolean;
@@ -32,26 +33,16 @@ export function NewRequestPicker({
           No open swaps right now. Check back soon, or list one of your own.
         </p>
       ) : (
-        <div
-          className={`grid items-stretch gap-4 ${
-            listings.length === 1
-              ? "grid-cols-1"
-              : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
-          }`}
-        >
-          {listings.map((l) => {
+        <ListingDayList
+          listings={listings}
+          renderRow={(l) => {
             const owner = getUser(l.ownerUserId);
             if (!owner) return null;
             return (
-              <ListingCard
-                key={l.id}
-                listing={l}
-                owner={owner}
-                onRequest={() => onSelect(l)}
-              />
+              <ListingRow listing={l} owner={owner} onRequest={() => onSelect(l)} />
             );
-          })}
-        </div>
+          }}
+        />
       )}
     </Modal>
   );
