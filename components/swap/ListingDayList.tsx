@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { SketchDot } from "@/components/ui/SketchDot";
 import { seedFrom } from "@/components/ui/SketchCard";
 import { formatDayLabel } from "@/lib/data/format";
@@ -12,16 +12,27 @@ type Props = {
   listings: Listing[];
   renderRow: (listing: Listing) => ReactNode;
   className?: string;
+  /** Sticky offset + background for the mobile day header. Override inside a modal. */
+  stickyClassName?: string;
 };
 
 /**
  * Luma-style day rail: the date is stated once per day in the left gutter,
  * rows carry only the time. Below `sm` the gutter collapses into a sticky
  * full-width day header.
+ *
+ * Ordering is owned by this container: it always re-sorts `listings`
+ * ascending by `dateTime` (via `groupListingsByDay`), so a caller-side sort
+ * control would be silently overridden.
  */
-export function ListingDayList({ listings, renderRow, className = "" }: Props) {
+export function ListingDayList({
+  listings,
+  renderRow,
+  className = "",
+  stickyClassName = "top-[var(--app-nav-height)] bg-[var(--bg)]",
+}: Props) {
   const nowMs = useNowMs();
-  const groups = groupListingsByDay(listings);
+  const groups = useMemo(() => groupListingsByDay(listings), [listings]);
 
   if (groups.length === 0) return null;
 
@@ -39,7 +50,7 @@ export function ListingDayList({ listings, renderRow, className = "" }: Props) {
             className="sm:grid sm:grid-cols-[6rem_1fr]"
           >
             <div
-              className={`sticky top-[var(--app-nav-height)] z-[2] bg-[var(--bg)] py-3 sm:static sm:bg-transparent sm:pr-3 sm:pt-5 ${dayInk}`}
+              className={`sticky z-[2] py-3 sm:static sm:bg-transparent sm:pr-3 sm:pt-5 ${stickyClassName} ${dayInk}`}
             >
               <div className="flex items-baseline gap-2 sm:block">
                 <div className="font-display text-[1.15rem] leading-tight">
@@ -59,18 +70,18 @@ export function ListingDayList({ listings, renderRow, className = "" }: Props) {
               </span>
 
               <ul>
-                {group.listings.map((listing, index) => (
-                  <li
-                    key={listing.id}
-                    className={
-                      index === 0
-                        ? ""
-                        : "border-t border-dashed border-[color-mix(in_srgb,var(--ink)_18%,transparent)]"
-                    }
-                  >
-                    {renderRow(listing)}
-                  </li>
-                ))}
+                {group.listings.map((listing) => {
+                  const content = renderRow(listing);
+                  if (!content) return null;
+                  return (
+                    <li
+                      key={listing.id}
+                      className="border-t border-dashed border-[color-mix(in_srgb,var(--ink)_18%,transparent)] first:border-t-0"
+                    >
+                      {content}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </section>

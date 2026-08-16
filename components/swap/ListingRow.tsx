@@ -47,12 +47,16 @@ export function ListingRow({
   const isPast = listingIsPast(listing.dateTime, nowMs);
   const ctaLabel = requestLabel ?? listingRequestCta(listing.listingType);
 
-  const profileLine = [
-    formatYearLabel(owner.year) || owner.year || formatYearLabel(listing.year) || listing.year,
+  const yearRoleLine = [
+    formatYearLabel(owner.year) || formatYearLabel(listing.year),
     owner.role || listing.role,
   ]
     .filter(Boolean)
     .join(" · ");
+  // A host with neither a year nor a role still gets an identifying line.
+  const profileLine =
+    yearRoleLine ||
+    [owner.college, formatYearLabel(owner.year)].filter(Boolean).join(" · ");
 
   const showStatusInsteadOfCta =
     listing.status === "expired" ||
@@ -63,6 +67,11 @@ export function ListingRow({
     <div
       role={onPress ? "button" : undefined}
       tabIndex={onPress ? 0 : undefined}
+      aria-label={
+        onPress
+          ? `${title ?? listing.college} · ${formatListingTime(listing.dateTime)}`
+          : undefined
+      }
       onClick={onPress}
       onKeyDown={
         onPress
@@ -133,14 +142,20 @@ export function ListingRow({
           ) : null}
         </div>
 
-        <ListingMenu
-          menu={listing.menu}
-          menuPdfUrl={listing.menuPdfUrl}
-          menuFileContentType={listing.menuFileContentType}
-          className="mt-2 break-words text-pretty text-[0.9rem] text-[var(--ink-muted)]"
-          textClassName="line-clamp-2"
-          imageClassName="mt-1 max-h-24 max-w-full rounded-[12px] border-[2px] border-[var(--ink)] object-contain"
-        />
+        <span
+          className="mt-2 block"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <ListingMenu
+            menu={listing.menu}
+            menuPdfUrl={listing.menuPdfUrl}
+            menuFileContentType={listing.menuFileContentType}
+            className="break-words text-pretty text-[0.9rem] text-[var(--ink-muted)]"
+            textClassName="line-clamp-2"
+            imageClassName="mt-1 max-h-24 max-w-full rounded-[12px] border-[2px] border-[var(--ink)] object-contain"
+          />
+        </span>
 
         {listing.message ? (
           <p className="mt-2 line-clamp-2 break-words text-pretty text-[0.9rem] italic text-[var(--ink-muted)]">

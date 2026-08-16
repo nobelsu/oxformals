@@ -35,6 +35,7 @@ export function NewRequestPicker({
       ) : (
         <ListingDayList
           listings={listings}
+          stickyClassName="top-0 bg-[var(--paper)]"
           renderRow={(l) => {
             const owner = getUser(l.ownerUserId);
             if (!owner) return null;

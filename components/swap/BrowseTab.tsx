@@ -488,6 +488,7 @@ export function BrowseTab({
           >
             <ListingDayList
               listings={browseListings}
+              className="mx-auto w-full max-w-6xl"
               renderRow={(l) => {
                 const owner = getUser(l.ownerUserId);
                 if (!owner) return null;

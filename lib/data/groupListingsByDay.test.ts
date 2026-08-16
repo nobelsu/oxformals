@@ -64,15 +64,51 @@ describe("groupListingsByDay", () => {
     assert.equal(groups[0].dateTime, "2026-05-08T19:00:00");
   });
 
+  // These two tests are inherently timezone-dependent: they assert the
+  // local-day bucketing that only holds under the repo's test timezone,
+  // Europe/London (see /etc/localtime on this machine, or set TZ
+  // explicitly when running elsewhere). That dependency is the point —
+  // they exist to prove grouping uses local time, not UTC.
+
   it("splits local days that share a UTC day", () => {
-    // 23:30 on the 8th and 00:30 on the 9th, local time.
+    // Both instants fall on the same UTC calendar day (10 Aug), but in
+    // Europe/London (BST, UTC+1 in August) they land on different local
+    // days: 20:00 UTC -> 21:00 local (10 Aug), 23:30 UTC -> 00:30 local
+    // (11 Aug). A UTC-based grouping would wrongly merge these into one.
     const groups = groupListingsByDay([
-      listing("a", "2026-05-08T23:30:00"),
-      listing("b", "2026-05-09T00:30:00"),
+      listing("a", "2026-08-10T20:00:00Z"),
+      listing("b", "2026-08-10T23:30:00Z"),
     ]);
     assert.deepEqual(
       groups.map((g) => g.dateKey),
-      ["2026-05-08", "2026-05-09"],
+      ["2026-08-10", "2026-08-11"],
+    );
+  });
+
+  it("keeps a DST-transition day intact despite the UTC-offset change", () => {
+    // Europe/London springs forward at 01:00 UTC on 29 Mar 2026 (clocks
+    // jump from 01:00 GMT to 02:00 BST), so 29 Mar is a 23-hour local day
+    // split across two different UTC offsets. Two listings that both fall
+    // on local 29 Mar — one before the transition (GMT, UTC+0) and one
+    // after (BST, UTC+1) — must still bucket into a single group, and a
+    // listing just after local midnight on the 30th must land in the next
+    // group.
+    const groups = groupListingsByDay([
+      listing("morning", "2026-03-29T00:30:00Z"), // 00:30 GMT, pre-transition
+      listing("evening", "2026-03-29T22:30:00Z"), // 23:30 BST, post-transition
+      listing("nextDay", "2026-03-29T23:30:00Z"), // 00:30 BST on 30 Mar
+    ]);
+    assert.deepEqual(
+      groups.map((g) => g.dateKey),
+      ["2026-03-29", "2026-03-30"],
+    );
+    assert.deepEqual(
+      groups[0].listings.map((l) => l.id),
+      ["morning", "evening"],
+    );
+    assert.deepEqual(
+      groups[1].listings.map((l) => l.id),
+      ["nextDay"],
     );
   });
 
