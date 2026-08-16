@@ -8,8 +8,9 @@ import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { MY_FORMALS_SENTINEL } from "./CollegeFilter";
 import { Hero } from "./Hero";
-import { ListingCard } from "./ListingCard";
+import { ListingDayList } from "./ListingDayList";
 import { ListingDetailModal } from "./ListingDetailModal";
+import { ListingRow } from "./ListingRow";
 import { BlockingRequestModal } from "./BlockingRequestModal";
 import { RequestPayModal } from "./RequestPayModal";
 import { RequestSwapModal } from "./RequestSwapModal";
@@ -485,28 +486,28 @@ export function BrowseTab({
             data-browse-listings
             className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen px-4 sm:px-6"
           >
-            <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {browseListings.map((l) => {
-              const owner = getUser(l.ownerUserId);
-              if (!owner) return null;
-              const members = (l.members ?? [])
-                .filter((mid) => mid !== l.ownerUserId)
-                .map(getUser)
-                .filter((u): u is NonNullable<typeof u> => !!u);
-              return (
-                <ListingCard
-                  key={l.id}
-                  listing={l}
-                  owner={owner}
-                  memberUsers={members}
-                  onPress={() => setDetailListing(l)}
-                  onRequest={() => handleRequestClick(l)}
-                  disabled={!isAuthenticated}
-                  disabledLabel={isAuthenticated ? undefined : "Sign in to request"}
-                />
-              );
-            })}
-            </div>
+            <ListingDayList
+              listings={browseListings}
+              renderRow={(l) => {
+                const owner = getUser(l.ownerUserId);
+                if (!owner) return null;
+                const members = (l.members ?? [])
+                  .filter((mid) => mid !== l.ownerUserId)
+                  .map(getUser)
+                  .filter((u): u is NonNullable<typeof u> => !!u);
+                return (
+                  <ListingRow
+                    listing={l}
+                    owner={owner}
+                    memberUsers={members}
+                    onPress={() => setDetailListing(l)}
+                    onRequest={() => handleRequestClick(l)}
+                    disabled={!isAuthenticated}
+                    disabledLabel={isAuthenticated ? undefined : "Sign in to request"}
+                  />
+                );
+              }}
+            />
           </div>
         )}
       </div>
