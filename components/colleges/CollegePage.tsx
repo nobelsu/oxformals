@@ -16,7 +16,7 @@ import { CollegeReviewCard } from "@/components/colleges/CollegeReviewCard";
 import { StarRating } from "@/components/colleges/StarRating";
 import { useCollegePageSection } from "@/components/colleges/useCollegePageSection";
 import { SketchCard } from "@/components/ui/SketchCard";
-import { mapConvexListing } from "@/lib/data/mapConvexListing";
+import { mapListing } from "@/lib/data/mapConvex";
 import {
   COLLEGE_REVIEW_CATEGORIES,
   type CollegeReviewSort,
@@ -83,7 +83,7 @@ export function CollegePage({ college }: Props) {
     if (rawListings === undefined) return null;
     const now = Date.now();
     return rawListings
-      .map(mapConvexListing)
+      .map(mapListing)
       .filter((l) => Date.parse(l.dateTime) > now)
       .filter((l) => !user || l.ownerUserId !== user.id).length;
   }, [rawListings, user]);

@@ -19,7 +19,7 @@ import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { collegeToSlug } from "@/lib/data/collegeSlug";
 import { findBlockingOutgoingRequestForTarget } from "@/lib/data/requestFilters";
 import { listingSupportsSwap } from "@/lib/data/listingType";
-import { mapConvexListing } from "@/lib/data/mapConvexListing";
+import { mapListing } from "@/lib/data/mapConvex";
 import type { Listing, RequestType } from "@/lib/data/types";
 
 type Props = {
@@ -60,7 +60,7 @@ export function CollegeListingsSection({ college }: Props) {
     if (rawListings === undefined) return undefined;
     const now = Date.now();
     return rawListings
-      .map(mapConvexListing)
+      .map(mapListing)
       .filter((l) => Date.parse(l.dateTime) > now)
       .filter((l) => !user || l.ownerUserId !== user.id);
   }, [rawListings, user]);
