@@ -7,6 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import { UnreadBadge } from "@/components/chat/UnreadBadge";
 import { Drawer } from "@/components/ui/Drawer";
 import { api } from "@/convex/_generated/api";
+import { BROWSE_ROUTE } from "@/lib/ui/routes";
 import { useAuth } from "./auth/useAuth";
 import { NavSettingsModal } from "./NavSettingsModal";
 
@@ -53,7 +54,12 @@ function NavInner() {
     : isCollegeDetail
       ? "rankings"
       : searchParams.get("tab") ?? "browse";
-  const onTabbedPage = pathname === "/" || isRequestsDetail;
+  // Mirrors HomeClient's landing-page condition: logged-out visitors on "/"
+  // with no ?tab= see the marketing page, not BrowseTab, so Browse shouldn't
+  // be marked active there.
+  const isLandingPage =
+    pathname === "/" && !searchParams.get("tab") && !isAuthenticated;
+  const onTabbedPage = (pathname === "/" && !isLandingPage) || isRequestsDetail;
   const activeTabLabel =
     TABS.find((t) => t.id === activeTab)?.label ?? "Browse";
   const totalUnread =
@@ -67,7 +73,7 @@ function NavInner() {
   }, [pathname, searchParams]);
 
   function hrefFor(tab: string): string {
-    if (tab === "browse") return "/";
+    if (tab === "browse") return BROWSE_ROUTE;
     return `/?tab=${tab}`;
   }
 
