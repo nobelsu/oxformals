@@ -74,7 +74,8 @@ export default defineSchema({
   })
     .index("by_ownerUserId", ["ownerUserId"])
     .index("by_status", ["status"])
-    .index("by_college_and_status", ["college", "status"]),
+    .index("by_college_and_status", ["college", "status"])
+    .index("by_status_and_dateTime", ["status", "dateTime"]),
   requests: defineTable({
     fromUserId: v.id("users"),
     toUserId: v.id("users"),

@@ -126,6 +126,27 @@ export const listListings = query({
   },
 });
 
+/**
+ * Upcoming open formals for the logged-out landing page. Deliberately narrow:
+ * the landing page must not pay for `listListings` (200 docs) plus
+ * `users.listPublic` (500 docs) to render a handful of rows.
+ */
+export const listUpcomingPublic = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = Math.min(Math.max(args.limit ?? 5, 1), 20);
+    const nowIso = new Date().toISOString();
+    const listings = await ctx.db
+      .query("listings")
+      .withIndex("by_status_and_dateTime", (q) =>
+        q.eq("status", "active").gt("dateTime", nowIso),
+      )
+      .order("asc")
+      .take(limit);
+    return Promise.all(listings.map((listing) => enrichListing(ctx, listing)));
+  },
+});
+
 export const listMyListings = query({
   args: {},
   handler: async (ctx) => {
