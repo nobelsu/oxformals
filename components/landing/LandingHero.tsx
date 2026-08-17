@@ -15,7 +15,7 @@ export function LandingHero() {
   const ownerIds = docs ? [...new Set(docs.map((d) => d.ownerUserId))] : [];
   const ownerDocs = useQuery(
     api.users.getPublicByIds,
-    docs && ownerIds.length > 0 ? { userIds: ownerIds } : "skip",
+    ownerIds.length > 0 ? { userIds: ownerIds } : "skip",
   );
 
   const listings = docs?.map(mapListing) ?? [];
@@ -23,7 +23,8 @@ export function LandingHero() {
     (ownerDocs ?? []).map((doc) => [doc._id as string, mapUser(doc)]),
   );
 
-  const loading = docs === undefined;
+  const loading =
+    docs === undefined || (ownerIds.length > 0 && ownerDocs === undefined);
   const isEmpty = !loading && listings.length === 0;
 
   return (
