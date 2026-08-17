@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { MessagesTab } from "@/components/chat/MessagesTab";
 import { RankingsTab } from "@/components/colleges/RankingsTab";
+import { LandingPage } from "@/components/landing/LandingPage";
 import { BrowseTab } from "@/components/swap/BrowseTab";
 import { MineTab } from "@/components/swap/MineTab";
 import { RequestsTab } from "@/components/swap/RequestsTab";
@@ -57,6 +58,9 @@ export function HomeClient() {
   );
 
   const content = useMemo(() => {
+    if (!isAuthenticated && tab === "browse" && !urlTab) {
+      return <LandingPage />;
+    }
     if (tab === "browse") {
       return (
         <BrowseTab
@@ -84,7 +88,7 @@ export function HomeClient() {
       return <MineTab />;
     }
     return null;
-  }, [tab, isAuthenticated, setActiveTab, router]);
+  }, [tab, isAuthenticated, setActiveTab, router, urlTab]);
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 px-4 py-8 sm:px-6">
