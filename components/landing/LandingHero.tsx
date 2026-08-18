@@ -7,6 +7,7 @@ import { ListingRow } from "@/components/swap/ListingRow";
 import { mapListing, mapUser } from "@/lib/data/mapConvex";
 import { BROWSE_ROUTE } from "@/lib/ui/routes";
 import { HeroShowcase, type HeroSlide } from "@/components/landing/HeroShowcase";
+import { HeadlineMark } from "@/components/landing/HeadlineMark";
 import { HeroFeedSlide } from "@/components/landing/HeroFeedSlide";
 import { HeroReviewSlide } from "@/components/landing/HeroReviewSlide";
 
@@ -65,7 +66,10 @@ export function LandingHero({
       <div className="flex flex-col items-start">
         <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
           Find a seat at any{" "}
-          <span className="whitespace-nowrap">Oxford formal.</span>
+          <span className="relative whitespace-nowrap">
+            Oxford formal.
+            <HeadlineMark />
+          </span>
         </h1>
         <p className="mt-3 max-w-[46ch] text-base leading-relaxed text-[var(--ink-muted)]">
           Swap your place, take an empty seat, and eat somewhere you&rsquo;ve
