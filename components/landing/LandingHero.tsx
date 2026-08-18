@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { usePreloadedQuery, type Preloaded } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { ListingRow } from "@/components/swap/ListingRow";
 import { mapListing, mapUser } from "@/lib/data/mapConvex";
@@ -10,17 +10,19 @@ import { HeroShowcase, type HeroSlide } from "@/components/landing/HeroShowcase"
 import { HeroFeedSlide } from "@/components/landing/HeroFeedSlide";
 import { HeroReviewSlide } from "@/components/landing/HeroReviewSlide";
 
-const RAIL_LIMIT = 5;
-
-export function LandingHero() {
-  const docs = useQuery(api.listings.listUpcomingPublic, { limit: RAIL_LIMIT });
+export function LandingHero({
+  preloaded,
+}: {
+  preloaded: Preloaded<typeof api.listings.listUpcomingPublic>;
+}) {
+  const docs = usePreloadedQuery(preloaded);
 
   const listings = docs?.map(mapListing) ?? [];
   const owners = new Map(
     (docs ?? []).map((doc) => [doc.ownerUserId as string, mapUser(doc.owner)]),
   );
 
-  const loading = docs === undefined;
+  const loading = false;
   const isEmpty = !loading && listings.length === 0;
 
   const railSlide = loading ? (

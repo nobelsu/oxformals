@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { MessagesTab } from "@/components/chat/MessagesTab";
 import { RankingsTab } from "@/components/colleges/RankingsTab";
-import { LandingPage } from "@/components/landing/LandingPage";
 import { BrowseTab } from "@/components/swap/BrowseTab";
 import { MineTab } from "@/components/swap/MineTab";
 import { RequestsTab } from "@/components/swap/RequestsTab";
@@ -23,7 +22,6 @@ export function HomeClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlTab = searchParams.get("tab");
-  const listingParam = searchParams.get("listing");
 
   const [tab, setTab] = useState<Tab>(isTab(urlTab) ? urlTab : "browse");
 
@@ -59,16 +57,8 @@ export function HomeClient() {
   );
 
   const content = useMemo(() => {
-    // Landing only applies to "/" with no ?tab= and no ?listing= (email deep
-    // links must still reach BrowseTab). Wait for auth to settle (status ===
-    // "ready") before deciding — isAuthenticated is false while hydrating,
-    // so deciding earlier would flash the marketing page at signed-in users
-    // and fire its queries for them. Mirrors the idiom in RequireAuth /
-    // Nav.tsx, which gate on `status` rather than `isAuthenticated` alone.
-    if (tab === "browse" && !urlTab && !listingParam) {
-      if (status !== "ready") return null;
-      if (!isAuthenticated) return <LandingPage />;
-    }
+    // The logged-out marketing landing is server-rendered in app/page.tsx; by
+    // the time HomeClient mounts we are either signed in or on a tab/deep-link.
     if (tab === "browse") {
       return (
         <BrowseTab
@@ -100,7 +90,7 @@ export function HomeClient() {
       return <MineTab />;
     }
     return null;
-  }, [tab, status, isAuthenticated, setActiveTab, router, urlTab, listingParam]);
+  }, [tab, status, isAuthenticated, setActiveTab, router]);
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 px-4 py-8 sm:px-6">
