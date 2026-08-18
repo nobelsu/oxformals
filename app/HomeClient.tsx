@@ -83,6 +83,10 @@ export function HomeClient() {
     if (tab === "rankings") {
       return <RankingsTab />;
     }
+    // Same hydration rule as the landing branch above: `isAuthenticated` is
+    // false while auth resolves, so gating on it alone flashes the sign-in wall
+    // at users who are already signed in.
+    if (status !== "ready") return null;
     if (!isAuthenticated) {
       return <SignInGate />;
     }
