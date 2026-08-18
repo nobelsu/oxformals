@@ -73,7 +73,7 @@ export function ListingDayList({
               className={`sticky z-[2] py-3 sm:static sm:bg-transparent sm:pr-3 sm:pt-5 ${stickyClassName} ${dayInk}`}
             >
               <div className="flex items-baseline gap-2 sm:block">
-                <div className="font-display text-[1.15rem] leading-tight">
+                <div className="font-display text-[1.25rem] leading-tight">
                   {day}
                 </div>
                 <div className="text-[0.85rem] text-[var(--ink-soft)]">

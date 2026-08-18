@@ -518,17 +518,6 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
 
 .newsletter-page {
   color-scheme: light;
-  --bg: #e5d9c4;
-  --paper: #faf6ee;
-  --ink: #1a140f;
-  --ink-muted: #5a4d40;
-  --ink-soft: #b5a48f;
-  --tag: #20140d;
-  --tag-ink: #f6efe0;
-  --accent: #e8b4ae;
-  --accent-hover: #dfa099;
-  --accent-ink: #1a140f;
-  --danger: #c96360;
   --newsletter-shadow: 0 18px 48px rgba(26, 20, 15, 0.14);
   background-color: var(--bg);
   background-image:

@@ -120,13 +120,13 @@ export function ListingRow({
       <div className="min-w-0 flex-1">
         {compact ? (
           <div className="mb-0.5 flex items-baseline gap-2 text-[0.85rem] text-[var(--ink-muted)]">
-            <span className="font-display text-[1rem] text-[var(--ink)]">
+            <span className="font-display text-[1.1rem] text-[var(--ink)]">
               {formatShortDate(listing.dateTime)}
             </span>
             <span>{formatListingTime(listing.dateTime)}</span>
           </div>
         ) : null}
-        <h3 className="flex flex-wrap items-baseline gap-x-2 break-words font-display text-[1.4rem] uppercase leading-tight tracking-wide sm:text-[1.65rem]">
+        <h3 className="flex flex-wrap items-baseline gap-x-2 break-words font-display text-[1.4rem] uppercase leading-tight tracking-wide sm:text-[1.9rem]">
           {title ?? listing.college}
           {!compact ? (
             <>
@@ -135,7 +135,7 @@ export function ListingRow({
                   together ("Worcester7:15pm") when copied or read by a
                   screen reader. */}
               <span className="sr-only"> </span>
-              <span className="text-[0.9rem] normal-case tracking-normal text-[var(--ink-muted)]">
+              <span className="text-[1rem] normal-case tracking-normal text-[var(--ink-muted)]">
                 {formatListingTime(listing.dateTime)}
               </span>
             </>
@@ -151,7 +151,7 @@ export function ListingRow({
               />
             ) : null}
             {rowTail ? (
-              <span className="text-[0.9rem] text-[var(--ink-muted)]">
+              <span className="text-[1rem] text-[var(--ink-muted)]">
                 {rowTail}
               </span>
             ) : null}
@@ -166,10 +166,10 @@ export function ListingRow({
             className="flex items-center gap-2 hover:underline"
           >
             <Avatar name={owner.name} size="sm" source={owner.avatar} />
-            <span className="text-[0.95rem]">{owner.name.split(" ")[0]}</span>
+            <span className="text-[1.05rem]">{owner.name.split(" ")[0]}</span>
           </Link>
           {profileLine ? (
-            <span className="text-[0.85rem] text-[var(--ink-soft)]">
+            <span className="text-[0.95rem] text-[var(--ink-soft)]">
               {profileLine}
             </span>
           ) : null}
@@ -212,7 +212,7 @@ export function ListingRow({
               menu={listing.menu}
               menuPdfUrl={listing.menuPdfUrl}
               menuFileContentType={listing.menuFileContentType}
-              className="break-words text-pretty text-[0.9rem] text-[var(--ink-muted)]"
+              className="break-words text-pretty text-[1rem] text-[var(--ink-muted)]"
               textClassName="line-clamp-2"
               imageClassName="mt-1 max-h-24 max-w-full rounded-[12px] border-[2px] border-[var(--ink)] object-contain"
             />
@@ -220,7 +220,7 @@ export function ListingRow({
         ) : null}
 
         {listing.message ? (
-          <p className="mt-2 line-clamp-2 break-words text-pretty text-[0.9rem] italic text-[var(--ink-muted)]">
+          <p className="mt-2 line-clamp-2 break-words text-pretty text-[1rem] italic text-[var(--ink-muted)]">
             &ldquo;{listing.message}&rdquo;
           </p>
         ) : null}
@@ -228,7 +228,7 @@ export function ListingRow({
         {!hideInterests && owner.interests.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {owner.interests.map((tag) => (
-              <Chip key={tag} size="sm" as="span" className="!text-[0.65rem]">
+              <Chip key={tag} size="sm" as="span" className="!text-[0.75rem]">
                 {tag}
               </Chip>
             ))}
@@ -258,7 +258,7 @@ export function ListingRow({
           <button
             type="button"
             disabled
-            className={`cursor-not-allowed whitespace-nowrap rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-5 py-2 text-[0.75rem] text-[var(--accent-ink)] opacity-70${
+            className={`cursor-not-allowed whitespace-nowrap rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-5 py-2 text-[0.875rem] text-[var(--accent-ink)] opacity-70${
               compact ? " flex-1" : ""
             }`}
           >
@@ -268,7 +268,7 @@ export function ListingRow({
           <button
             type="button"
             onClick={onRequest}
-            className={`whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-2 text-[0.75rem] text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]${
+            className={`whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-2 text-[0.875rem] text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]${
               compact ? " flex-1" : ""
             }`}
           >
