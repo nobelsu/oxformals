@@ -5,7 +5,6 @@ import { LandingHowItWorks } from "@/components/landing/LandingHowItWorks";
 import { LandingSocialTeaser } from "@/components/landing/LandingSocialTeaser";
 import { SprayFinale } from "@/components/landing/SprayFinale";
 import { LandingStats } from "@/components/landing/LandingStats";
-import { LandingSpray } from "@/components/landing/LandingSpray";
 
 export function LandingPage({
   preloaded,
@@ -14,7 +13,6 @@ export function LandingPage({
 }) {
   return (
     <>
-      <LandingSpray />
       <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 px-4 py-8 sm:px-6">
         <div className="relative z-10 flex flex-col">
           <LandingHero preloaded={preloaded} />
