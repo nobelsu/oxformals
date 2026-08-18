@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- **Build only from existing design tokens** — `--bg`, `--paper`, `--ink`, `--ink-muted`, `--ink-soft`, `--tag`, `--tag-ink`, `--accent`, `--accent-hover`, `--accent-ink` — and existing font classes (`font-display`, inherited body font). No hardcoded hex, no Manrope, no new palette values. The typography/colour revamp is agreed but unspecced; building on tokens means this page inherits it for free.
+- **Build only from existing design tokens** — `--bg`, `--paper`, `--ink`, `--ink-muted`, `--ink-soft`, `--tag`, `--tag-ink`, `--accent`, `--accent-hover`, `--accent-ink` — and existing font classes (`font-display`, inherited body font). No hardcoded hex, no Space Grotesk, no new palette values. The typography/colour revamp is agreed but unspecced; building on tokens means this page inherits it for free.
 - **The primary CTA uses `text-[var(--accent-ink)]`, never `text-white`.** White on the pale pink `--accent` is 1.6:1 contrast; `--accent-ink` is the token for text-on-accent and gives 11:1 in the default theme. 34 existing places get this wrong — do not add a 35th.
 - `oxformals` and `oxformals-mobile` share one Convex deployment and their `convex/schema.ts` files are byte-identical. **Any change under `convex/` must be copied to `/Users/nobel/Desktop/Work/oxformals-mobile/convex/` in the same commit**, and the two files must remain identical afterwards.
 - Components use `@/...` alias imports; files under `lib/data/` import siblings relatively.

@@ -96,12 +96,12 @@ html {
    * comment on the :root block above: logged-out visitors never get
    * data-ui-font, so this rule is their live styling, not a flash).
    */
-  --font-app: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-app: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-display-face: var(--font-schoolbell), "Schoolbell", cursive;
 }
 
 html[data-ui-font="schoolbell"] {
-  --font-app: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-app: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-display-face: var(--font-schoolbell), "Schoolbell", cursive;
   --bg: #f2ecdd;
   --paper: #ffffff;

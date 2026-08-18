@@ -25,7 +25,7 @@ Three things, established by the colour audit and by looking at the app:
 
 | Question | Decision |
 |---|---|
-| Body face | **Manrope.** Inter was rejected; Roboto considered and passed over. |
+| Body face | **Space Grotesk.** Space Grotesk and Roboto were considered; Inter rejected. |
 | Schoolbell | Demoted to accent: wordmark, row headlines, day-rail dates, section headings. |
 | Ground | **Sand** — `#f2ecdd`, a warm with a little olive in it, so it no longer shares a hue with the pink. |
 | Surfaces | White. `--paper` becomes `#ffffff`. |
@@ -81,15 +81,15 @@ flips to the dark ground colour to stay readable on it.
 `--font-app` currently drives **both** body text and `.font-display`, which is
 why Schoolbell is everywhere. Split them:
 
-- `--font-app` — body face. Manrope for the default theme, unchanged for the others.
+- `--font-app` — body face. Space Grotesk for the default theme, unchanged for the others.
 - `--font-display-face` — display face. Schoolbell for the default theme;
   `var(--font-app)` for the other six, preserving their current behaviour exactly.
 
-`.font-display` reads `--font-display-face`. Manrope loads through
+`.font-display` reads `--font-display-face`. Space Grotesk loads through
 `next/font/google` alongside the existing Schoolbell import in `app/layout.tsx`.
 
 **Weights.** `body` is currently `font-weight: 700` because Schoolbell needs it.
-Manrope at 700 shouts. The default theme moves to **400 body, 500–600 for
+Space Grotesk at 700 shouts. The default theme moves to **400 body, 500–600 for
 emphasis**; Schoolbell stays 400 wherever it appears. The other six themes keep
 their current 600.
 
@@ -97,7 +97,7 @@ their current 600.
 headline 1.65rem → **1.9rem** at `sm` and up, meta 0.9rem → **1rem**, host name
 0.95rem → **1.05rem**, host sub 0.85rem → **0.95rem**, chips 0.65rem →
 **0.75rem**, CTA 0.75rem → **0.875rem**, day-rail date 1.15rem → **1.25rem**.
-These are Manrope sizes; the same numbers under Schoolbell would be too large,
+These are Space Grotesk sizes; the same numbers under Schoolbell would be too large,
 which is another reason the scale change and the face change ship together.
 
 ## Token cleanups

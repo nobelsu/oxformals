@@ -29,14 +29,14 @@ logged-out home cannot be a personalised feed.
 
 ## Styling constraint — read this before writing any markup
 
-The typography and colour revamp (Manrope body, Schoolbell demoted to accent, a
+The typography and colour revamp (Space Grotesk body, Schoolbell demoted to accent, a
 new warm ground, an `--accent` / `--accent-wash` split) is **agreed in direction
 but not yet specced, and the ground tone is still unpicked.**
 
 This page must therefore be built entirely from the **existing** design tokens
 (`--bg`, `--paper`, `--ink`, `--ink-muted`, `--ink-soft`, `--tag`, `--tag-ink`,
 `--accent`, `--accent-hover`, `--accent-ink`) and the existing font classes
-(`font-display`, the inherited body font). Do not hardcode Manrope, Oat, or any
+(`font-display`, the inherited body font). Do not hardcode Space Grotesk, Oat, or any
 hex value. Built this way, the landing page inherits the new palette
 automatically when it lands, and needs no rework.
 

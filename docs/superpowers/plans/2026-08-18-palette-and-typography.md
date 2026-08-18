@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Move the default theme to the Sand ground with white surfaces, make Manrope the body face with Schoolbell as an accent, split `--accent` into an actionable rose and a decorative wash, and retire the hardcoded colours the audit found.
+**Goal:** Move the default theme to the Sand ground with white surfaces, make Space Grotesk the body face with Schoolbell as an accent, split `--accent` into an actionable rose and a decorative wash, and retire the hardcoded colours the audit found.
 
 **Architecture:** Everything lands in `app/globals.css` and `app/layout.tsx` except the component sweeps, which replace hardcoded `text-white` and `red-*` utilities with the tokens that already exist. Components were built against tokens throughout, so most of the visual change arrives without touching them.
 
@@ -96,15 +96,15 @@ git commit -m "FEAT: Sand palette with split accent and paired ink tokens"
 
 ---
 
-### Task 2: Manrope body, Schoolbell as accent
+### Task 2: Space Grotesk body, Schoolbell as accent
 
 **Files:**
 - Modify: `app/layout.tsx`
 - Modify: `app/globals.css`
 
-- [ ] **Step 1: Load Manrope**
+- [ ] **Step 1: Load Space Grotesk**
 
-In `app/layout.tsx`, add a `next/font/google` import for Manrope alongside the existing Schoolbell one, exposing it as `--font-manrope` with the weights the spec needs (400, 500, 600, 700), and add its `.variable` to the `<html>` className next to `schoolbell.variable`.
+In `app/layout.tsx`, add a `next/font/google` import for Space Grotesk alongside the existing Schoolbell one, exposing it as `--font-manrope` with the weights the spec needs (400, 500, 600, 700), and add its `.variable` to the `<html>` className next to `schoolbell.variable`.
 
 - [ ] **Step 2: Split body and display faces**
 
@@ -116,20 +116,20 @@ In `app/layout.tsx`, add a `next/font/google` import for Manrope alongside the e
 
 - [ ] **Step 3: Fix the weights**
 
-`body` is `font-weight: 700` because Schoolbell needs it; Manrope at 700 shouts. The default theme's body becomes `400`. `.font-display` under the default theme stays `400` (Schoolbell has one weight). The six other themes keep their existing 600 body / 600 display rules untouched.
+`body` is `font-weight: 700` because Schoolbell needs it; Space Grotesk at 700 shouts. The default theme's body becomes `400`. `.font-display` under the default theme stays `400` (Schoolbell has one weight). The six other themes keep their existing 600 body / 600 display rules untouched.
 
 Check whether anything relied on the inherited bold — search for elements that set no weight of their own and previously looked bold. Where a specific element genuinely needs emphasis, give it `font-medium` or `font-semibold` explicitly rather than restoring a global bold.
 
 - [ ] **Step 4: Verify in the browser**
 
-Run the dev server. Confirm: body text is Manrope; the wordmark, row headlines and day-rail dates are Schoolbell; switching to the `inter` theme still renders Inter for body *and* display, exactly as before. Report what you saw.
+Run the dev server. Confirm: body text is Space Grotesk; the wordmark, row headlines and day-rail dates are Schoolbell; switching to the `inter` theme still renders Inter for body *and* display, exactly as before. Report what you saw.
 
 - [ ] **Step 5: Typecheck, lint, commit**
 
 ```bash
 npx tsc --noEmit && npm run lint
 git add app/layout.tsx app/globals.css
-git commit -m "FEAT: Manrope body with Schoolbell as display accent"
+git commit -m "FEAT: Space Grotesk body with Schoolbell as display accent"
 ```
 
 ---
@@ -306,7 +306,7 @@ git commit -am "FEAT: Decorative pink moves to the accent wash"
 
 ## Self-Review Notes
 
-Spec coverage: Sand light/dark (T1), `--accent-wash` and `--danger-ink` across all themes (T1), `:root` kept as the logged-out palette and `@theme inline` exports (T1), Manrope + display-face split + weights (T2), the 33 accent-white sites (T3), the 13 red sites (T4), `.newsletter-page` un-fork and the type scale (T5), decorative pink moved onto the wash with its own ink token (T6). `--rank-*`, `convex/uiFont.ts`, and the other six themes' palettes are untouched, as the spec requires.
+Spec coverage: Sand light/dark (T1), `--accent-wash` and `--danger-ink` across all themes (T1), `:root` kept as the logged-out palette and `@theme inline` exports (T1), Space Grotesk + display-face split + weights (T2), the 33 accent-white sites (T3), the 13 red sites (T4), `.newsletter-page` un-fork and the type scale (T5), decorative pink moved onto the wash with its own ink token (T6). `--rank-*`, `convex/uiFont.ts`, and the other six themes' palettes are untouched, as the spec requires.
 
 Amended mid-build: Task 1 found that `:root` is the live palette for logged-out
 visitors rather than a duplicate, so the plan's original "delete it" instruction was

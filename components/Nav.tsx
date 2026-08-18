@@ -94,6 +94,12 @@ function NavInner() {
     <nav className="w-full shrink-0 bg-[var(--bg)]">
       <div className="mx-auto grid w-full max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-5 sm:grid-cols-[1fr_auto_1fr] sm:gap-4 sm:px-6">
         <div className="flex items-center justify-start">
+          <Link
+            href="/"
+            className="hidden font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--ink)] sm:block"
+          >
+            Oxformals
+          </Link>
           <button
             type="button"
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] sm:hidden"
