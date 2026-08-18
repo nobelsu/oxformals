@@ -41,7 +41,26 @@ export function formatListingRowMeta(args: {
   return parts.join(" · ");
 }
 
-/** `2 left · £28` — the text beside the seat pips. Seats are dropped once past. */
+/**
+ * Clamp `seatsAvailable` into `[0, groupSize]` so every consumer that derives
+ * seat state — pips, tail text, anything else — agrees on the same number
+ * even when the source data is invalid (negative, or exceeding the group
+ * size from a stale cache or a race).
+ */
+export function clampSeatsAvailable(
+  seatsAvailable: number,
+  groupSize: number,
+): number {
+  const safeGroupSize = Math.max(0, Math.trunc(groupSize));
+  return Math.min(Math.max(0, Math.trunc(seatsAvailable)), safeGroupSize);
+}
+
+/**
+ * `2 left · £28` — the text beside the seat pips. Seats are dropped once
+ * past. `seatsAvailable` is expected to already be clamped to
+ * `[0, groupSize]` (see `clampSeatsAvailable`) so this stays in agreement
+ * with the pips rendered alongside it.
+ */
 export function formatRowTail(args: {
   seatsAvailable: number;
   isPast: boolean;

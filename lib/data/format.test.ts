@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  clampSeatsAvailable,
   formatDayLabel,
   formatListingDate,
   formatListingMetaLine,
@@ -86,6 +87,50 @@ describe("formatRowTail", () => {
 
   it("omits price when absent", () => {
     assert.equal(formatRowTail({ seatsAvailable: 1, isPast: false }), "1 left");
+  });
+});
+
+describe("clampSeatsAvailable", () => {
+  it("passes through a valid value unchanged", () => {
+    assert.equal(clampSeatsAvailable(2, 4), 2);
+  });
+
+  it("floors negative seats to zero", () => {
+    assert.equal(clampSeatsAvailable(-1, 4), 0);
+  });
+
+  it("caps seats exceeding the group size", () => {
+    assert.equal(clampSeatsAvailable(9, 4), 4);
+  });
+
+  it("treats a negative group size as zero seats total", () => {
+    assert.equal(clampSeatsAvailable(2, -1), 0);
+  });
+
+  it("truncates fractional inputs", () => {
+    assert.equal(clampSeatsAvailable(2.9, 4.9), 2);
+  });
+});
+
+describe("formatRowTail composed with clampSeatsAvailable (as ListingRow calls them)", () => {
+  it("reads 'Group full' instead of negative seats", () => {
+    assert.equal(
+      formatRowTail({
+        seatsAvailable: clampSeatsAvailable(-1, 4),
+        isPast: false,
+      }),
+      "Group full",
+    );
+  });
+
+  it("caps seats over the group size instead of overstating availability", () => {
+    assert.equal(
+      formatRowTail({
+        seatsAvailable: clampSeatsAvailable(9, 4),
+        isPast: false,
+      }),
+      "4 left",
+    );
   });
 });
 

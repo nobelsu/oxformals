@@ -5,6 +5,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import type { User } from "@/lib/auth/types";
 import {
+  clampSeatsAvailable,
   formatRowTail,
   formatListingTime,
   formatShortDate,
@@ -51,6 +52,19 @@ export function ListingRow({
   const nowMs = useNowMs();
   const isPast = listingIsPast(listing.dateTime, nowMs);
   const ctaLabel = requestLabel ?? listingRequestCta(listing.listingType);
+
+  // One clamped seat count feeds both the pips and the tail text so they
+  // can never disagree, even on invalid data (negative seats, or seats
+  // exceeding the group size from a stale cache or a race).
+  const safeSeatsAvailable = clampSeatsAvailable(
+    listing.seatsAvailable,
+    listing.groupSize,
+  );
+  const rowTail = formatRowTail({
+    seatsAvailable: safeSeatsAvailable,
+    isPast,
+    price: listing.price,
+  });
 
   const yearRoleLine = [
     formatYearLabel(owner.year) || formatYearLabel(listing.year),
@@ -108,27 +122,34 @@ export function ListingRow({
         <h3 className="flex flex-wrap items-baseline gap-x-2 break-words font-display text-[1.4rem] uppercase leading-tight tracking-wide sm:text-[1.65rem]">
           {title ?? listing.college}
           {!compact ? (
-            <span className="text-[0.9rem] normal-case tracking-normal text-[var(--ink-muted)]">
-              {formatListingTime(listing.dateTime)}
-            </span>
+            <>
+              {/* Visually-hidden separator: the gap-x-2 flex gap keeps the
+                  visual spacing, but adjacent text nodes otherwise run
+                  together ("Worcester7:15pm") when copied or read by a
+                  screen reader. */}
+              <span className="sr-only"> </span>
+              <span className="text-[0.9rem] normal-case tracking-normal text-[var(--ink-muted)]">
+                {formatListingTime(listing.dateTime)}
+              </span>
+            </>
           ) : null}
         </h3>
 
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-          {!isPast ? (
-            <SeatPips
-              total={listing.groupSize}
-              taken={listing.groupSize - listing.seatsAvailable}
-            />
-          ) : null}
-          <span className="text-[0.9rem] text-[var(--ink-muted)]">
-            {formatRowTail({
-              seatsAvailable: listing.seatsAvailable,
-              isPast,
-              price: listing.price,
-            })}
-          </span>
-        </div>
+        {!isPast || rowTail ? (
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+            {!isPast ? (
+              <SeatPips
+                total={listing.groupSize}
+                taken={listing.groupSize - safeSeatsAvailable}
+              />
+            ) : null}
+            {rowTail ? (
+              <span className="text-[0.9rem] text-[var(--ink-muted)]">
+                {rowTail}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Link
