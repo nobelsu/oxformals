@@ -178,7 +178,7 @@ export function PaintReveal() {
 
   if (skip) {
     return (
-      <section className="relative mt-10 w-full overflow-hidden rounded-[16px] bg-[var(--accent)] [height:clamp(18rem,40vh,24rem)]">
+      <section className="relative mt-10 w-full overflow-hidden rounded-[16px] bg-[var(--accent)] [height:clamp(28rem,80svh,52rem)]">
         <div className="flex h-full w-full items-center justify-center px-6 text-center">
           {tagline}
         </div>
@@ -189,7 +189,7 @@ export function PaintReveal() {
   return (
     <section
       ref={sectionRef}
-      className="relative mt-10 w-full touch-none select-none overflow-hidden rounded-[16px] bg-[var(--accent)] [height:clamp(18rem,40vh,24rem)] cursor-none"
+      className="relative mt-10 w-full touch-none select-none overflow-hidden rounded-[16px] bg-[var(--accent)] [height:clamp(28rem,80svh,52rem)] cursor-none"
       onPointerMove={handlePointerMove}
       onPointerDown={handlePointerDown}
       onPointerEnter={handlePointerEnter}

@@ -4,6 +4,7 @@ import { LandingHero } from "@/components/landing/LandingHero";
 import { LandingHowItWorks } from "@/components/landing/LandingHowItWorks";
 import { LandingSocialTeaser } from "@/components/landing/LandingSocialTeaser";
 import { PaintReveal } from "@/components/landing/PaintReveal";
+import { LandingStats } from "@/components/landing/LandingStats";
 import { LandingSpray } from "@/components/landing/LandingSpray";
 
 export function LandingPage({
@@ -17,6 +18,7 @@ export function LandingPage({
       <div className="relative z-10 flex flex-col">
         <LandingHero preloaded={preloaded} />
         <LandingHowItWorks />
+        <LandingStats />
         <LandingSocialTeaser />
         <PaintReveal />
       </div>

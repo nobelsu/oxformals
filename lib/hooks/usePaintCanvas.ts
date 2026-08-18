@@ -24,6 +24,22 @@ export function useReducedOrCoarse(): boolean {
   return skip;
 }
 
+/**
+ * True when the user prefers reduced motion. Unlike {@link useReducedOrCoarse}
+ * this ignores pointer type — touch visitors still get scroll-reveal motion.
+ */
+export function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduced(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return reduced;
+}
+
 /** Keeps a canvas sized to its CSS box × dpr (capped at 2); calls back after each resize. */
 export function useCanvasDpr(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,

@@ -1,7 +1,9 @@
+import { Reveal } from "@/components/landing/Reveal";
+
 export function LandingSocialTeaser() {
   return (
-    <section className="grid items-center gap-8 border-t-[2px] border-dashed border-[color-mix(in_srgb,var(--ink)_20%,transparent)] py-10 md:grid-cols-2">
-      <div>
+    <section className="grid min-h-[85svh] items-center gap-8 border-t-[2px] border-dashed border-[color-mix(in_srgb,var(--ink)_20%,transparent)] py-16 md:grid-cols-2">
+      <Reveal>
         <h2 className="font-display text-3xl uppercase tracking-wide">
           Follow people, not just formals
         </h2>
@@ -10,9 +12,10 @@ export function LandingSocialTeaser() {
           and get told when someone lists a formal at a college on your
           wishlist.
         </p>
-      </div>
+      </Reveal>
 
-      <div className="flex flex-col gap-3" aria-hidden>
+      <Reveal delay={120}>
+        <div className="flex flex-col gap-3" aria-hidden>
         <div className="rounded-[14px] border-[2px] border-[var(--ink)] bg-[var(--paper)] p-4">
           <div className="flex items-center gap-2 text-sm">
             <span className="flex h-7 w-7 items-center justify-center rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--accent-wash)] text-[0.7rem] font-bold text-[var(--accent-wash-ink)]">
@@ -40,7 +43,8 @@ export function LandingSocialTeaser() {
             On your wishlist &middot; 3 seats left &middot; 20 Oct
           </p>
         </div>
-      </div>
+        </div>
+      </Reveal>
     </section>
   );
 }
