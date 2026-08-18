@@ -54,11 +54,9 @@ function wrapLines(
  * you scroll in, revealing the stationary card underneath rather than scrolling
  * it into view.
  *
- * On the revealed rose card the tagline is visible; moving the cursor over it
- * covers it (the words disappear under the cover colour), and pressing and
- * dragging scratches the veil away to reveal the same words beneath in a
- * different colour on a different ground. Once scratching starts, hovering no
- * longer re-covers what's been revealed.
+ * On the revealed rose card the tagline is visible; the first cursor move blanks
+ * the whole veil (the words vanish), and moving the cursor from then on scratches
+ * them back into view beneath, in a different colour on a different ground.
  *
  * The scratch is a mouse affordance. Under reduced motion / coarse pointers the
  * card is a plain, fully-legible rose page — no canvas, no listeners — and the
@@ -74,10 +72,9 @@ export function SprayFinale({ cover }: { cover: ReactNode }) {
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const dprRef = useRef(1);
   const lastRef = useRef<{ x: number; y: number } | null>(null);
-  const downRef = useRef(false);
-  // Flips true on the first scratch (pointer down). Before it, hovering covers
-  // the text; after it, hovering no longer re-covers what's been revealed.
-  const scratchedRef = useRef(false);
+  // Flips true once the first cursor move has blanked the whole veil; from then
+  // on, moving the cursor scratches the words back into view.
+  const coveredRef = useRef(false);
   // Resolved once we're client-side; the veil stays undrawn until then.
   const coverRef = useRef<[number, number, number] | null>(null);
   const inkRef = useRef("");
@@ -123,7 +120,7 @@ export function SprayFinale({ cover }: { cover: ReactNode }) {
     (ctx: CanvasRenderingContext2D, w: number, h: number, dpr: number) => {
       ctxRef.current = ctx;
       dprRef.current = dpr;
-      scratchedRef.current = false;
+      coveredRef.current = false;
       drawVeil(ctx, w, h, dpr);
     },
     [drawVeil],
@@ -143,7 +140,7 @@ export function SprayFinale({ cover }: { cover: ReactNode }) {
       const canvas = canvasRef.current;
       const ctx = ctxRef.current;
       if (!cancelled && canvas && ctx && canvas.width > 0) {
-        scratchedRef.current = false;
+        coveredRef.current = false;
         drawVeil(ctx, canvas.width, canvas.height, dprRef.current);
       }
     };
@@ -164,7 +161,7 @@ export function SprayFinale({ cover }: { cover: ReactNode }) {
         if (entry.isIntersecting) return;
         const ctx = ctxRef.current;
         if (ctx) drawVeil(ctx, canvas.width, canvas.height, dprRef.current);
-        scratchedRef.current = false;
+        coveredRef.current = false;
         lastRef.current = null;
       },
       { threshold: 0 },
@@ -172,17 +169,6 @@ export function SprayFinale({ cover }: { cover: ReactNode }) {
     io.observe(canvas);
     return () => io.disconnect();
   }, [skip, drawVeil]);
-
-  // Global pointerup so a drag that ends outside the panel still stops.
-  useEffect(() => {
-    if (skip) return;
-    const up = () => {
-      downRef.current = false;
-      lastRef.current = null;
-    };
-    window.addEventListener("pointerup", up);
-    return () => window.removeEventListener("pointerup", up);
-  }, [skip]);
 
   const toDeviceXY = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
@@ -192,38 +178,17 @@ export function SprayFinale({ cover }: { cover: ReactNode }) {
     return { x: (clientX - rect.left) * dpr, y: (clientY - rect.top) * dpr };
   }, []);
 
-  // Cover: paint the cover colour where the cursor moves, hiding the text — the
-  // "move to make it disappear" pass, before any scratching starts.
-  const paintCover = useCallback((clientX: number, clientY: number) => {
+  // Blank the whole veil in one shot — the first cursor move makes the words
+  // vanish; scratching then brings them back.
+  const coverAll = useCallback(() => {
     const ctx = ctxRef.current;
     const rgb = coverRef.current;
-    const p = toDeviceXY(clientX, clientY);
-    if (!ctx || !rgb || !p) return;
-    const radius = REVEAL_RADIUS * dprRef.current;
-    const stamp = (x: number, y: number) => {
-      const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
-      g.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 1)`);
-      g.addColorStop(0.7, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 1)`);
-      g.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0)`);
-      ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
-    };
-    const last = lastRef.current;
-    if (last) {
-      const dist = Math.hypot(p.x - last.x, p.y - last.y);
-      const steps = Math.max(1, Math.round(dist / (radius / 2)));
-      for (let i = 1; i <= steps; i++) {
-        const t = i / steps;
-        stamp(last.x + (p.x - last.x) * t, last.y + (p.y - last.y) * t);
-      }
-    } else {
-      stamp(p.x, p.y);
-    }
-    lastRef.current = p;
-  }, [toDeviceXY]);
+    const canvas = canvasRef.current;
+    if (!ctx || !rgb || !canvas) return;
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }, []);
 
   // Reveal: erase the veil with a soft brush, uncovering the layer beneath.
   const reveal = useCallback((clientX: number, clientY: number) => {
@@ -263,23 +228,27 @@ export function SprayFinale({ cover }: { cover: ReactNode }) {
         ring.style.left = `${e.clientX}px`;
         ring.style.top = `${e.clientY}px`;
       }
-      if (downRef.current) {
-        reveal(e.clientX, e.clientY);
-      } else if (e.pointerType === "mouse" && !scratchedRef.current) {
-        paintCover(e.clientX, e.clientY);
+      if (!coveredRef.current) {
+        coverAll();
+        coveredRef.current = true;
+        lastRef.current = null;
+        return;
       }
+      reveal(e.clientX, e.clientY);
     },
-    [paintCover, reveal],
+    [coverAll, reveal],
   );
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
-      downRef.current = true;
-      scratchedRef.current = true;
-      lastRef.current = null;
+      if (!coveredRef.current) {
+        coverAll();
+        coveredRef.current = true;
+        lastRef.current = null;
+      }
       reveal(e.clientX, e.clientY);
     },
-    [reveal],
+    [coverAll, reveal],
   );
 
   const handlePointerEnter = useCallback(() => {
