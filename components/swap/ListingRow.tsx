@@ -5,7 +5,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Chip } from "@/components/ui/Chip";
 import type { User } from "@/lib/auth/types";
 import {
-  formatListingRowMeta,
+  formatRowTail,
   formatListingTime,
   formatYearLabel,
 } from "@/lib/data/format";
@@ -16,6 +16,7 @@ import { useNowMs } from "@/lib/hooks/useNowMs";
 import { ListingMenu } from "@/components/swap/ListingMenu";
 import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
+import { SeatPips } from "@/components/swap/SeatPips";
 
 type Props = {
   listing: Listing;
@@ -89,22 +90,28 @@ export function ListingRow({
           : ""
       }`}
     >
-      <div className="shrink-0 pt-0.5 text-[0.95rem] text-[var(--ink-muted)] sm:w-[4.5rem]">
-        {formatListingTime(listing.dateTime)}
-      </div>
-
       <div className="min-w-0 flex-1">
-        <h3 className="break-words font-display text-[1.4rem] uppercase leading-tight tracking-wide sm:text-[1.65rem]">
+        <h3 className="flex flex-wrap items-baseline gap-x-2 break-words font-display text-[1.4rem] uppercase leading-tight tracking-wide sm:text-[1.65rem]">
           {title ?? listing.college}
+          <span className="text-[0.9rem] normal-case tracking-normal text-[var(--ink-muted)]">
+            {formatListingTime(listing.dateTime)}
+          </span>
         </h3>
 
-        <div className="mt-1 text-[0.9rem] text-[var(--ink-muted)]">
-          {formatListingRowMeta({
-            groupSize: listing.groupSize,
-            seatsAvailable: listing.seatsAvailable,
-            isPast,
-            price: listing.price,
-          })}
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+          {!isPast ? (
+            <SeatPips
+              total={listing.groupSize}
+              taken={listing.groupSize - listing.seatsAvailable}
+            />
+          ) : null}
+          <span className="text-[0.9rem] text-[var(--ink-muted)]">
+            {formatRowTail({
+              seatsAvailable: listing.seatsAvailable,
+              isPast,
+              price: listing.price,
+            })}
+          </span>
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
