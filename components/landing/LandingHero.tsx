@@ -9,7 +9,6 @@ import { BROWSE_ROUTE } from "@/lib/ui/routes";
 import { HeroShowcase, type HeroSlide } from "@/components/landing/HeroShowcase";
 import { HeroFeedSlide } from "@/components/landing/HeroFeedSlide";
 import { HeroReviewSlide } from "@/components/landing/HeroReviewSlide";
-import { HeroSpray } from "@/components/landing/HeroSpray";
 
 export function LandingHero({
   preloaded,
@@ -62,9 +61,8 @@ export function LandingHero({
   ];
 
   return (
-    <section className="relative grid items-center gap-10 py-10 md:grid-cols-2 md:gap-14">
-      <HeroSpray />
-      <div className="relative z-10 flex flex-col items-start">
+    <section className="grid items-center gap-10 py-10 md:grid-cols-2 md:gap-14">
+      <div className="flex flex-col items-start">
         <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
           Find a seat at any{" "}
           <span className="whitespace-nowrap">Oxford formal.</span>
@@ -95,9 +93,7 @@ export function LandingHero({
         </p>
       </div>
 
-      <div className="relative z-10">
-        <HeroShowcase slides={heroSlides} />
-      </div>
+      <HeroShowcase slides={heroSlides} />
     </section>
   );
 }

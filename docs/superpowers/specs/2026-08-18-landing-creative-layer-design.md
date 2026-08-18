@@ -6,7 +6,7 @@ Status: approved in direction; three features, validated by prototype where note
 ## Overview
 
 Three creative/interactive touches on the **logged-out landing page only**, inspired
-by Studio Marrone: a cursor paint-reveal block, an ambient spray behind the hero,
+by Studio Marrone: a cursor paint-reveal block, a full-page fading spray,
 and a drawn accent mark on the headline. All decorative, all landing-only —
 none of this goes near the app's working surfaces (Browse, feed, chats, forms),
 where native scroll and plain interaction must stay untouched.
@@ -58,30 +58,38 @@ field and tagline fully shown, veil and cursor skipped.
 
 ---
 
-## Feature 2 — Ambient spray behind the hero
+## Feature 2 — Full-page fading spray
 
-**Validated by prototype** (`paintbrush-v2`, the build-up brush).
+**Revised** from the prototype: a living spray trail across the **whole landing page**
+that **dissipates** rather than accumulating permanently.
 
-`components/landing/HeroSpray.tsx`, an absolutely-positioned canvas **behind** the
-hero content (`z-0`; hero content sits at `z-10`). Soft translucent dabs in
-`--accent-wash` accumulate gently as the cursor moves across the hero, building a
-faint colour wash. The canvas is `pointer-events: none`; the hero section listens for
-`pointermove` and forwards coordinates, so CTAs stay clickable.
+`components/landing/LandingSpray.tsx` — a **fixed, full-viewport** canvas
+(`position: fixed; inset: 0; z-0; pointer-events: none`) mounted at the top of
+`LandingPage`, behind a `relative z-10` content wrapper. Soft translucent
+`--accent-wash` dabs follow the cursor anywhere on the page, and a
+`requestAnimationFrame` loop **fades the canvas continuously** so old strokes fade out
+a second or so after the cursor leaves them.
 
-**The contrast guardrail — this is the one that can go wrong.** Spray behind the
-headline could drop text contrast below AA. Mitigations, all required:
-- Cap accumulated alpha low (a faint wash, not a fill).
-- Keep the wash in `--accent-wash` (pale), never the rose.
-- **Verify**: with the wash at maximum accumulation, the hero headline (`--ink` on
-  the sprayed ground) must still measure ≥ 4.5:1. If it can't, the spray is confined
-  to the hero's margins / the area behind the showcase panel rather than behind the
-  copy.
+**The fade loop must idle.** It runs only while there is paint to fade — it stops
+itself once the canvas is empty and restarts on the next dab — so an idle page burns
+no frames. (This supersedes the earlier "no rAF loop" rule, which applied to the
+permanent version; a fading trail inherently needs a loop.)
 
-**Static form**: a single faint pre-painted `--accent-wash` gradient wash, no pointer
-interaction. (Ambient and subtle enough that the static version looks intentional.)
+**Clicks never blocked**: the canvas is `pointer-events: none`; it watches `window`
+for `pointermove` and paints at the pointer's viewport position, so all page content
+stays interactive with no per-section wiring.
 
-**Register**: deliberately different from Feature 1 — ambient and barely-there vs the
-overt bottom block — so the two paint interactions don't compete.
+**Contrast guardrail (still required, now easier).** The spray now sits behind *all*
+page text, not just the hero — but most body text lives on opaque white/paper cards
+that cover the spray, and the continuous fade caps how much wash can accumulate. The
+binding case is **dark mode**, where `--ink` is light while `--accent-wash` stays pale:
+at accumulated alpha 0.5 the ink-on-wash ratio falls to ~4.16:1, under the floor. So
+the per-region accumulation is **capped at ≤ 0.35** (measured worst-case ~5.28:1 dark,
+~13:1 light), and the accumulation estimate decays in step with the canvas fade. Text
+directly on the Sand ground (hero headline, section headings) stays ≥ 4.5:1.
+
+**Static form** (reduced-motion / touch / SSR): a single faint static `--accent-wash`
+radial-gradient wash, no canvas, no loop, no listeners.
 
 ---
 
@@ -117,14 +125,13 @@ pen-script word as a later, separate piece.
    sizing via `ResizeObserver`, pointer-move plumbing, reduced-motion/touch detection)
    so Features 1 and 2 don't duplicate it.
 2. **Feature 1** (paint-reveal block) — validated, highest-value, ship first.
-3. **Feature 2** (hero spray) — depends on the contrast verification.
+3. **Feature 2** (full-page fading spray) — fade loop must idle; depends on the contrast cap.
 4. **Feature 3** (drawn accent mark) — independent and cheap; reuses the roughjs setup.
 
 ## Testing
 
 No new pure logic to unit-test. Everything is visual + interaction, verified in the
-browser: paint-reveal reveals + repaints and resets on scroll-out; spray stays under
-the contrast floor at max accumulation (measured, not eyeballed); the drawn mark animates once and respects reduced-motion; all three render their static form with motion
+browser: paint-reveal reveals + repaints and resets on scroll-out; spray fades out when idle and stays under the contrast floor (measured, not eyeballed); the drawn mark animates once and respects reduced-motion; all three render their static form with motion
 reduced and on touch. Confirm the app's working surfaces are untouched.
 
 ## Out of scope
