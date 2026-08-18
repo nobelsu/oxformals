@@ -80,18 +80,25 @@
   --color-danger: var(--danger);
   --color-danger-ink: var(--danger-ink);
   --font-hand: var(--font-app);
-  --font-display: var(--font-app);
+  --font-display: var(--font-display-face);
 }
 
 /* --- Font stacks + paired color themes (light) --- */
 
 html {
   scrollbar-gutter: stable;
-  --font-app: var(--font-schoolbell), "Schoolbell", cursive;
+  /*
+   * Body face for the default theme (and bare `html` — see the fallback
+   * comment on the :root block above: logged-out visitors never get
+   * data-ui-font, so this rule is their live styling, not a flash).
+   */
+  --font-app: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display-face: var(--font-schoolbell), "Schoolbell", cursive;
 }
 
 html[data-ui-font="schoolbell"] {
-  --font-app: var(--font-schoolbell), "Schoolbell", cursive;
+  --font-app: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display-face: var(--font-schoolbell), "Schoolbell", cursive;
   --bg: #f2ecdd;
   --paper: #ffffff;
   --ink: #1b1a12;
@@ -109,6 +116,7 @@ html[data-ui-font="schoolbell"] {
 
 html[data-ui-font="inter"] {
   --font-app: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display-face: var(--font-app);
   --bg: #eef2f7;
   --paper: #f7f9fc;
   --ink: #0f172a;
@@ -126,6 +134,7 @@ html[data-ui-font="inter"] {
 
 html[data-ui-font="dm_sans"] {
   --font-app: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display-face: var(--font-app);
   --bg: #faf5f3;
   --paper: #fff9f7;
   --ink: #3d2a26;
@@ -143,6 +152,7 @@ html[data-ui-font="dm_sans"] {
 
 html[data-ui-font="lora"] {
   --font-app: "Lora", Georgia, "Times New Roman", serif;
+  --font-display-face: var(--font-app);
   --bg: #f4f1ea;
   --paper: #faf7f0;
   --ink: #2c1810;
@@ -161,6 +171,7 @@ html[data-ui-font="lora"] {
 html[data-ui-font="georgia"] {
   --font-app: "Georgia", "Palatino Linotype", "Book Antiqua", "Palatino",
     "Times New Roman", Times, serif;
+  --font-display-face: var(--font-app);
   --bg: #e8e4dc;
   --paper: #f2efe8;
   --ink: #111111;
@@ -178,6 +189,7 @@ html[data-ui-font="georgia"] {
 
 html[data-ui-font="arial"] {
   --font-app: "Arial", "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
+  --font-display-face: var(--font-app);
   --bg: #ffffff;
   --paper: #f5f5f5;
   --ink: #171717;
@@ -196,6 +208,7 @@ html[data-ui-font="arial"] {
 html[data-ui-font="system_ui"] {
   --font-app: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display-face: var(--font-app);
   --bg: #ecfdf5;
   --paper: #f0fdf4;
   --ink: #064e3b;
@@ -216,7 +229,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-app);
-  font-weight: 700;
+  font-weight: 400;
   letter-spacing: 0.01em;
 }
 
@@ -231,8 +244,8 @@ html[data-ui-font="system_ui"] body {
 }
 
 .font-display {
-  font-family: var(--font-app);
-  font-weight: 700;
+  font-family: var(--font-display-face);
+  font-weight: 400;
   letter-spacing: 0.02em;
 }
 

@@ -28,7 +28,7 @@ export function ConfirmDialog({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+          className="rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
         >
           {cancelLabel}
         </button>
@@ -36,7 +36,7 @@ export function ConfirmDialog({
           type="button"
           onClick={() => void onConfirm()}
           className={[
-            "rounded-full border-[2px] px-4 py-1.5 text-sm transition-colors",
+            "rounded-full border-[2px] px-4 py-1.5 text-sm font-medium transition-colors",
             variant === "destructive"
               ? "border-red-600 bg-red-600 text-white hover:bg-red-700 hover:border-red-700"
               : "border-[var(--ink)] bg-[var(--ink)] text-[var(--bg)] hover:opacity-80",

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
-import { Schoolbell } from "next/font/google";
+import { Manrope, Schoolbell } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "@/app/ConvexClientProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
@@ -12,6 +12,12 @@ const schoolbell = Schoolbell({
   variable: "--font-schoolbell",
   subsets: ["latin"],
   weight: "400",
+});
+
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -42,7 +48,10 @@ export default function RootLayout({
 }>) {
   return (
     <ConvexAuthNextjsServerProvider>
-      <html lang="en" className={`${schoolbell.variable} h-full antialiased`}>
+      <html
+        lang="en"
+        className={`${schoolbell.variable} ${manrope.variable} h-full antialiased`}
+      >
         <head>
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link

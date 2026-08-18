@@ -152,7 +152,7 @@ function NavInner() {
                 onClick={() => {
                   void signOut().then(() => router.push("/"));
                 }}
-                className="hidden whitespace-nowrap rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] transition-colors sm:inline-block"
+                className="hidden whitespace-nowrap rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 font-medium text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] transition-colors sm:inline-block"
               >
                 Sign out
               </button>
@@ -186,7 +186,7 @@ function NavInner() {
           ) : (
             <Link
               href="/login"
-              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-4 py-1"
+              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-4 py-1 font-medium"
             >
               Sign in
             </Link>
@@ -227,7 +227,7 @@ function NavInner() {
               <button
                 type="button"
                 onClick={openSettings}
-                className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
               >
                 Settings
               </button>
@@ -237,7 +237,7 @@ function NavInner() {
                   setDrawerOpen(false);
                   void signOut().then(() => router.push("/"));
                 }}
-                className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
               >
                 Sign out
               </button>
@@ -246,7 +246,7 @@ function NavInner() {
             <Link
               href="/login"
               onClick={() => setDrawerOpen(false)}
-              className="block rounded-full bg-[var(--accent)] px-4 py-2 text-center text-white hover:bg-[var(--accent-hover)]"
+              className="block rounded-full bg-[var(--accent)] px-4 py-2 text-center font-medium text-white hover:bg-[var(--accent-hover)]"
             >
               Sign in
             </Link>

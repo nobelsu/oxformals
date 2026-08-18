@@ -46,7 +46,7 @@ export function Chip({
       : "";
 
   const base =
-    "inline-flex items-center rounded-full leading-normal max-w-full";
+    "inline-flex items-center rounded-full leading-normal max-w-full font-medium";
   const colorCls =
     appearance === "plain"
       ? border

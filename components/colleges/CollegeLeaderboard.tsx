@@ -307,7 +307,7 @@ export function CollegeLeaderboard() {
           {rest.length > 0 ? (
             <section aria-label="All colleges">
               {topThree.length > 0 ? (
-                <h2 className="mb-2 text-sm uppercase tracking-wide text-[var(--ink-muted)]">
+                <h2 className="mb-2 text-sm font-medium uppercase tracking-wide text-[var(--ink-muted)]">
                   All colleges
                 </h2>
               ) : null}

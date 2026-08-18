@@ -35,7 +35,7 @@ function StatTile({
       seed={seedFrom(label)}
       className="flex min-h-[5.5rem] flex-col justify-between"
     >
-      <span className="text-xs uppercase tracking-wide text-[var(--ink-muted)]">
+      <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
         {label}
       </span>
       <span
