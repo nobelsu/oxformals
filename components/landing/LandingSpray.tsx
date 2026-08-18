@@ -3,31 +3,33 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useReducedOrCoarse } from "@/lib/hooks/usePaintCanvas";
 
-/** Spray cone radius in CSS px — speckle scatters within this. */
-const RADIUS = 96;
-/** Alpha estimate laid down per dab, used for the contrast-cap grid only. */
-const PER_DAB_ALPHA = 0.05;
-/** Number of speckle particles flung per dab — the grainy airbrush texture. */
-const SPECKLE_COUNT = 30;
-/** Alpha of each individual speckle particle. Low; density builds coverage. */
-const SPECKLE_ALPHA = 0.06;
+/** Spray cone radius in CSS px — the dab's soft core plus fine grain. */
+const RADIUS = 54;
+/** Fine grain flecks per dab — texture on top of the core, not the whole dab. */
+const GRAIN_COUNT = 70;
 /**
- * Per-region ceiling on accumulated alpha, from the contrast budget:
+ * Alpha values are laid down *on the offscreen mask*. The mask may saturate to
+ * fully opaque with no contrast risk — it is only ever composited onto the
+ * visible canvas at `globalAlpha = ALPHA_CAP` (see the render step), so what the
+ * user sees can never exceed the cap regardless of how hard they scribble.
+ */
+const CORE_ALPHA = 0.9;
+/**
+ * Hard ceiling on the visible wash alpha, from the contrast budget:
  * `--accent-wash` (#edbfba) is identical in light and dark, but `--ink` flips
- * (near-black light, near-cream dark), so dark mode binds. At alpha 0.5 the
- * ink-on-wash ratio falls to ~4.16:1 (under 4.5:1); 0.35 leaves headroom
- * (~5.28:1 dark, ~13:1 light). The continuous fade keeps accumulation well
- * below this in practice; the cap guards fast scribbling in one spot.
+ * (near-black light, near-cream dark), so dark mode binds — cream text over the
+ * wash. At alpha 0.5 that ratio falls to ~4.16:1 (under 4.5:1); 0.35 leaves
+ * headroom (~5.28:1 dark, ~13:1 light).
+ *
+ * This is enforced *by construction*: the mask is drawn onto the visible canvas
+ * at exactly this globalAlpha, so `visible = mask · ALPHA_CAP ≤ ALPHA_CAP`. No
+ * per-region accumulation grid, no gate that a wide speckle radius can escape.
  */
 const ALPHA_CAP = 0.35;
-/** CSS-px bucket for the coarse accumulation grid that enforces the cap. */
-const CELL = 24;
-/** CSS-px radius within which a dab's alpha counts toward the cap. */
-const CORE = RADIUS * 0.45;
-/** Alpha subtracted from the whole canvas each frame — the fade rate. */
-const FADE_PER_FRAME = 0.03;
-/** Matching decay applied to the accumulation grid each frame. */
-const ACCUM_DECAY = 0.05;
+/** Alpha erased from the mask each frame — the fade-out rate. */
+const FADE_PER_FRAME = 0.035;
+/** Frames of no new dab before the layer hard-clears itself and idles. */
+const IDLE_CUTOFF = 150;
 
 function parseHexColor(value: string): [number, number, number] | null {
   const hex = value.trim().replace("#", "");
@@ -53,10 +55,12 @@ function parseHexColor(value: string): [number, number, number] | null {
  * in `LandingPage`; it is `pointer-events: none` and watches `window` for
  * moves, so nothing on the page is ever blocked.
  *
- * A `requestAnimationFrame` loop fades the canvas continuously but idles itself
- * once the canvas is empty — an untouched page burns no frames. Per-region
- * accumulation is capped so text on the Sand ground stays above the 4.5:1
- * contrast floor (dark mode is the binding case).
+ * Grain is stamped onto an offscreen mask canvas, then each frame the mask is
+ * composited onto the visible canvas at `globalAlpha = ALPHA_CAP` — capping the
+ * visible wash below the 4.5:1 contrast floor (dark mode is the binding case)
+ * no matter how densely the mask is scribbled. A `requestAnimationFrame` loop
+ * fades the mask continuously but idles itself once the layer is empty, so an
+ * untouched page burns no frames.
  *
  * Falls back to a single static CSS radial-gradient wash under
  * prefers-reduced-motion / coarse pointers — no canvas, no loop, no listeners.
@@ -66,58 +70,43 @@ export function LandingSpray() {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const maskRef = useRef<HTMLCanvasElement | null>(null);
+  const maskCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const dprRef = useRef(1);
   const lastRef = useRef<{ x: number; y: number } | null>(null);
   const washRef = useRef<[number, number, number] | null>(null);
-  const accumRef = useRef<Map<string, number>>(new Map());
   const rafRef = useRef<number | null>(null);
   /** Frames since the last dab; drives the fade-out-then-stop cutoff. */
   const idleFramesRef = useRef(0);
 
-  const cellsAround = useCallback((cx: number, cy: number) => {
-    const cells: { key: string; weight: number }[] = [];
-    const gx = Math.floor(cx / CELL);
-    const gy = Math.floor(cy / CELL);
-    const span = Math.ceil(CORE / CELL);
-    for (let dy = -span; dy <= span; dy++) {
-      for (let dx = -span; dx <= span; dx++) {
-        const ccx = (gx + dx) * CELL + CELL / 2;
-        const ccy = (gy + dy) * CELL + CELL / 2;
-        const dist = Math.hypot(ccx - cx, ccy - cy);
-        if (dist > CORE) continue;
-        cells.push({ key: `${gx + dx},${gy + dy}`, weight: 1 - dist / CORE });
-      }
-    }
-    return cells;
-  }, []);
-
-  // The fade loop: subtract a little alpha from the whole canvas each frame,
-  // decay the accumulation grid in step, and stop once nothing's left.
+  // The render/fade loop: thin the mask a little each frame, repaint the visible
+  // canvas from it at the capped alpha, and stop once the layer is empty.
   const tick = useCallback(function loop() {
     const ctx = ctxRef.current;
     const canvas = canvasRef.current;
-    if (!ctx || !canvas) {
+    const mask = maskRef.current;
+    const maskCtx = maskCtxRef.current;
+    if (!ctx || !canvas || !mask || !maskCtx) {
       rafRef.current = null;
       return;
     }
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.fillStyle = `rgba(0, 0, 0, ${FADE_PER_FRAME})`;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    for (const [key, value] of accumRef.current) {
-      const next = value - ACCUM_DECAY;
-      if (next <= 0.001) accumRef.current.delete(key);
-      else accumRef.current.set(key, next);
-    }
+    // Fade the mask.
+    maskCtx.globalCompositeOperation = "destination-out";
+    maskCtx.fillStyle = `rgba(0, 0, 0, ${FADE_PER_FRAME})`;
+    maskCtx.fillRect(0, 0, mask.width, mask.height);
+    maskCtx.globalCompositeOperation = "source-over";
+
+    // Repaint the visible canvas from the mask, capped.
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = ALPHA_CAP;
+    ctx.drawImage(mask, 0, 0);
+    ctx.globalAlpha = 1;
 
     idleFramesRef.current += 1;
-    // destination-out fades multiplicatively (asymptotic to 0), so run long
-    // enough that the darkest paint is visually gone, then hard-clear the
-    // residue and stop — otherwise a faint ghost would linger forever.
-    if (idleFramesRef.current > 150) {
-      ctx.globalCompositeOperation = "source-over";
+    if (idleFramesRef.current > IDLE_CUTOFF) {
+      maskCtx.clearRect(0, 0, mask.width, mask.height);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      accumRef.current.clear();
       rafRef.current = null;
       return;
     }
@@ -129,50 +118,39 @@ export function LandingSpray() {
     if (rafRef.current == null) rafRef.current = requestAnimationFrame(tick);
   }, [tick]);
 
-  const stampAt = useCallback(
-    (cssX: number, cssY: number) => {
-      const ctx = ctxRef.current;
-      const rgb = washRef.current;
-      if (!ctx || !rgb) return;
+  const stampAt = useCallback((cssX: number, cssY: number) => {
+    const maskCtx = maskCtxRef.current;
+    const rgb = washRef.current;
+    if (!maskCtx || !rgb) return;
 
-      const cells = cellsAround(cssX, cssY);
-      const maxAccum = cells.reduce(
-        (m, c) => Math.max(m, accumRef.current.get(c.key) ?? 0),
-        0,
-      );
-      if (maxAccum >= ALPHA_CAP) return;
-
-      const dpr = dprRef.current;
-      const [r, g, b] = rgb;
-      const x = cssX * dpr;
-      const y = cssY * dpr;
-      const radius = RADIUS * dpr;
-      // Fling a cloud of small particles, denser toward the centre, so it reads
-      // as airbrush grain rather than a smooth wash. pow(<1) biases the sampled
-      // radius inward; the square-of-uniform would spread it evenly by area.
-      ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${SPECKLE_ALPHA})`;
-      for (let i = 0; i < SPECKLE_COUNT; i++) {
-        const rr = radius * Math.pow(Math.random(), 0.65);
-        const ang = Math.random() * Math.PI * 2;
-        const px = x + Math.cos(ang) * rr;
-        const py = y + Math.sin(ang) * rr;
-        const dotR = (Math.random() * 1.5 + 0.5) * dpr;
-        ctx.beginPath();
-        ctx.arc(px, py, dotR, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      for (const cell of cells) {
-        const prev = accumRef.current.get(cell.key) ?? 0;
-        const applied = PER_DAB_ALPHA * cell.weight;
-        // Clamp so a single dab can't push a near-cap cell past ALPHA_CAP —
-        // makes "capped at 0.35" an exact ceiling, not approximate.
-        accumRef.current.set(cell.key, Math.min(ALPHA_CAP, prev + (1 - prev) * applied));
-      }
-    },
-    [cellsAround],
-  );
+    const dpr = dprRef.current;
+    const [r, g, b] = rgb;
+    const x = cssX * dpr;
+    const y = cssY * dpr;
+    const radius = RADIUS * dpr;
+    // A soft, solid-reading core so the spray is obvious — a smooth radial dab
+    // that saturates the mask centre (which composites to the capped alpha) and
+    // feathers to nothing at the rim.
+    const grad = maskCtx.createRadialGradient(x, y, 0, x, y, radius);
+    grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${CORE_ALPHA})`);
+    grad.addColorStop(0.55, `rgba(${r}, ${g}, ${b}, ${CORE_ALPHA * 0.5})`);
+    grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+    maskCtx.fillStyle = grad;
+    maskCtx.beginPath();
+    maskCtx.arc(x, y, radius, 0, Math.PI * 2);
+    maskCtx.fill();
+    // Fine flecks over the core so it reads as spray, not a flat wash. Small and
+    // dense (sqrt spreads them evenly by area) — texture, not chunky speckle.
+    maskCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${CORE_ALPHA})`;
+    for (let i = 0; i < GRAIN_COUNT; i++) {
+      const rr = radius * Math.sqrt(Math.random());
+      const ang = Math.random() * Math.PI * 2;
+      const dotR = (Math.random() * 0.7 + 0.4) * dpr;
+      maskCtx.beginPath();
+      maskCtx.arc(x + Math.cos(ang) * rr, y + Math.sin(ang) * rr, dotR, 0, Math.PI * 2);
+      maskCtx.fill();
+    }
+  }, []);
 
   const paint = useCallback(
     (clientX: number, clientY: number) => {
@@ -193,7 +171,7 @@ export function LandingSpray() {
     [stampAt, ensureLoop],
   );
 
-  // Size the fixed canvas to the viewport (dpr-capped) and (re)read the token.
+  // Size both canvases to the viewport (dpr-capped) and (re)read the token.
   useEffect(() => {
     if (skip) return;
     const canvas = canvasRef.current;
@@ -202,12 +180,19 @@ export function LandingSpray() {
     if (!ctx) return;
     ctxRef.current = ctx;
 
+    const mask = document.createElement("canvas");
+    maskRef.current = mask;
+    maskCtxRef.current = mask.getContext("2d");
+
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       dprRef.current = dpr;
-      canvas.width = Math.round(window.innerWidth * dpr);
-      canvas.height = Math.round(window.innerHeight * dpr);
-      accumRef.current.clear();
+      const w = Math.round(window.innerWidth * dpr);
+      const h = Math.round(window.innerHeight * dpr);
+      canvas.width = w;
+      canvas.height = h;
+      mask.width = w;
+      mask.height = h;
       lastRef.current = null;
     };
     resize();
