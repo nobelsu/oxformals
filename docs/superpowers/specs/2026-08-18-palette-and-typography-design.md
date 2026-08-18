@@ -67,6 +67,7 @@ existing `--accent` value. That is not a redesign of their palettes.
 --accent-ink      #ffffff      #1a1810
 --accent-wash     #edbfba      #edbfba
 --danger          #b8423e      #f87171
+--danger-ink      #ffffff      #1a1810
 ```
 
 The dark accent lightens so it stays visible on a dark ground, and `--accent-ink`
@@ -104,6 +105,11 @@ From the audit, in this spec's scope:
   component fix, not a palette one, so it repairs every theme at once.
 - **Hardcoded reds → `var(--danger)`** in `ConfirmDialog`, `OutlineButton`,
   `CollegeReviewEditor`, `ReviewFormalSection`, `ListingRequestsView` (13 sites).
+  Those are *filled* red buttons, so they need a paired foreground the same way
+  `--accent` does — hence **`--danger-ink`** (light `#ffffff` at 5.40:1, dark
+  `#1a1810` at 6.42:1). Without it, white text on the dark theme's `--danger`
+  is **2.77:1**. This token was missed in the first draft of this spec and added
+  after measuring.
 - **Delete the `:root` duplicate** of the `schoolbell` theme block. Two sources of
   truth for the default palette invites drift; the `html[data-ui-font="schoolbell"]`
   block is the real one, and `:root` should only hold what is genuinely
@@ -137,6 +143,7 @@ results for the default theme:
 | accent-ink / accent | 4.83:1 | 5.60:1 |
 | tag-ink / tag | 15.47:1 | 15.07:1 |
 | danger / bg | 4.58:1 | 6.42:1 |
+| danger-ink / danger | 5.40:1 | 6.42:1 |
 | ink / accent-wash | 10.61:1 | 10.80:1 |
 
 Implementation must re-run these after any value changes:
