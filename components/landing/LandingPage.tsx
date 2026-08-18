@@ -3,7 +3,7 @@ import type { api } from "@/convex/_generated/api";
 import { LandingHero } from "@/components/landing/LandingHero";
 import { LandingHowItWorks } from "@/components/landing/LandingHowItWorks";
 import { LandingSocialTeaser } from "@/components/landing/LandingSocialTeaser";
-import { PaintReveal } from "@/components/landing/PaintReveal";
+import { SprayFinale } from "@/components/landing/SprayFinale";
 import { LandingStats } from "@/components/landing/LandingStats";
 import { LandingSpray } from "@/components/landing/LandingSpray";
 
@@ -13,15 +13,15 @@ export function LandingPage({
   preloaded: Preloaded<typeof api.listings.listUpcomingPublic>;
 }) {
   return (
-    <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 px-4 py-8 sm:px-6">
+    <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 overflow-x-clip px-4 py-8 sm:px-6">
       <LandingSpray />
       <div className="relative z-10 flex flex-col">
         <LandingHero preloaded={preloaded} />
         <LandingHowItWorks />
         <LandingStats />
         <LandingSocialTeaser />
-        <PaintReveal />
       </div>
+      <SprayFinale />
     </main>
   );
 }
