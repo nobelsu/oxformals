@@ -39,7 +39,9 @@ Three things, established by the colour audit and by looking at the app:
 --accent:       #b8524c   /* actionable: buttons, links, active states */
 --accent-hover: #a3453f
 --accent-ink:   #ffffff   /* text on --accent — 4.83:1, passes AA */
---accent-wash:  #edbfba   /* decorative only: avatars, chips, tints. Never carries text. */
+--accent-wash:      #edbfba   /* decorative: avatars, chips, tints */
+--accent-wash-ink:  #1a1810   /* text on the wash — 10.80:1, and the SAME in dark mode:
+                                 the wash does not flip, so --ink would be 1.40:1 there */
 ```
 
 This is what resolves the "black on pink looks poor" objection. The CTA becomes
@@ -66,6 +68,7 @@ existing `--accent` value. That is not a redesign of their palettes.
 --accent-hover    #a3453f      #c85f58
 --accent-ink      #ffffff      #1a1810
 --accent-wash     #edbfba      #edbfba
+--accent-wash-ink #1a1810      #1a1810
 --danger          #b8423e      #f87171
 --danger-ink      #ffffff      #1a1810
 ```
@@ -110,10 +113,11 @@ From the audit, in this spec's scope:
   `#1a1810` at 6.42:1). Without it, white text on the dark theme's `--danger`
   is **2.77:1**. This token was missed in the first draft of this spec and added
   after measuring.
-- **Delete the `:root` duplicate** of the `schoolbell` theme block. Two sources of
-  truth for the default palette invites drift; the `html[data-ui-font="schoolbell"]`
-  block is the real one, and `:root` should only hold what is genuinely
-  theme-independent (`--app-nav-height`).
+- **`:root` is NOT a duplicate — keep it.** The audit called it redundant; that was
+  wrong. `AuthProvider` *removes* `data-ui-font` whenever there is no signed-in user
+  (`components/auth/AuthProvider.tsx:124`), so `:root` is the live palette for every
+  logged-out visitor — the entire landing-page audience. It must carry the full Sand
+  palette, kept in sync with the `schoolbell` block rather than deleted.
 - **`.newsletter-page` stops forking 11 tokens.** It currently redefines the
   palette with four different values on one page. It keeps whatever it genuinely
   needs (its shadow) and inherits the rest.
@@ -144,7 +148,7 @@ results for the default theme:
 | tag-ink / tag | 15.47:1 | 15.07:1 |
 | danger / bg | 4.58:1 | 6.42:1 |
 | danger-ink / danger | 5.40:1 | 6.42:1 |
-| ink / accent-wash | 10.61:1 | 10.80:1 |
+| accent-wash-ink / accent-wash | 10.80:1 | 10.80:1 |
 
 Implementation must re-run these after any value changes:
 every foreground/background pair in the default light and dark palettes —

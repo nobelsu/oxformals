@@ -34,6 +34,7 @@
 --accent-hover    #a3453f      #c85f58
 --accent-ink      #ffffff      #1a1810
 --accent-wash     #edbfba      #edbfba
+--accent-wash-ink #1a1810      #1a1810
 --danger          #b8423e      #f87171
 --danger-ink      #ffffff      #1a1810
 ```
@@ -64,15 +65,22 @@ For each of `inter`, `dm_sans`, `lora`, `georgia`, `arial`, `system_ui`, in **bo
 
 Their palettes are otherwise unchanged. For `--danger-ink`, pick per theme by measuring — a light `--danger` (like the dark themes' `#f87171` or `#fca5a5`) needs a dark ink; a saturated one (like `#dc2626`) takes white. Record each choice and its ratio in your report.
 
-- [ ] **Step 4: Delete the `:root` palette duplicate**
+- [x] **Step 4: Keep `:root` — it is not a duplicate** *(corrected mid-build)*
 
-`:root` currently repeats the whole schoolbell palette, giving the default theme two sources of truth. Remove the colour declarations from `:root`, keeping only what is genuinely theme-independent (`--app-nav-height`) plus the `--rank-*` tokens, which are out of scope and must stay exactly as they are.
+The audit called `:root` a redundant copy of the schoolbell palette. That was
+wrong, and Task 1's implementer caught it: `components/auth/AuthProvider.tsx:124`
+*removes* `data-ui-font` whenever there is no signed-in user, so `:root` is the
+live palette for every logged-out visitor — the whole landing-page audience.
+Emptying it would have unstyled the app for exactly the people the landing page
+exists to convert.
 
-Then confirm nothing regressed: the `html` element always carries a `data-ui-font` attribute — verify this by reading how it is set (look in `app/layout.tsx` and wherever `data-ui-font` is written) and say in your report what happens before hydration if the attribute is briefly absent. **If a bare `html` with no attribute is reachable, keep a minimal fallback in `:root` rather than shipping an unstyled flash** — and say so.
+`:root` therefore carries the full Sand palette, kept in sync with the
+`schoolbell` block. Only `--rank-*` and `--app-nav-height` remain genuinely
+theme-independent.
 
 - [ ] **Step 5: Export the tokens through `@theme inline`**
 
-Add `--color-accent-ink`, `--color-accent-wash`, `--color-danger`, and `--color-danger-ink` alongside the existing eight, so all semantic colours are reachable as Tailwind utilities rather than only through bracket syntax.
+Add `--color-accent-ink`, `--color-accent-wash`, `--color-accent-wash-ink`, `--color-danger`, and `--color-danger-ink` alongside the existing eight, so all semantic colours are reachable as Tailwind utilities rather than only through bracket syntax.
 
 - [ ] **Step 6: Verify contrast**
 
@@ -220,7 +228,75 @@ git commit -am "FEAT: Bump row type scale and un-fork the letter page palette"
 
 ---
 
-### Task 6: Verify
+### Task 6: Move decorative pink onto the wash
+
+**Files:**
+- Modify: `app/globals.css` (add `--accent-wash-ink` to all seven themes, light and dark)
+- Modify: the decorative call sites found below
+
+Without this task `--accent-wash` is defined and unused, every decorative pink
+becomes the deep rose, and the pale-pink character the redesign was meant to keep
+disappears. This is the task that actually preserves it.
+
+**The distinction to apply**, per call site:
+
+- **Actionable** — anything you click that carries a label: buttons, CTAs, the
+  sign-in button, submit controls. These keep `--accent` with `--accent-ink`.
+- **Decorative** — surfaces that convey identity or state rather than inviting a
+  click: avatar circles, unread badges, the wishlist highlight, selected filter
+  chips, radio dots, step number badges, the type badge. These move to
+  `--accent-wash`, and any text on them uses `--accent-wash-ink`.
+
+- [ ] **Step 1: Add the token**
+
+Add `--accent-wash-ink` to all seven themes in both light and dark blocks, and to
+`:root`. For the default theme it is `#1a1810` in **both** modes — the wash does
+not flip between modes, so an ink that flips would be 1.40:1 in dark. For the
+other six, pick the value that contrasts with that theme's wash and report the
+ratio.
+
+Export it through `@theme inline` alongside the others.
+
+- [ ] **Step 2: Enumerate the call sites**
+
+```bash
+grep -rn "var(--accent)" app components --include="*.tsx"
+```
+
+Known decorative ones to start from — verify each by reading its surrounding
+markup rather than trusting this list: `components/chat/UnreadBadge.tsx`,
+`components/swap/WishlistChips.tsx`, `components/swap/DualTypeBadge.tsx`,
+`components/swap/BrowseTab.tsx` (`CHIP_ON`), `components/ui/SketchRadioGroup.tsx`,
+`components/landing/LandingSocialTeaser.tsx`, `components/landing/LandingHowItWorks.tsx`
+(step badges), `components/ui/Avatar.tsx` if it tints.
+
+For each, decide actionable vs decorative using the rule above and **list your
+decision per site in the report**. Where a site is genuinely ambiguous — a
+selected filter chip is both a state and a control — say which way you went and
+why, rather than picking silently.
+
+- [ ] **Step 3: Convert the decorative ones**
+
+`bg-[var(--accent)]` → `bg-[var(--accent-wash)]`, and any `text-white` or
+`text-[var(--accent-ink)]` on those elements → `text-[var(--accent-wash-ink)]`.
+Leave actionable sites alone.
+
+- [ ] **Step 4: Verify contrast on the converted sites**
+
+For every converted site that carries text, compute the ratio of its new
+foreground against `--accent-wash` in both modes. All must be ≥ 4.5:1. Report the
+table.
+
+- [ ] **Step 5: Typecheck, lint, commit**
+
+```bash
+npx tsc --noEmit && npm run lint
+git commit -am "FEAT: Decorative pink moves to the accent wash"
+```
+
+---
+
+### Task 7: Verify
 
 **Files:** none — verification only. The controller performs this.
 
@@ -230,4 +306,9 @@ git commit -am "FEAT: Bump row type scale and un-fork the letter page palette"
 
 ## Self-Review Notes
 
-Spec coverage: Sand light/dark (T1), `--accent-wash` and `--danger-ink` across all themes (T1), `:root` de-duplication and `@theme inline` exports (T1), Manrope + display-face split + weights (T2), the 33 accent-white sites (T3), the 13 red sites (T4), `.newsletter-page` un-fork and the type scale (T5). `--rank-*`, `convex/uiFont.ts`, and the other six themes' palettes are untouched, as the spec requires.
+Spec coverage: Sand light/dark (T1), `--accent-wash` and `--danger-ink` across all themes (T1), `:root` kept as the logged-out palette and `@theme inline` exports (T1), Manrope + display-face split + weights (T2), the 33 accent-white sites (T3), the 13 red sites (T4), `.newsletter-page` un-fork and the type scale (T5), decorative pink moved onto the wash with its own ink token (T6). `--rank-*`, `convex/uiFont.ts`, and the other six themes' palettes are untouched, as the spec requires.
+
+Amended mid-build: Task 1 found that `:root` is the live palette for logged-out
+visitors rather than a duplicate, so the plan's original "delete it" instruction was
+wrong and has been corrected. Task 6 was added after noticing `--accent-wash` had no
+consumers, which would have turned every decorative pink into the rose.
