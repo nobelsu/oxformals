@@ -19,10 +19,11 @@ function isTab(x: string | null): x is Tab {
 }
 
 export function HomeClient() {
-  const { isAuthenticated } = useAuth();
+  const { status, isAuthenticated } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlTab = searchParams.get("tab");
+  const listingParam = searchParams.get("listing");
 
   const [tab, setTab] = useState<Tab>(isTab(urlTab) ? urlTab : "browse");
 
@@ -58,8 +59,15 @@ export function HomeClient() {
   );
 
   const content = useMemo(() => {
-    if (!isAuthenticated && tab === "browse" && !urlTab) {
-      return <LandingPage />;
+    // Landing only applies to "/" with no ?tab= and no ?listing= (email deep
+    // links must still reach BrowseTab). Wait for auth to settle (status ===
+    // "ready") before deciding — isAuthenticated is false while hydrating,
+    // so deciding earlier would flash the marketing page at signed-in users
+    // and fire its queries for them. Mirrors the idiom in RequireAuth /
+    // Nav.tsx, which gate on `status` rather than `isAuthenticated` alone.
+    if (tab === "browse" && !urlTab && !listingParam) {
+      if (status !== "ready") return null;
+      if (!isAuthenticated) return <LandingPage />;
     }
     if (tab === "browse") {
       return (
@@ -88,7 +96,7 @@ export function HomeClient() {
       return <MineTab />;
     }
     return null;
-  }, [tab, isAuthenticated, setActiveTab, router, urlTab]);
+  }, [tab, status, isAuthenticated, setActiveTab, router, urlTab, listingParam]);
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 px-4 py-8 sm:px-6">

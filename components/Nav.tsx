@@ -55,10 +55,18 @@ function NavInner() {
       ? "rankings"
       : searchParams.get("tab") ?? "browse";
   // Mirrors HomeClient's landing-page condition: logged-out visitors on "/"
-  // with no ?tab= see the marketing page, not BrowseTab, so Browse shouldn't
-  // be marked active there.
+  // with no ?tab= and no ?listing= (email deep links bypass landing) see the
+  // marketing page, not BrowseTab, so Browse shouldn't be marked active
+  // there. Gate on `status === "ready"` too — isAuthenticated is false while
+  // auth is still hydrating, which previously made this flip true for
+  // signed-in users too and caused the Browse highlight to flicker in on
+  // hydration instead of showing immediately.
   const isLandingPage =
-    pathname === "/" && !searchParams.get("tab") && !isAuthenticated;
+    pathname === "/" &&
+    !searchParams.get("tab") &&
+    !searchParams.get("listing") &&
+    status === "ready" &&
+    !isAuthenticated;
   const onTabbedPage = (pathname === "/" && !isLandingPage) || isRequestsDetail;
   const activeTabLabel =
     TABS.find((t) => t.id === activeTab)?.label ?? "Browse";
