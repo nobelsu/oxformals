@@ -6,16 +6,18 @@ import { useReducedOrCoarse } from "@/lib/hooks/usePaintCanvas";
 const CONTAINER_ID = "handwrite-formal";
 
 /**
- * The word "formal" written out by hand under the hero headline, using Vara's
- * single-stroke handwriting font (self-hosted JSON, no CDN). It genuinely draws
- * itself pen-style once on mount, in `--accent`.
+ * The terminal word of the hero headline — "formal." — written out by hand,
+ * inline, so it reads as part of the sentence ("…any Oxford <em>formal.</em>")
+ * rather than a caption underneath. Uses Vara's single-stroke handwriting font
+ * (self-hosted JSON, no CDN); it genuinely draws itself pen-style once on mount,
+ * in `--accent`, as the sentence's accented last beat.
  *
- * Under reduced motion / coarse pointers it renders nothing — the printed
- * headline already reads "…Oxford formal.", so the accent is pure decoration.
+ * Under reduced motion / coarse pointers it renders the plain accent word — no
+ * canvas, no animation — so the sentence still completes.
  */
 export function HeadlineScript() {
   const skip = useReducedOrCoarse();
-  const ref = useRef<HTMLDivElement | null>(null);
+  const ref = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
     if (skip) return;
@@ -36,10 +38,10 @@ export function HeadlineScript() {
         "/fonts/shadows-into-light.json",
         [
           {
-            text: "formal",
-            fontSize: 44,
-            strokeWidth: 1.5,
-            duration: 1400,
+            text: "formal.",
+            fontSize: 38,
+            strokeWidth: 1.6,
+            duration: 1300,
             color: accent,
             textAlign: "left",
           },
@@ -54,14 +56,16 @@ export function HeadlineScript() {
     };
   }, [skip]);
 
-  if (skip) return null;
+  if (skip) {
+    return <span className="text-[var(--accent)]">formal.</span>;
+  }
 
   return (
-    <div
+    <span
       id={CONTAINER_ID}
       ref={ref}
-      aria-hidden
-      className="pointer-events-none mt-1 mb-1 min-h-[52px] w-[180px] max-w-full text-[var(--accent)]"
+      aria-label="formal."
+      className="inline-block translate-y-[0.18em] align-baseline leading-none text-[var(--accent)]"
     />
   );
 }

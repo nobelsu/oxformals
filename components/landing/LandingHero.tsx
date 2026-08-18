@@ -66,9 +66,10 @@ export function LandingHero({
       <div className="flex flex-col items-start">
         <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
           Find a seat at any{" "}
-          <span className="whitespace-nowrap">Oxford formal.</span>
+          <span className="whitespace-nowrap">
+            Oxford <HeadlineScript />
+          </span>
         </h1>
-        <HeadlineScript />
         <p className="mt-3 max-w-[46ch] text-base leading-relaxed text-[var(--ink-muted)]">
           Swap your place, take an empty seat, and eat somewhere you&rsquo;ve
           never been.
