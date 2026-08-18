@@ -128,7 +128,7 @@ export function MineTab() {
             type="button"
             onClick={() => profileCancel?.()}
             disabled={saving || !profileDirty}
-            className="cursor-pointer rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-6 py-3.5 text-base font-semibold text-[var(--ink)] shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-200 hover:bg-[var(--paper)] disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/80 dark:bg-[var(--bg)] dark:text-[var(--ink)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.45)] dark:hover:bg-white/10"
+            className="cursor-pointer rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-6 py-3.5 text-base font-semibold text-[var(--ink)] shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-200 hover:bg-[var(--paper)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel
           </button>
@@ -136,7 +136,7 @@ export function MineTab() {
             type="button"
             onClick={() => void handleSaveAll()}
             disabled={saving || !hasUnsavedChanges}
-            className="cursor-pointer rounded-full bg-[var(--accent)] px-8 py-4 text-base font-semibold text-[var(--accent-ink)] ring-1 ring-black/10 shadow-[0_6px_16px_rgba(0,0,0,0.18)] transition-all duration-200 hover:brightness-95 hover:shadow-[0_8px_20px_rgba(0,0,0,0.22)] dark:bg-white dark:text-black dark:ring-white dark:ring-2 dark:shadow-[0_10px_28px_rgba(0,0,0,0.55),0_0_0_2px_rgba(255,255,255,0.25),0_0_22px_rgba(255,255,255,0.2)] dark:hover:bg-neutral-200 dark:hover:brightness-100 dark:hover:shadow-[0_12px_32px_rgba(0,0,0,0.6),0_0_0_2px_rgba(255,255,255,0.32),0_0_28px_rgba(255,255,255,0.26)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="cursor-pointer rounded-full bg-[var(--accent)] px-8 py-4 text-base font-semibold text-[var(--accent-ink)] ring-1 ring-[color-mix(in_srgb,var(--ink)_12%,transparent)] shadow-[0_6px_16px_rgba(0,0,0,0.18)] transition-all duration-200 hover:bg-[var(--accent-hover)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.22)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Saving…" : saved ? "Saved" : "Save"}
           </button>
