@@ -34,6 +34,7 @@ const SCROLL_PER_FRAME = 80;
 export function LandingHowItWorks() {
   const reduced = usePrefersReducedMotion();
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const finaleTextRef = useRef<HTMLParagraphElement | null>(null);
   const [active, setActive] = useState(0);
 
   useEffect(() => {
@@ -48,6 +49,15 @@ export function LandingHowItWorks() {
       const scrolled = Math.min(Math.max(-rect.top, 0), Math.max(range, 1));
       const p = range > 0 ? scrolled / range : 0;
       setActive(Math.min(FRAMES - 1, Math.floor(p * FRAMES)));
+      // Scrub the closing line's left-to-right "writing" reveal across the last
+      // frame's slice of the scroll.
+      const finale = finaleTextRef.current;
+      if (finale) {
+        const fp = Math.min(1, Math.max(0, p * FRAMES - (FRAMES - 1)));
+        // ease so it lands fully written a touch before the frame ends
+        const eased = Math.min(1, fp * 1.15);
+        finale.style.clipPath = `inset(-15% ${(1 - eased) * 100}% -15% 0)`;
+      }
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
@@ -134,12 +144,13 @@ export function LandingHowItWorks() {
           <div
             aria-hidden={active !== FRAMES - 1}
             className="absolute inset-0 flex items-center justify-center text-center transition-[opacity,transform] duration-500 ease-out"
-            style={{
-              opacity: active === FRAMES - 1 ? 1 : 0,
-              transform: `translateY(${active === FRAMES - 1 ? 0 : 28}px)`,
-            }}
+            style={{ opacity: active === FRAMES - 1 ? 1 : 0 }}
           >
-            <p className="font-display text-[clamp(3rem,13vw,8rem)] lowercase leading-[0.9] tracking-tight text-[var(--accent)]">
+            <p
+              ref={finaleTextRef}
+              style={{ clipPath: "inset(-15% 100% -15% 0)" }}
+              className="font-display text-[clamp(3rem,13vw,8rem)] lowercase leading-[0.9] tracking-tight text-[var(--accent)]"
+            >
               it&rsquo;s that easy.
             </p>
           </div>
