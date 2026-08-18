@@ -194,8 +194,11 @@ export function BrowseTab({
 
     const params = new URLSearchParams(searchParams.toString());
     params.delete("listing");
-    const qs = params.toString();
-    router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+    // Keep an explicit tab once the id is consumed. Bare "/" is the logged-out
+    // landing page, so dropping the param without it would yank a deep-linked
+    // visitor off the listing they just opened and onto the marketing page.
+    if (!params.has("tab")) params.set("tab", "browse");
+    router.replace(`/?${params.toString()}`, { scroll: false });
   }, [listingParam, getListing, listings, router, searchParams]);
 
   const wishlistSet = useMemo(() => new Set(wishlist), [wishlist]);
