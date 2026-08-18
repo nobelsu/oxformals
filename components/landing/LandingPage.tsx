@@ -20,10 +20,9 @@ export function LandingPage({
           <LandingHero preloaded={preloaded} />
           <LandingHowItWorks />
           <LandingStats />
-          <LandingSocialTeaser />
         </div>
       </main>
-      <SprayFinale />
+      <SprayFinale cover={<LandingSocialTeaser />} />
     </>
   );
 }

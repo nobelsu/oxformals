@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef } from "react";
 import { useCanvasDpr, useReducedOrCoarse } from "@/lib/hooks/usePaintCanvas";
 
@@ -47,20 +48,22 @@ function wrapLines(
 }
 
 /**
- * Full-bleed closing panel that recolours the whole viewport (Studio Marrone
- * style) and doubles as a scratch-card. It breaks out of the page's max-width
- * column and pins (`position: sticky`) over a tall runway, so scrolling off the
- * last Sand section pulls it up and the rose page rises to fill the screen.
+ * Closing panel that recolours the whole viewport (Studio Marrone style) and
+ * doubles as a scratch-card. The rose card is pinned (`position: sticky`) and the
+ * `cover` — the page's last Sand section — sits over it and slides up and off as
+ * you scroll in, revealing the stationary card underneath rather than scrolling
+ * it into view.
  *
- * On the rose page the tagline is visible; moving the cursor over it paints the
- * flip — the veil wipes away under the cursor to reveal the same words beneath in
- * a different colour on a different ground, so the colour follows the pointer.
+ * On the revealed rose card the tagline is visible; moving the cursor over it
+ * paints the flip — the veil wipes away under the cursor to reveal the same words
+ * beneath in a different colour on a different ground, so the colour follows the
+ * pointer.
  *
- * The flip is a mouse affordance. Under reduced motion / coarse pointers the
- * panel is a plain, fully-legible rose page — no canvas, no listeners, and fully
- * scrollable (so touch visitors can always scroll past the pinned runway).
+ * The flip is a mouse affordance. Under reduced motion / coarse pointers the card
+ * is a plain, fully-legible rose page — no canvas, no listeners — and the whole
+ * stage stays scrollable.
  */
-export function SprayFinale() {
+export function SprayFinale({ cover }: { cover: ReactNode }) {
   const skip = useReducedOrCoarse();
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -247,21 +250,24 @@ export function SprayFinale() {
   const taglineClass =
     "max-w-[13ch] text-center font-display text-[clamp(3.5rem,13vw,9rem)] font-bold lowercase leading-[0.88] tracking-tight";
 
+  // The last Sand section, made into an opaque full-width sheet that covers the
+  // pinned card and slides up off it as you scroll into the stage.
+  const coverSheet = (
+    <div className="absolute inset-x-0 top-0 z-10 flex h-svh items-center overflow-hidden bg-[var(--bg)]">
+      <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">{cover}</div>
+    </div>
+  );
+
   if (skip) {
     return (
       <section
         aria-label="Find your next formal"
         className="relative h-[210svh] w-full"
       >
-        {/* Pinned card, revealed as the Sand cover above it scrolls away. */}
-        <div className="sticky top-0 flex h-svh items-center justify-center overflow-hidden bg-[var(--accent)] px-6">
+        <div className="sticky top-0 z-0 flex h-svh items-center justify-center overflow-hidden bg-[var(--accent)] px-6">
           <p className={`${taglineClass} text-[var(--tag-ink)]`}>{TAGLINE}</p>
         </div>
-        {/* Sand cover: sits over the card, slides up off it as you scroll in. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-svh bg-[var(--bg)]"
-        />
+        {coverSheet}
       </section>
     );
   }
@@ -272,7 +278,7 @@ export function SprayFinale() {
       className="relative h-[210svh] w-full"
     >
       <div
-        className="sticky top-0 h-svh cursor-none select-none overflow-hidden"
+        className="sticky top-0 z-0 h-svh cursor-none select-none overflow-hidden"
         onPointerMove={handlePointerMove}
         onPointerDown={handlePointerDown}
         onPointerEnter={handlePointerEnter}
@@ -297,12 +303,7 @@ export function SprayFinale() {
           style={{ width: REVEAL_RADIUS * 2, height: REVEAL_RADIUS * 2 }}
         />
       </div>
-      {/* Sand cover: sits over the card, slides up off it as you scroll in,
-          so the pinned card is revealed underneath rather than scrolling up. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-svh bg-[var(--bg)]"
-      />
+      {coverSheet}
     </section>
   );
 }
