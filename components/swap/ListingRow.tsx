@@ -80,6 +80,11 @@ export function ListingRow({
     listing.status === "confirmed" ||
     listing.status === "closed";
 
+  // A compact row with no button is just body + tag, so the tag sits beside the
+  // body rather than in a full-width block beneath it.
+  const hasAction = showStatusInsteadOfCta || !!disabled || !!onRequest;
+  const compactTagOnly = compact && !hasAction;
+
   return (
     <div
       role={onPress ? "button" : undefined}
@@ -100,8 +105,12 @@ export function ListingRow({
             }
           : undefined
       }
-      className={`flex flex-col gap-3 py-4${
-        compact ? "" : " sm:flex-row sm:items-start sm:gap-4"
+      className={`flex gap-3 py-4 ${
+        compactTagOnly
+          ? "flex-row items-start"
+          : compact
+            ? "flex-col"
+            : "flex-col sm:flex-row sm:items-start sm:gap-4"
       }${
         onPress
           ? " cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--paper)_70%,transparent)]"
@@ -229,9 +238,11 @@ export function ListingRow({
 
       <div
         className={
-          compact
-            ? "flex w-full shrink-0 flex-row items-center gap-2"
-            : "flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-end"
+          compactTagOnly
+            ? "flex shrink-0 flex-row items-center gap-2"
+            : compact
+              ? "flex w-full shrink-0 flex-row items-center gap-2"
+              : "flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-end"
         }
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}

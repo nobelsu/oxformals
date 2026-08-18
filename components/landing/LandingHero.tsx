@@ -97,8 +97,6 @@ export function LandingHero() {
                     owner={owner}
                     compact
                     hideInterests
-                    disabled
-                    disabledLabel="Sign in to request"
                   />
                 </li>
               );
