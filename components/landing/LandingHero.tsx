@@ -11,19 +11,13 @@ const RAIL_LIMIT = 5;
 
 export function LandingHero() {
   const docs = useQuery(api.listings.listUpcomingPublic, { limit: RAIL_LIMIT });
-  const ownerIds = docs ? [...new Set(docs.map((d) => d.ownerUserId))] : [];
-  const ownerDocs = useQuery(
-    api.users.getPublicByIds,
-    ownerIds.length > 0 ? { userIds: ownerIds } : "skip",
-  );
 
   const listings = docs?.map(mapListing) ?? [];
   const owners = new Map(
-    (ownerDocs ?? []).map((doc) => [doc._id as string, mapUser(doc)]),
+    (docs ?? []).map((doc) => [doc.ownerUserId as string, mapUser(doc.owner)]),
   );
 
-  const loading =
-    docs === undefined || (ownerIds.length > 0 && ownerDocs === undefined);
+  const loading = docs === undefined;
   const isEmpty = !loading && listings.length === 0;
 
   return (

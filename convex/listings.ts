@@ -21,7 +21,7 @@ import {
   resolveStatusAfterEdit,
   validateMenuPdfId,
 } from "./listingHelpers";
-import { requireActiveUser } from "./guards";
+import { requireActiveUser, sanitizePublicUser } from "./guards";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -130,12 +130,23 @@ export const listListings = query({
  * Upcoming open formals for the logged-out landing page. Deliberately narrow:
  * the landing page must not pay for `listListings` (200 docs) plus
  * `users.listPublic` (500 docs) to render a handful of rows.
+ *
+ * Returns each listing joined with its owner's public summary so the hero
+ * renders in a single round trip instead of waiting on a second
+ * `users.getPublicByIds` query keyed off the first result.
  */
 export const listUpcomingPublic = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 5, 1), 20);
     const nowIso = new Date().toISOString();
+    // Writes normalise `dateTime` via `new Date(timestamp).toISOString()`
+    // (see createListing/updateListing), so every stored value is a
+    // uniform UTC ISO string and this range query sorts/filters correctly
+    // via plain lexicographic comparison. That invariant isn't enforced by
+    // the schema, and this deployment is shared with a sibling repo whose
+    // `convex/` has diverged — a row written in another format would
+    // silently escape this filter.
     const listings = await ctx.db
       .query("listings")
       .withIndex("by_status_and_dateTime", (q) =>
@@ -143,7 +154,23 @@ export const listUpcomingPublic = query({
       )
       .order("asc")
       .take(limit);
-    return Promise.all(listings.map((listing) => enrichListing(ctx, listing)));
+    const enriched = await Promise.all(
+      listings.map((listing) => enrichListing(ctx, listing)),
+    );
+
+    // Multiple listings can share an owner; look each owner up once.
+    const ownerIds = [...new Set(enriched.map((listing) => listing.ownerUserId))];
+    const ownerDocs = await Promise.all(ownerIds.map((id) => ctx.db.get(id)));
+    const ownersById = new Map(
+      ownerDocs
+        .filter((user): user is Doc<"users"> => user !== null)
+        .map((user) => [user._id, sanitizePublicUser(user)]),
+    );
+
+    return enriched.flatMap((listing) => {
+      const owner = ownersById.get(listing.ownerUserId);
+      return owner ? [{ ...listing, owner }] : [];
+    });
   },
 });
 
