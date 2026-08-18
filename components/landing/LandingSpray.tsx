@@ -3,10 +3,14 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useReducedOrCoarse } from "@/lib/hooks/usePaintCanvas";
 
-/** Dab radius in CSS px. Soft and wide — an ambient wash, not a brush. */
-const RADIUS = 130;
-/** Alpha laid down per dab. Low, so the trail is faint. */
+/** Spray cone radius in CSS px — speckle scatters within this. */
+const RADIUS = 96;
+/** Alpha estimate laid down per dab, used for the contrast-cap grid only. */
 const PER_DAB_ALPHA = 0.05;
+/** Number of speckle particles flung per dab — the grainy airbrush texture. */
+const SPECKLE_COUNT = 30;
+/** Alpha of each individual speckle particle. Low; density builds coverage. */
+const SPECKLE_ALPHA = 0.06;
 /**
  * Per-region ceiling on accumulated alpha, from the contrast budget:
  * `--accent-wash` (#edbfba) is identical in light and dark, but `--ink` flips
@@ -143,19 +147,28 @@ export function LandingSpray() {
       const x = cssX * dpr;
       const y = cssY * dpr;
       const radius = RADIUS * dpr;
-      const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-      gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${PER_DAB_ALPHA})`);
-      gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+      // Fling a cloud of small particles, denser toward the centre, so it reads
+      // as airbrush grain rather than a smooth wash. pow(<1) biases the sampled
+      // radius inward; the square-of-uniform would spread it evenly by area.
       ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${SPECKLE_ALPHA})`;
+      for (let i = 0; i < SPECKLE_COUNT; i++) {
+        const rr = radius * Math.pow(Math.random(), 0.65);
+        const ang = Math.random() * Math.PI * 2;
+        const px = x + Math.cos(ang) * rr;
+        const py = y + Math.sin(ang) * rr;
+        const dotR = (Math.random() * 1.5 + 0.5) * dpr;
+        ctx.beginPath();
+        ctx.arc(px, py, dotR, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       for (const cell of cells) {
         const prev = accumRef.current.get(cell.key) ?? 0;
         const applied = PER_DAB_ALPHA * cell.weight;
-        accumRef.current.set(cell.key, prev + (1 - prev) * applied);
+        // Clamp so a single dab can't push a near-cap cell past ALPHA_CAP —
+        // makes "capped at 0.35" an exact ceiling, not approximate.
+        accumRef.current.set(cell.key, Math.min(ALPHA_CAP, prev + (1 - prev) * applied));
       }
     },
     [cellsAround],
