@@ -32,20 +32,33 @@ export function SketchDot({ seed = 1, size = 14, className = "" }: Props) {
         roughness: 1.6,
         bowing: 1.4,
         seed: Math.abs(seed) || 1,
-        fill: "var(--bg)",
-        fillStyle: "solid",
+        fill: "none",
       }),
     );
   }, [seed, size]);
 
+  // SVG fill is a presentation attribute, not CSS — roughjs writes the fill
+  // string straight into the attribute, where var() is never substituted.
+  // So the knockout disc behind the stroke is a plain CSS-backed element
+  // instead: background-color resolves var(--bg) correctly, and needs no
+  // JS colour resolution at draw time.
   return (
-    <svg
-      ref={svgRef}
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      className={className}
+    <span
+      className={`relative inline-block ${className}`}
+      style={{ width: size, height: size }}
       aria-hidden
-    />
+    >
+      <span
+        className="absolute rounded-full bg-[var(--bg)]"
+        style={{ inset: 2 }}
+      />
+      <svg
+        ref={svgRef}
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="absolute inset-0"
+      />
+    </span>
   );
 }

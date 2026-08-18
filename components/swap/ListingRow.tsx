@@ -15,7 +15,7 @@ import type { Listing } from "@/lib/data/types";
 import { listingIsPast } from "@/lib/data/collegeReviewEligibility";
 import { listingRequestCta } from "@/lib/data/listingType";
 import { useNowMs } from "@/lib/hooks/useNowMs";
-import { ListingMenu } from "@/components/swap/ListingMenu";
+import { ListingMenu, hasListingMenu } from "@/components/swap/ListingMenu";
 import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
 import { SeatPips } from "@/components/swap/SeatPips";
@@ -31,7 +31,6 @@ type Props = {
   hideInterests?: boolean;
   /** Headline override — the college page uses the host's name instead. */
   title?: string;
-  requestLabel?: string;
   /** Narrow contexts (the landing hero): no day rail, so the row states its own date. */
   compact?: boolean;
 };
@@ -46,12 +45,11 @@ export function ListingRow({
   disabledLabel,
   hideInterests,
   title,
-  requestLabel,
   compact = false,
 }: Props) {
   const nowMs = useNowMs();
   const isPast = listingIsPast(listing.dateTime, nowMs);
-  const ctaLabel = requestLabel ?? listingRequestCta(listing.listingType);
+  const ctaLabel = listingRequestCta(listing.listingType);
 
   // One clamped seat count feeds both the pips and the tail text so they
   // can never disagree, even on invalid data (negative seats, or seats
@@ -186,20 +184,31 @@ export function ListingRow({
           ) : null}
         </div>
 
-        <span
-          className="mt-2 block"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          <ListingMenu
-            menu={listing.menu}
-            menuPdfUrl={listing.menuPdfUrl}
-            menuFileContentType={listing.menuFileContentType}
-            className="break-words text-pretty text-[0.9rem] text-[var(--ink-muted)]"
-            textClassName="line-clamp-2"
-            imageClassName="mt-1 max-h-24 max-w-full rounded-[12px] border-[2px] border-[var(--ink)] object-contain"
-          />
-        </span>
+        {hasListingMenu(listing.menu, listing.menuPdfUrl) ? (
+          <div
+            className="mt-2"
+            // Only the file link needs to swallow the click/keydown before it
+            // reaches the row's onPress (otherwise opening the menu file also
+            // "selects" the row behind it). Scoped to the link itself rather
+            // than the whole region so clicking plain menu text still presses
+            // the row.
+            onClick={(e) => {
+              if ((e.target as HTMLElement).closest("a")) e.stopPropagation();
+            }}
+            onKeyDown={(e) => {
+              if ((e.target as HTMLElement).closest("a")) e.stopPropagation();
+            }}
+          >
+            <ListingMenu
+              menu={listing.menu}
+              menuPdfUrl={listing.menuPdfUrl}
+              menuFileContentType={listing.menuFileContentType}
+              className="break-words text-pretty text-[0.9rem] text-[var(--ink-muted)]"
+              textClassName="line-clamp-2"
+              imageClassName="mt-1 max-h-24 max-w-full rounded-[12px] border-[2px] border-[var(--ink)] object-contain"
+            />
+          </div>
+        ) : null}
 
         {listing.message ? (
           <p className="mt-2 line-clamp-2 break-words text-pretty text-[0.9rem] italic text-[var(--ink-muted)]">
@@ -231,7 +240,7 @@ export function ListingRow({
         {showStatusInsteadOfCta ? (
           <ListingStatusTag
             status={listing.status}
-            seatsAvailable={listing.seatsAvailable}
+            seatsAvailable={safeSeatsAvailable}
             size="sm"
           />
         ) : disabled ? (

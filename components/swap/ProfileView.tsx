@@ -180,6 +180,14 @@ export function ProfileView({
     userId: userId as Id<"users">,
   });
 
+  // Stable array identity across renders — ListingDayList memoises its day
+  // grouping on this reference, so a fresh array here would re-run that
+  // grouping on every unrelated state change in this component.
+  const activeListings = useMemo(
+    () => (profile?.listings ?? []).map(mapProfileListing),
+    [profile?.listings],
+  );
+
   const myActiveListings = useMemo(
     () =>
       currentUser
@@ -294,7 +302,7 @@ export function ProfileView({
     );
   }
 
-  const { user: profileUser, listings: rawListings } = profile;
+  const { user: profileUser } = profile;
   const name = profileUser.name ?? "Anonymous";
   const college = profileUser.college ?? "";
   const year = profileUser.year ?? "";
@@ -315,7 +323,6 @@ export function ProfileView({
     .join(" · ");
 
   const isOwnProfile = currentUser?.id === userId;
-  const activeListings = rawListings.map(mapProfileListing);
   const listingDisabled = isOwnProfile || !isAuthenticated;
 
   const ownerAsUser = {

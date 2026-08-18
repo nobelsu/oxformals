@@ -26,7 +26,7 @@ export function NewRequestPicker({
       open={open}
       onClose={onClose}
       title="Pick a formal to swap for"
-      panelClassName="max-w-[96vw] xl:max-w-[1400px] max-h-[90vh]"
+      panelClassName="max-w-lg max-h-[90vh]"
     >
       {listings.length === 0 ? (
         <p className="text-[var(--ink-muted)]">
