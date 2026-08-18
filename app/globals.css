@@ -2,17 +2,31 @@
 
 :root {
   --app-nav-height: 5.5rem;
-  --bg: #f2ead8;
-  --paper: #f6efe0;
-  --ink: #1a140f;
-  --ink-muted: #5a4d40;
-  --ink-soft: #9a8c7a;
-  --tag: #20140d;
-  --tag-ink: #f6efe0;
-  --accent: #edbfba;
-  --accent-hover: #e3a9a2;
-  --accent-ink: #1a140f;
-  --danger: #c96360;
+  /*
+   * Fallback palette — NOT a duplicate of html[data-ui-font="schoolbell"] by
+   * accident. `data-ui-font` is set entirely client-side in
+   * components/auth/AuthProvider.tsx, inside a useEffect: it's absent on the
+   * server-rendered HTML and during hydration for every visitor, and
+   * AuthProvider explicitly removes it (`removeAttribute`) whenever the user
+   * is unauthenticated or has no Convex user doc. That makes bare `html` a
+   * persistent, common state (every signed-out visitor, including the public
+   * landing page), not a brief pre-hydration flash — so this mirrors the Sand
+   * palette below rather than being deleted. It also keeps the --rank-* var()
+   * references beneath it resolvable.
+   */
+  --bg: #f2ecdd;
+  --paper: #ffffff;
+  --ink: #1b1a12;
+  --ink-muted: #565039;
+  --ink-soft: #716b55;
+  --tag: #1b1a12;
+  --tag-ink: #f5f1e6;
+  --accent: #b8524c;
+  --accent-hover: #a3453f;
+  --accent-ink: #ffffff;
+  --accent-wash: #edbfba;
+  --danger: #b8423e;
+  --danger-ink: #ffffff;
   /* Rankings mountain — summit (#1) and silhouette fill */
   --rank-summit-bg: var(--tag);
   --rank-summit-emphasis: var(--tag-ink);
@@ -26,16 +40,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1a140f;
-    --paper: #241b14;
-    --ink: #f2ead8;
-    --ink-muted: #c9bfb1;
-    --ink-soft: #8a7d70;
-    --tag: #f2ead8;
-    --tag-ink: #1a140f;
-    --accent: #edbfba;
-    --accent-hover: #e3a9a2;
-    --accent-ink: #1a140f;
+    /* See the fallback comment on the light :root block above. */
+    --bg: #1a1810;
+    --paper: #232016;
+    --ink: #f2ecdd;
+    --ink-muted: #c6bfa9;
+    --ink-soft: #8f8875;
+    --tag: #f2ecdd;
+    --tag-ink: #1a1810;
+    --accent: #d9736c;
+    --accent-hover: #c85f58;
+    --accent-ink: #1a1810;
+    --accent-wash: #edbfba;
+    --danger: #f87171;
+    --danger-ink: #1a1810;
     --rank-summit-bg: var(--tag);
     --rank-summit-emphasis: var(--tag-ink);
     --rank-summit-score: var(--tag-ink);
@@ -57,6 +75,10 @@
   --color-tag-ink: var(--tag-ink);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-wash: var(--accent-wash);
+  --color-danger: var(--danger);
+  --color-danger-ink: var(--danger-ink);
   --font-hand: var(--font-app);
   --font-display: var(--font-app);
 }
@@ -70,17 +92,19 @@ html {
 
 html[data-ui-font="schoolbell"] {
   --font-app: var(--font-schoolbell), "Schoolbell", cursive;
-  --bg: #f2ead8;
-  --paper: #f6efe0;
-  --ink: #1a140f;
-  --ink-muted: #5a4d40;
-  --ink-soft: #9a8c7a;
-  --tag: #20140d;
-  --tag-ink: #f6efe0;
-  --accent: #edbfba;
-  --accent-hover: #e3a9a2;
-  --accent-ink: #1a140f;
-  --danger: #c96360;
+  --bg: #f2ecdd;
+  --paper: #ffffff;
+  --ink: #1b1a12;
+  --ink-muted: #565039;
+  --ink-soft: #716b55;
+  --tag: #1b1a12;
+  --tag-ink: #f5f1e6;
+  --accent: #b8524c;
+  --accent-hover: #a3453f;
+  --accent-ink: #ffffff;
+  --accent-wash: #edbfba;
+  --danger: #b8423e;
+  --danger-ink: #ffffff;
 }
 
 html[data-ui-font="inter"] {
@@ -95,7 +119,9 @@ html[data-ui-font="inter"] {
   --accent: #3b82f6;
   --accent-hover: #2563eb;
   --accent-ink: #ffffff;
+  --accent-wash: #3b82f6;
   --danger: #dc2626;
+  --danger-ink: #ffffff;
 }
 
 html[data-ui-font="dm_sans"] {
@@ -110,7 +136,9 @@ html[data-ui-font="dm_sans"] {
   --accent: #d4827e;
   --accent-hover: #c46a66;
   --accent-ink: #ffffff;
+  --accent-wash: #d4827e;
   --danger: #b91c1c;
+  --danger-ink: #ffffff;
 }
 
 html[data-ui-font="lora"] {
@@ -125,7 +153,9 @@ html[data-ui-font="lora"] {
   --accent: #b8860b;
   --accent-hover: #9a7209;
   --accent-ink: #1a1208;
+  --accent-wash: #b8860b;
   --danger: #8b2942;
+  --danger-ink: #ffffff;
 }
 
 html[data-ui-font="georgia"] {
@@ -141,7 +171,9 @@ html[data-ui-font="georgia"] {
   --accent: #1e40af;
   --accent-hover: #1d4ed8;
   --accent-ink: #ffffff;
+  --accent-wash: #1e40af;
   --danger: #b91c1c;
+  --danger-ink: #ffffff;
 }
 
 html[data-ui-font="arial"] {
@@ -156,7 +188,9 @@ html[data-ui-font="arial"] {
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
   --accent-ink: #ffffff;
+  --accent-wash: #2563eb;
   --danger: #dc2626;
+  --danger-ink: #ffffff;
 }
 
 html[data-ui-font="system_ui"] {
@@ -172,7 +206,9 @@ html[data-ui-font="system_ui"] {
   --accent: #059669;
   --accent-hover: #047857;
   --accent-ink: #ffffff;
+  --accent-wash: #059669;
   --danger: #be123c;
+  --danger-ink: #ffffff;
 }
 
 html,
@@ -212,17 +248,19 @@ html[data-ui-font="system_ui"] .font-display {
 
 @media (prefers-color-scheme: dark) {
   html[data-ui-font="schoolbell"] {
-    --bg: #1a140f;
-    --paper: #241b14;
-    --ink: #f2ead8;
-    --ink-muted: #c9bfb1;
-    --ink-soft: #8a7d70;
-    --tag: #f2ead8;
-    --tag-ink: #1a140f;
-    --accent: #edbfba;
-    --accent-hover: #e3a9a2;
-    --accent-ink: #1a140f;
+    --bg: #1a1810;
+    --paper: #232016;
+    --ink: #f2ecdd;
+    --ink-muted: #c6bfa9;
+    --ink-soft: #8f8875;
+    --tag: #f2ecdd;
+    --tag-ink: #1a1810;
+    --accent: #d9736c;
+    --accent-hover: #c85f58;
+    --accent-ink: #1a1810;
+    --accent-wash: #edbfba;
     --danger: #f87171;
+    --danger-ink: #1a1810;
   }
 
   html[data-ui-font="inter"] {
@@ -236,7 +274,9 @@ html[data-ui-font="system_ui"] .font-display {
     --accent: #60a5fa;
     --accent-hover: #3b82f6;
     --accent-ink: #0f172a;
+    --accent-wash: #60a5fa;
     --danger: #f87171;
+    --danger-ink: #0f172a;
   }
 
   html[data-ui-font="dm_sans"] {
@@ -250,7 +290,9 @@ html[data-ui-font="system_ui"] .font-display {
     --accent: #f0a8a3;
     --accent-hover: #e8928c;
     --accent-ink: #2a1f1d;
+    --accent-wash: #f0a8a3;
     --danger: #fca5a5;
+    --danger-ink: #2a1f1d;
   }
 
   html[data-ui-font="lora"] {
@@ -264,7 +306,9 @@ html[data-ui-font="system_ui"] .font-display {
     --accent: #d4a84b;
     --accent-hover: #c49a3d;
     --accent-ink: #1a1410;
+    --accent-wash: #d4a84b;
     --danger: #fb7185;
+    --danger-ink: #1a1410;
   }
 
   html[data-ui-font="georgia"] {
@@ -278,7 +322,9 @@ html[data-ui-font="system_ui"] .font-display {
     --accent: #93c5fd;
     --accent-hover: #60a5fa;
     --accent-ink: #171717;
+    --accent-wash: #93c5fd;
     --danger: #fca5a5;
+    --danger-ink: #171717;
   }
 
   html[data-ui-font="arial"] {
@@ -292,7 +338,9 @@ html[data-ui-font="system_ui"] .font-display {
     --accent: #60a5fa;
     --accent-hover: #3b82f6;
     --accent-ink: #0a0a0a;
+    --accent-wash: #60a5fa;
     --danger: #f87171;
+    --danger-ink: #0a0a0a;
   }
 
   html[data-ui-font="system_ui"] {
@@ -306,7 +354,9 @@ html[data-ui-font="system_ui"] .font-display {
     --accent: #34d399;
     --accent-hover: #10b981;
     --accent-ink: #022c22;
+    --accent-wash: #34d399;
     --danger: #fda4af;
+    --danger-ink: #022c22;
   }
 }
 
