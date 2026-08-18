@@ -7,6 +7,7 @@ import type { User } from "@/lib/auth/types";
 import {
   formatRowTail,
   formatListingTime,
+  formatShortDate,
   formatYearLabel,
 } from "@/lib/data/format";
 import type { Listing } from "@/lib/data/types";
@@ -30,6 +31,8 @@ type Props = {
   /** Headline override — the college page uses the host's name instead. */
   title?: string;
   requestLabel?: string;
+  /** Narrow contexts (the landing hero): no day rail, so the row states its own date. */
+  compact?: boolean;
 };
 
 export function ListingRow({
@@ -43,6 +46,7 @@ export function ListingRow({
   hideInterests,
   title,
   requestLabel,
+  compact = false,
 }: Props) {
   const nowMs = useNowMs();
   const isPast = listingIsPast(listing.dateTime, nowMs);
@@ -84,18 +88,30 @@ export function ListingRow({
             }
           : undefined
       }
-      className={`flex flex-col gap-3 py-4 sm:flex-row sm:items-start sm:gap-4${
+      className={`flex flex-col gap-3 py-4${
+        compact ? "" : " sm:flex-row sm:items-start sm:gap-4"
+      }${
         onPress
           ? " cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--paper)_70%,transparent)]"
           : ""
       }`}
     >
       <div className="min-w-0 flex-1">
+        {compact ? (
+          <div className="mb-0.5 flex items-baseline gap-2 text-[0.85rem] text-[var(--ink-muted)]">
+            <span className="font-display text-[1rem] text-[var(--ink)]">
+              {formatShortDate(listing.dateTime)}
+            </span>
+            <span>{formatListingTime(listing.dateTime)}</span>
+          </div>
+        ) : null}
         <h3 className="flex flex-wrap items-baseline gap-x-2 break-words font-display text-[1.4rem] uppercase leading-tight tracking-wide sm:text-[1.65rem]">
           {title ?? listing.college}
-          <span className="text-[0.9rem] normal-case tracking-normal text-[var(--ink-muted)]">
-            {formatListingTime(listing.dateTime)}
-          </span>
+          {!compact ? (
+            <span className="text-[0.9rem] normal-case tracking-normal text-[var(--ink-muted)]">
+              {formatListingTime(listing.dateTime)}
+            </span>
+          ) : null}
         </h3>
 
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -182,7 +198,11 @@ export function ListingRow({
       </div>
 
       <div
-        className="flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-end"
+        className={
+          compact
+            ? "flex w-full shrink-0 flex-row items-center gap-2"
+            : "flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-end"
+        }
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
@@ -197,7 +217,9 @@ export function ListingRow({
           <button
             type="button"
             disabled
-            className="cursor-not-allowed whitespace-nowrap rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-5 py-2 text-[0.75rem] text-white opacity-70"
+            className={`cursor-not-allowed whitespace-nowrap rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-5 py-2 text-[0.75rem] text-white opacity-70${
+              compact ? " flex-1" : ""
+            }`}
           >
             {disabledLabel ?? ctaLabel}
           </button>
@@ -205,7 +227,9 @@ export function ListingRow({
           <button
             type="button"
             onClick={onRequest}
-            className="whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-2 text-[0.75rem] text-white transition-colors hover:bg-[var(--accent-hover)]"
+            className={`whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-2 text-[0.75rem] text-white transition-colors hover:bg-[var(--accent-hover)]${
+              compact ? " flex-1" : ""
+            }`}
           >
             {ctaLabel}
           </button>

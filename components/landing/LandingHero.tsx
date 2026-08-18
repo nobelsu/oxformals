@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { ListingDayList } from "@/components/swap/ListingDayList";
 import { ListingRow } from "@/components/swap/ListingRow";
 import { mapListing, mapUser } from "@/lib/data/mapConvex";
 import { BROWSE_ROUTE } from "@/lib/ui/routes";
@@ -90,24 +89,27 @@ export function LandingHero() {
             </Link>
           </div>
         ) : (
-          <div className="min-h-[16rem]">
-            <ListingDayList
-              listings={listings}
-              renderRow={(listing) => {
-                const owner = owners.get(listing.ownerUserId);
-                if (!owner) return null;
-                return (
+          <ul className="min-h-[16rem]">
+            {listings.map((listing) => {
+              const owner = owners.get(listing.ownerUserId);
+              if (!owner) return null;
+              return (
+                <li
+                  key={listing.id}
+                  className="border-t border-dashed border-[color-mix(in_srgb,var(--ink)_18%,transparent)] first:border-t-0"
+                >
                   <ListingRow
                     listing={listing}
                     owner={owner}
+                    compact
                     hideInterests
                     disabled
                     disabledLabel="Sign in to request"
                   />
-                );
-              }}
-            />
-          </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
     </section>
