@@ -284,7 +284,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
           if (file) void handleImageSelect(file);
         }}
       />
-      {imageError ? <p className="text-sm text-red-600">{imageError}</p> : null}
+      {imageError ? <p className="text-sm text-[var(--danger)]">{imageError}</p> : null}
     </div>
   );
 
@@ -402,7 +402,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
         <p className="mt-2 text-sm text-[var(--ink-muted)]">{state.reason}</p>
       )}
 
-      {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-[var(--danger)]">{error}</p> : null}
       {success ? <p className="mt-3 text-sm text-[var(--ink-muted)]">{success}</p> : null}
 
       <Modal

@@ -236,7 +236,7 @@ export function CollegeReviewEditor({ review, onSaved, onCancel }: Props) {
           if (file) void handleImageSelect(file);
         }}
       />
-      {imageError ? <p className="text-sm text-red-600">{imageError}</p> : null}
+      {imageError ? <p className="text-sm text-[var(--danger)]">{imageError}</p> : null}
     </div>
   );
 
@@ -293,7 +293,7 @@ export function CollegeReviewEditor({ review, onSaved, onCancel }: Props) {
         </div>
       </div>
 
-      {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-[var(--danger)]">{error}</p> : null}
 
       <Modal
         open={confirmSubmitOpen}

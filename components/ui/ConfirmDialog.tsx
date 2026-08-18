@@ -38,7 +38,7 @@ export function ConfirmDialog({
           className={[
             "rounded-full border-[2px] px-4 py-1.5 text-sm font-medium transition-colors",
             variant === "destructive"
-              ? "border-red-600 bg-red-600 text-white hover:bg-red-700 hover:border-red-700"
+              ? "border-[var(--danger)] bg-[var(--danger)] text-[var(--danger-ink)] hover:bg-[color-mix(in_srgb,var(--danger)_85%,black)] hover:border-[color-mix(in_srgb,var(--danger)_85%,black)]"
               : "border-[var(--ink)] bg-[var(--ink)] text-[var(--bg)] hover:opacity-80",
           ].join(" ")}
         >

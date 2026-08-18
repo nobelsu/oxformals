@@ -19,7 +19,7 @@ const VARIANT_CLS: Record<Variant, string> = {
   ghost:
     "border-[2px] border-[var(--ink)]/40 bg-transparent text-[var(--ink-muted)] hover:border-[var(--ink)] hover:text-[var(--ink)]",
   destructive:
-    "border-[2px] border-red-600 bg-red-600 text-white hover:bg-red-700 hover:border-red-700",
+    "border-[2px] border-[var(--danger)] bg-[var(--danger)] text-[var(--danger-ink)] hover:bg-[color-mix(in_srgb,var(--danger)_85%,black)] hover:border-[color-mix(in_srgb,var(--danger)_85%,black)]",
 };
 
 export function OutlineButton({
