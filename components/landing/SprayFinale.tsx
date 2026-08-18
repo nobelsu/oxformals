@@ -251,11 +251,17 @@ export function SprayFinale() {
     return (
       <section
         aria-label="Find your next formal"
-        className="relative h-[170svh] w-full"
+        className="relative h-[210svh] w-full"
       >
+        {/* Pinned card, revealed as the Sand cover above it scrolls away. */}
         <div className="sticky top-0 flex h-svh items-center justify-center overflow-hidden bg-[var(--accent)] px-6">
           <p className={`${taglineClass} text-[var(--tag-ink)]`}>{TAGLINE}</p>
         </div>
+        {/* Sand cover: sits over the card, slides up off it as you scroll in. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-svh bg-[var(--bg)]"
+        />
       </section>
     );
   }
@@ -263,10 +269,10 @@ export function SprayFinale() {
   return (
     <section
       aria-label="Find your next formal"
-      className="relative h-[170svh] w-full"
+      className="relative h-[210svh] w-full"
     >
       <div
-        className="sticky top-0 h-svh cursor-none touch-none select-none overflow-hidden"
+        className="sticky top-0 h-svh cursor-none select-none overflow-hidden"
         onPointerMove={handlePointerMove}
         onPointerDown={handlePointerDown}
         onPointerEnter={handlePointerEnter}
@@ -291,6 +297,12 @@ export function SprayFinale() {
           style={{ width: REVEAL_RADIUS * 2, height: REVEAL_RADIUS * 2 }}
         />
       </div>
+      {/* Sand cover: sits over the card, slides up off it as you scroll in,
+          so the pinned card is revealed underneath rather than scrolling up. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-svh bg-[var(--bg)]"
+      />
     </section>
   );
 }
