@@ -7,7 +7,7 @@ Status: approved in direction; three features, validated by prototype where note
 
 Three creative/interactive touches on the **logged-out landing page only**, inspired
 by Studio Marrone: a cursor paint-reveal block, an ambient spray behind the hero,
-and a handwritten wordmark that draws itself. All decorative, all landing-only —
+and a drawn accent mark on the headline. All decorative, all landing-only —
 none of this goes near the app's working surfaces (Browse, feed, chats, forms),
 where native scroll and plain interaction must stay untouched.
 
@@ -27,7 +27,7 @@ where native scroll and plain interaction must stay untouched.
   interaction.
 - **Performance.** The two paint effects run on `pointermove` only — **no
   `requestAnimationFrame` loop**. `devicePixelRatio` capped at 2. Canvases sized via
-  `ResizeObserver`. The handwriting is a one-shot draw on load.
+  `ResizeObserver`. The drawn mark is a one-shot draw on load.
 - **Landing-only.** Rendered by `LandingPage`/`LandingHero`, which only mount for
   logged-out visitors on a bare `/`. Nothing here ships to authenticated users.
 
@@ -85,35 +85,29 @@ overt bottom block — so the two paint interactions don't compete.
 
 ---
 
-## Feature 3 — Handwritten wordmark (draws on load)
+## Feature 3 — Drawn accent mark on the hero headline
 
-Genuine **single-stroke pen-script** (not Schoolbell — Schoolbell is a filled font and
-can't be pen-drawn), animated via SVG `stroke-dashoffset`, one-shot on first load.
+A hand-drawn **roughjs** mark — an underline (or circle/arrow) — that *draws itself*
+under a word in the hero headline on load. On-brand with the existing roughjs doodles
+(`SketchCard`, `SketchDot`), cheap, and unmistakably an accent. The nav keeps its
+Schoolbell wordmark unchanged.
 
-**Placement — needs your call at spec review.** Recommended: the **nav wordmark**
-"oxformals" (top-left) becomes an inline SVG that writes itself once as the page
-loads, then persists as the drawn wordmark. This respects the earlier decision to
-keep the wordmark small in the nav and lead the hero with the headline, and gives the
-handwriting a natural home — the brand signing itself as you arrive.
+`components/landing/HeadlineMark.tsx`. It renders a roughjs-generated SVG path
+(hand-drawn underline) positioned under the target phrase in the hero `<h1>` —
+**"Oxford formal."**, the phrase already kept together on one line — and animates the
+path drawing via `stroke-dashoffset`, one-shot on first load, in `--accent`.
 
-- Trade-off: the nav wordmark stops being live text and becomes an SVG (add
-  `aria-label="oxformals"`; it stays a link to `/`). And its resting state is the
-  pen-script face, not Schoolbell — so the pen-script has to look right as the
-  permanent wordmark, not just mid-draw.
-- Alternative if you'd rather: a larger handwritten "oxformals" as a hero accent above
-  the headline, with the nav keeping its Schoolbell text. More presence, some
-  redundancy (two wordmarks).
+- Reuse the existing roughjs setup (same import as `SketchDot`). One instance, one
+  draw. The underline width tracks the phrase width via `ResizeObserver` so it stays
+  under the words if the headline reflows.
+- **Static form** (reduced-motion): the mark shown fully drawn instantly, no draw
+  animation.
+- `aria-hidden` — purely decorative; the headline text is unchanged and unaffected.
 
-**Sourcing the path — the technical risk.** A true pen-draw needs single-stroke path
-data for the word. Approach: author it as a **static SVG asset** — generate the
-single-line paths from a single-stroke/engraving script font (Hershey-style) or a
-handwriting-to-path tool, committed as a component/asset, not generated at runtime.
-This is the part most likely to need iteration to look right; the build should
-timebox it and fall back to Feature-1/2 shipping independently if the letterforms
-don't land.
-
-**Static form** (reduced-motion): the word shown fully drawn instantly, no stroke
-animation.
+**Deferred (not this build):** a genuine single-stroke pen-script *word* that writes
+itself. It carries real path-authoring risk (Schoolbell is a filled font, so a true
+pen-draw needs sourced single-stroke paths). Ship the drawn mark now; revisit the
+pen-script word as a later, separate piece.
 
 ---
 
@@ -124,15 +118,13 @@ animation.
    so Features 1 and 2 don't duplicate it.
 2. **Feature 1** (paint-reveal block) — validated, highest-value, ship first.
 3. **Feature 2** (hero spray) — depends on the contrast verification.
-4. **Feature 3** (handwriting) — independent; the path-authoring risk means it must be
-   able to slip without blocking 1 and 2.
+4. **Feature 3** (drawn accent mark) — independent and cheap; reuses the roughjs setup.
 
 ## Testing
 
 No new pure logic to unit-test. Everything is visual + interaction, verified in the
 browser: paint-reveal reveals + repaints and resets on scroll-out; spray stays under
-the contrast floor at max accumulation (measured, not eyeballed); handwriting draws
-once and respects reduced-motion; all three render their static form with motion
+the contrast floor at max accumulation (measured, not eyeballed); the drawn mark animates once and respects reduced-motion; all three render their static form with motion
 reduced and on touch. Confirm the app's working surfaces are untouched.
 
 ## Out of scope
