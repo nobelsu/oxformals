@@ -6,6 +6,7 @@ import {
   formatListingMetaLine,
   formatListingRowMeta,
   formatListingTime,
+  formatRowTail,
 } from "./format";
 
 describe("formatListingTime", () => {
@@ -57,6 +58,34 @@ describe("formatListingRowMeta", () => {
       formatListingRowMeta({ groupSize: 2, seatsAvailable: 0, isPast: false }),
       "Group of 2 · Group full",
     );
+  });
+});
+
+describe("formatRowTail", () => {
+  it("pairs remaining seats with price", () => {
+    assert.equal(
+      formatRowTail({ seatsAvailable: 2, isPast: false, price: 28 }),
+      "2 left · £28",
+    );
+  });
+
+  it("says group full at zero seats", () => {
+    assert.equal(
+      formatRowTail({ seatsAvailable: 0, isPast: false }),
+      "Group full",
+    );
+  });
+
+  it("omits seats entirely once past", () => {
+    assert.equal(formatRowTail({ seatsAvailable: 2, isPast: true, price: 28 }), "£28");
+  });
+
+  it("returns an empty string when a past listing has no price", () => {
+    assert.equal(formatRowTail({ seatsAvailable: 2, isPast: true }), "");
+  });
+
+  it("omits price when absent", () => {
+    assert.equal(formatRowTail({ seatsAvailable: 1, isPast: false }), "1 left");
   });
 });
 

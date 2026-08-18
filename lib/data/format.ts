@@ -41,6 +41,22 @@ export function formatListingRowMeta(args: {
   return parts.join(" · ");
 }
 
+/** `2 left · £28` — the text beside the seat pips. Seats are dropped once past. */
+export function formatRowTail(args: {
+  seatsAvailable: number;
+  isPast: boolean;
+  price?: number;
+}): string {
+  const parts: string[] = [];
+  if (!args.isPast) {
+    parts.push(
+      args.seatsAvailable === 0 ? "Group full" : `${args.seatsAvailable} left`,
+    );
+  }
+  if (args.price !== undefined) parts.push(formatPrice(args.price));
+  return parts.join(" · ");
+}
+
 /** `Thu 8 May · 7:15pm · Group of 3 · …` — drops seat availability for past formals. */
 export function formatListingMetaLine(args: {
   dateTime: string;
