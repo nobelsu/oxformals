@@ -74,7 +74,7 @@ export function LandingHowItWorks() {
 
   if (reduced) {
     return (
-      <section className="flex min-h-[85svh] flex-col justify-center border-t-[2px] border-dashed border-[color-mix(in_srgb,var(--ink)_20%,transparent)] py-16">
+      <section className="flex min-h-[85svh] flex-col justify-center bg-[var(--ink)] px-4 py-16 text-[var(--bg)] sm:px-6">
         <h2 className="font-display text-3xl uppercase tracking-wide">
           How it works
         </h2>
@@ -104,11 +104,11 @@ export function LandingHowItWorks() {
     <section
       ref={wrapRef}
       aria-label="How it works"
-      className="relative border-t-[2px] border-dashed border-[color-mix(in_srgb,var(--ink)_20%,transparent)]"
+      className="relative bg-[var(--ink)] text-[var(--bg)]"
       style={{ height: `${FRAMES * SCROLL_PER_FRAME}svh` }}
     >
       <div className="sticky top-0 flex h-svh flex-col items-center justify-center overflow-hidden px-6">
-        <span className="absolute left-1/2 top-[12svh] -translate-x-1/2 font-display text-sm uppercase tracking-[0.2em] text-[var(--ink-muted)]">
+        <span className="absolute left-1/2 top-[12svh] -translate-x-1/2 font-display text-sm uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--bg)_55%,var(--ink))]">
           How it works
         </span>
 
@@ -133,7 +133,7 @@ export function LandingHowItWorks() {
                 <h3 className="mt-4 text-2xl font-bold sm:text-3xl">
                   {step.title}
                 </h3>
-                <p className="mt-3 max-w-[40ch] text-base leading-relaxed text-[var(--ink-muted)]">
+                <p className="mt-3 max-w-[40ch] text-base leading-relaxed text-[color-mix(in_srgb,var(--bg)_72%,var(--ink))]">
                   {step.body}
                 </p>
               </div>
@@ -167,7 +167,7 @@ export function LandingHowItWorks() {
                 backgroundColor:
                   active >= i
                     ? "var(--accent)"
-                    : "color-mix(in srgb, var(--ink) 25%, transparent)",
+                    : "color-mix(in srgb, var(--bg) 30%, transparent)",
               }}
             />
           ))}

@@ -13,10 +13,12 @@ export function LandingPage({
 }) {
   return (
     <>
-      <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 px-4 py-8 sm:px-6">
-        <div className="relative z-10 flex flex-col">
+      <main className="flex w-full flex-1 flex-col min-h-0">
+        <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
           <LandingHero preloaded={preloaded} />
-          <LandingHowItWorks />
+        </div>
+        <LandingHowItWorks />
+        <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
           <LandingStats />
         </div>
       </main>
