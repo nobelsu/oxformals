@@ -5,9 +5,7 @@ import { useCanvasDpr, useReducedOrCoarse } from "@/lib/hooks/usePaintCanvas";
 
 const TAGLINE = "find your next formal";
 
-/** Cover-spray radius (hover hides the text) in CSS px. */
-const COVER_RADIUS = 84;
-/** Reveal-brush radius (drag wipes back to the text) in CSS px. */
+/** Reveal-brush radius (cursor wipes to the layer beneath) in CSS px. */
 const REVEAL_RADIUS = 66;
 
 function parseHexColor(value: string): [number, number, number] | null {
@@ -54,11 +52,11 @@ function wrapLines(
  * column and pins (`position: sticky`) over a tall runway, so scrolling off the
  * last Sand section pulls it up and the rose page rises to fill the screen.
  *
- * On the rose page the tagline is visible; moving the cursor sprays rose over it
- * (it disappears), and pressing and dragging wipes the veil away to reveal the
- * same words underneath in a different colour on a different ground.
+ * On the rose page the tagline is visible; moving the cursor over it paints the
+ * flip — the veil wipes away under the cursor to reveal the same words beneath in
+ * a different colour on a different ground, so the colour follows the pointer.
  *
- * The scratch is a mouse affordance. Under reduced motion / coarse pointers the
+ * The flip is a mouse affordance. Under reduced motion / coarse pointers the
  * panel is a plain, fully-legible rose page — no canvas, no listeners, and fully
  * scrollable (so touch visitors can always scroll past the pinned runway).
  */
@@ -184,38 +182,6 @@ export function SprayFinale() {
     return { x: (clientX - rect.left) * dpr, y: (clientY - rect.top) * dpr };
   }, []);
 
-  // Cover: repaint the cover colour over where the cursor moves, hiding the text.
-  const cover = useCallback((clientX: number, clientY: number) => {
-    const ctx = ctxRef.current;
-    const rgb = coverRef.current;
-    const p = toDeviceXY(clientX, clientY);
-    if (!ctx || !rgb || !p) return;
-    const radius = COVER_RADIUS * dprRef.current;
-    const stamp = (x: number, y: number) => {
-      const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
-      g.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 1)`);
-      g.addColorStop(0.7, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 1)`);
-      g.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0)`);
-      ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
-    };
-    const last = lastRef.current;
-    if (last) {
-      const dist = Math.hypot(p.x - last.x, p.y - last.y);
-      const steps = Math.max(1, Math.round(dist / (radius / 2)));
-      for (let i = 1; i <= steps; i++) {
-        const t = i / steps;
-        stamp(last.x + (p.x - last.x) * t, last.y + (p.y - last.y) * t);
-      }
-    } else {
-      stamp(p.x, p.y);
-    }
-    lastRef.current = p;
-  }, [toDeviceXY]);
-
   // Reveal: erase the veil with a soft brush, uncovering the layer beneath.
   const reveal = useCallback((clientX: number, clientY: number) => {
     const ctx = ctxRef.current;
@@ -254,16 +220,16 @@ export function SprayFinale() {
         ring.style.left = `${e.clientX}px`;
         ring.style.top = `${e.clientY}px`;
       }
-      if (downRef.current) reveal(e.clientX, e.clientY);
-      else if (e.pointerType === "mouse") cover(e.clientX, e.clientY);
+      if (e.pointerType === "mouse" || downRef.current) {
+        reveal(e.clientX, e.clientY);
+      }
     },
-    [cover, reveal],
+    [reveal],
   );
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
       downRef.current = true;
-      lastRef.current = null;
       reveal(e.clientX, e.clientY);
     },
     [reveal],
@@ -285,7 +251,7 @@ export function SprayFinale() {
     return (
       <section
         aria-label="Find your next formal"
-        className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] h-[170svh] w-screen"
+        className="relative h-[170svh] w-full"
       >
         <div className="sticky top-0 flex h-svh items-center justify-center overflow-hidden bg-[var(--accent)] px-6">
           <p className={`${taglineClass} text-[var(--tag-ink)]`}>{TAGLINE}</p>
@@ -297,7 +263,7 @@ export function SprayFinale() {
   return (
     <section
       aria-label="Find your next formal"
-      className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] h-[170svh] w-screen"
+      className="relative h-[170svh] w-full"
     >
       <div
         className="sticky top-0 h-svh cursor-none touch-none select-none overflow-hidden"

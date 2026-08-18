@@ -13,15 +13,17 @@ export function LandingPage({
   preloaded: Preloaded<typeof api.listings.listUpcomingPublic>;
 }) {
   return (
-    <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 overflow-x-clip px-4 py-8 sm:px-6">
+    <>
       <LandingSpray />
-      <div className="relative z-10 flex flex-col">
-        <LandingHero preloaded={preloaded} />
-        <LandingHowItWorks />
-        <LandingStats />
-        <LandingSocialTeaser />
-      </div>
+      <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col min-h-0 px-4 py-8 sm:px-6">
+        <div className="relative z-10 flex flex-col">
+          <LandingHero preloaded={preloaded} />
+          <LandingHowItWorks />
+          <LandingStats />
+          <LandingSocialTeaser />
+        </div>
+      </main>
       <SprayFinale />
-    </main>
+    </>
   );
 }
