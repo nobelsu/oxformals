@@ -91,25 +91,24 @@ export function HeroShowcase({ slides }: { slides: HeroSlide[] }) {
       </div>
 
       <div
-        className="grid min-h-[16rem]"
+        className="overflow-hidden"
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
       >
-        {slides.map((s, i) => (
-          <div
-            key={s.id}
-            className={`col-start-1 row-start-1 ${
-              reduced ? "" : "transition-opacity duration-500 ease-out"
-            } ${
-              i === index
-                ? "opacity-100"
-                : "pointer-events-none opacity-0"
-            }`}
-            aria-hidden={i !== index}
-          >
-            {s.content}
-          </div>
-        ))}
+        <div
+          className={`flex ${reduced ? "" : "transition-transform duration-500 ease-out"}`}
+          style={{ transform: `translateX(-${index * 100}%)` }}
+        >
+          {slides.map((s, i) => (
+            <div
+              key={s.id}
+              className="min-h-[16rem] w-full shrink-0"
+              aria-hidden={i !== index}
+            >
+              {s.content}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
