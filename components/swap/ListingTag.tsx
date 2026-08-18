@@ -11,7 +11,7 @@ const SIZE_CLASS = {
 
 const VARIANT_CLASS: Record<ListingTagVariant, string> = {
   outline: "border-[var(--ink)] bg-transparent text-[var(--ink)]",
-  accent: "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]",
+  accent: "border-[var(--accent-wash)] bg-[var(--accent-wash)] text-[var(--accent-wash-ink)]",
 };
 
 type Props = {

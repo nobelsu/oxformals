@@ -25,6 +25,8 @@
   --accent-hover: #a3453f;
   --accent-ink: #ffffff;
   --accent-wash: #edbfba;
+  /* Wash is the same colour in light and dark — ink stays dark in both. */
+  --accent-wash-ink: #1a1810;
   --danger: #b8423e;
   --danger-ink: #ffffff;
   /* Rankings mountain — summit (#1) and silhouette fill */
@@ -52,6 +54,7 @@
     --accent-hover: #c85f58;
     --accent-ink: #1a1810;
     --accent-wash: #edbfba;
+    --accent-wash-ink: #1a1810;
     --danger: #f87171;
     --danger-ink: #1a1810;
     --rank-summit-bg: var(--tag);
@@ -77,6 +80,7 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-ink: var(--accent-ink);
   --color-accent-wash: var(--accent-wash);
+  --color-accent-wash-ink: var(--accent-wash-ink);
   --color-danger: var(--danger);
   --color-danger-ink: var(--danger-ink);
   --font-hand: var(--font-app);
@@ -110,6 +114,7 @@ html[data-ui-font="schoolbell"] {
   --accent-hover: #a3453f;
   --accent-ink: #ffffff;
   --accent-wash: #edbfba;
+  --accent-wash-ink: #1a1810;
   --danger: #b8423e;
   --danger-ink: #ffffff;
 }
@@ -128,6 +133,7 @@ html[data-ui-font="inter"] {
   --accent-hover: #2563eb;
   --accent-ink: #ffffff;
   --accent-wash: #3b82f6;
+  --accent-wash-ink: #0f172a;
   --danger: #dc2626;
   --danger-ink: #ffffff;
 }
@@ -146,6 +152,7 @@ html[data-ui-font="dm_sans"] {
   --accent-hover: #c46a66;
   --accent-ink: #ffffff;
   --accent-wash: #d4827e;
+  --accent-wash-ink: #3d2a26;
   --danger: #b91c1c;
   --danger-ink: #ffffff;
 }
@@ -164,6 +171,7 @@ html[data-ui-font="lora"] {
   --accent-hover: #9a7209;
   --accent-ink: #1a1208;
   --accent-wash: #b8860b;
+  --accent-wash-ink: #1a1208;
   --danger: #8b2942;
   --danger-ink: #ffffff;
 }
@@ -183,6 +191,7 @@ html[data-ui-font="georgia"] {
   --accent-hover: #1d4ed8;
   --accent-ink: #ffffff;
   --accent-wash: #1e40af;
+  --accent-wash-ink: #ffffff;
   --danger: #b91c1c;
   --danger-ink: #ffffff;
 }
@@ -201,6 +210,7 @@ html[data-ui-font="arial"] {
   --accent-hover: #1d4ed8;
   --accent-ink: #ffffff;
   --accent-wash: #2563eb;
+  --accent-wash-ink: #ffffff;
   --danger: #dc2626;
   --danger-ink: #ffffff;
 }
@@ -220,6 +230,7 @@ html[data-ui-font="system_ui"] {
   --accent-hover: #047857;
   --accent-ink: #ffffff;
   --accent-wash: #059669;
+  --accent-wash-ink: #000000;
   --danger: #be123c;
   --danger-ink: #ffffff;
 }
@@ -272,6 +283,7 @@ html[data-ui-font="system_ui"] .font-display {
     --accent-hover: #c85f58;
     --accent-ink: #1a1810;
     --accent-wash: #edbfba;
+    --accent-wash-ink: #1a1810;
     --danger: #f87171;
     --danger-ink: #1a1810;
   }
@@ -288,6 +300,7 @@ html[data-ui-font="system_ui"] .font-display {
     --accent-hover: #3b82f6;
     --accent-ink: #0f172a;
     --accent-wash: #60a5fa;
+    --accent-wash-ink: #0f172a;
     --danger: #f87171;
     --danger-ink: #0f172a;
   }
@@ -304,6 +317,7 @@ html[data-ui-font="system_ui"] .font-display {
     --accent-hover: #e8928c;
     --accent-ink: #2a1f1d;
     --accent-wash: #f0a8a3;
+    --accent-wash-ink: #2a1f1d;
     --danger: #fca5a5;
     --danger-ink: #2a1f1d;
   }
@@ -320,6 +334,7 @@ html[data-ui-font="system_ui"] .font-display {
     --accent-hover: #c49a3d;
     --accent-ink: #1a1410;
     --accent-wash: #d4a84b;
+    --accent-wash-ink: #1a1410;
     --danger: #fb7185;
     --danger-ink: #1a1410;
   }
@@ -336,6 +351,7 @@ html[data-ui-font="system_ui"] .font-display {
     --accent-hover: #60a5fa;
     --accent-ink: #171717;
     --accent-wash: #93c5fd;
+    --accent-wash-ink: #171717;
     --danger: #fca5a5;
     --danger-ink: #171717;
   }
@@ -352,6 +368,7 @@ html[data-ui-font="system_ui"] .font-display {
     --accent-hover: #3b82f6;
     --accent-ink: #0a0a0a;
     --accent-wash: #60a5fa;
+    --accent-wash-ink: #0a0a0a;
     --danger: #f87171;
     --danger-ink: #0a0a0a;
   }
@@ -368,6 +385,7 @@ html[data-ui-font="system_ui"] .font-display {
     --accent-hover: #10b981;
     --accent-ink: #022c22;
     --accent-wash: #34d399;
+    --accent-wash-ink: #022c22;
     --danger: #fda4af;
     --danger-ink: #022c22;
   }

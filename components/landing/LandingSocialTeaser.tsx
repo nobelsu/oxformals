@@ -15,7 +15,7 @@ export function LandingSocialTeaser() {
       <div className="flex flex-col gap-3" aria-hidden>
         <div className="rounded-[14px] border-[2px] border-[var(--ink)] bg-[var(--paper)] p-4">
           <div className="flex items-center gap-2 text-sm">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--accent)] text-[0.7rem] font-bold text-[var(--accent-ink)]">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--accent-wash)] text-[0.7rem] font-bold text-[var(--accent-wash-ink)]">
               SA
             </span>
             <span>
@@ -29,7 +29,7 @@ export function LandingSocialTeaser() {
         </div>
         <div className="rounded-[14px] border-[2px] border-[var(--ink)] bg-[var(--paper)] p-4">
           <div className="flex items-center gap-2 text-sm">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--accent)] text-[0.7rem] font-bold text-[var(--accent-ink)]">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--accent-wash)] text-[0.7rem] font-bold text-[var(--accent-wash-ink)]">
               JO
             </span>
             <span>

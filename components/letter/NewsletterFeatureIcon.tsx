@@ -33,7 +33,7 @@ export function NewsletterFeatureIcon({ name, className = "h-5 w-5 shrink-0" }: 
         />
         <path
           d="M3 7 L12 13.5 L21 7 Z"
-          fill="var(--accent)"
+          fill="var(--accent-wash)"
           fillOpacity="0.45"
           stroke="currentColor"
           strokeWidth="2"
@@ -83,7 +83,7 @@ export function NewsletterFeatureIcon({ name, className = "h-5 w-5 shrink-0" }: 
         width="8"
         height="4"
         rx="1"
-        fill="var(--accent)"
+        fill="var(--accent-wash)"
         stroke="currentColor"
         strokeWidth="1.5"
         opacity="0.85"

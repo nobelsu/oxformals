@@ -22,7 +22,7 @@ function renderHighlightedMatch(label: string, query: string) {
   return (
     <>
       {label.slice(0, start)}
-      <mark className="rounded bg-[var(--accent)]/25 px-0.5 text-current">
+      <mark className="rounded bg-[var(--accent-wash)]/25 px-0.5 text-current">
         {label.slice(start, end)}
       </mark>
       {label.slice(end)}

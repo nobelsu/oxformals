@@ -275,7 +275,7 @@ export function OnboardingOverlay() {
                   key={i}
                   className={`h-2 rounded-full transition-all ${
                     i === slide
-                      ? "w-6 bg-[var(--accent)]"
+                      ? "w-6 bg-[var(--accent-wash)]"
                       : "w-2 bg-[var(--ink-soft)]/40"
                   }`}
                 />

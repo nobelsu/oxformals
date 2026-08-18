@@ -76,7 +76,7 @@ export function NewsletterLetter({ animateIn = true }: Props) {
                   className="newsletter-feature-item flex gap-3 p-4 sm:gap-4"
                 >
                   <span
-                    className="font-display flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--ink)] bg-[var(--accent)] text-sm text-[var(--accent-ink)]"
+                    className="font-display flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--ink)] bg-[var(--accent-wash)] text-sm text-[var(--accent-wash-ink)]"
                     aria-hidden
                   >
                     {index + 1}

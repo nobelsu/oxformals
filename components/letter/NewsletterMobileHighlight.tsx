@@ -27,7 +27,7 @@ function PhoneIcon({ className = "h-14 w-14 shrink-0" }: { className?: string })
         width="20"
         height="28"
         rx="2"
-        fill="var(--accent)"
+        fill="var(--accent-wash)"
         fillOpacity="0.4"
       />
       <circle cx="24" cy="38" r="2" fill="currentColor" />
@@ -106,7 +106,7 @@ export function NewsletterMobileHighlight() {
       className="newsletter-mobile-highlight relative overflow-hidden rounded-2xl border-[2.5px] border-[var(--ink)] p-5 sm:p-6"
       aria-labelledby="newsletter-mobile-heading"
     >
-      <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-[var(--accent)] opacity-30" aria-hidden />
+      <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-[var(--accent-wash)] opacity-30" aria-hidden />
 
       <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
         <div className="flex items-center gap-4 sm:flex-col sm:items-center sm:gap-3">

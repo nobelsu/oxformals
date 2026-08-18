@@ -152,7 +152,7 @@ export function NavSettingsModal({ open, onClose }: Props) {
               className="relative mt-4 min-w-0 max-w-full rounded-3xl border-[2px] border-[var(--ink)] bg-[var(--paper)] px-4 py-3 pl-6"
             >
               <span
-                className="absolute left-2.5 top-3 bottom-3 w-1.5 rounded-full bg-[var(--accent)]"
+                className="absolute left-2.5 top-3 bottom-3 w-1.5 rounded-full bg-[var(--accent-wash)]"
                 aria-hidden
               />
               <p className="max-w-full break-words font-display text-lg uppercase tracking-[0.12em] text-[var(--ink)]">

@@ -39,7 +39,7 @@ export function SketchCard({
   strokeWidth = 2.5,
   bowing = 1.6,
   roughFill = false,
-  roughTintClassName = "text-[var(--accent)]",
+  roughTintClassName = "text-[var(--accent-wash)]",
   className = "",
   style,
   ...rest

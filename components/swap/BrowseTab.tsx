@@ -71,7 +71,7 @@ const BROWSE_COLLEGE_CHIP_LIMIT = 3;
 const CHIP_BASE =
   "cursor-pointer rounded-full border-2 px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30";
 const CHIP_IDLE = `${CHIP_BASE} border-[var(--ink)]/30 bg-[var(--bg)] text-[var(--ink)] hover:border-[var(--ink)]/50`;
-const CHIP_ON = `${CHIP_BASE} border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]`;
+const CHIP_ON = `${CHIP_BASE} border-[var(--accent-wash)] bg-[var(--accent-wash)] text-[var(--accent-wash-ink)] hover:bg-[var(--accent-hover)] hover:text-[var(--accent-ink)]`;
 /** Same look as idle chips; span only (no hover / focus ring). */
 const CHIP_MORE_META =
   "inline-flex select-none items-center rounded-full border-2 border-[var(--ink)]/30 bg-[var(--bg)] px-3 py-1.5 text-xs font-medium tabular-nums text-[var(--ink)]";
@@ -403,7 +403,7 @@ export function BrowseTab({
                     <FilterIcon className="h-5 w-5" />
                     {hasActiveFilters ? (
                       <span
-                        className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--accent)] ring-2 ring-[var(--bg)]"
+                        className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--accent-wash)] ring-2 ring-[var(--bg)]"
                         aria-hidden
                       />
                     ) : null}

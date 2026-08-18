@@ -25,7 +25,7 @@ export function LandingHowItWorks() {
             key={step.title}
             className="rounded-[14px] border-[2px] border-[var(--ink)] bg-[var(--paper)] p-5"
           >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent)] text-sm font-bold text-[var(--accent-ink)]">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent-wash)] text-sm font-bold text-[var(--accent-wash-ink)]">
               {index + 1}
             </span>
             <h3 className="mt-3 text-lg font-bold">{step.title}</h3>
