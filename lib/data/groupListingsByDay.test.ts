@@ -1,6 +1,11 @@
+// Pinned so the local-day assertions below are deterministic on any machine
+// or CI runner, not just one already set to Europe/London. Must run before
+// any Date/Intl call in this file (including in the imported modules).
+process.env.TZ = "Europe/London";
+
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { groupListingsByDay } from "./groupListingsByDay";
+import { groupListingsByDay, isDayGroupPast } from "./groupListingsByDay";
 import type { Listing } from "./types";
 
 function listing(id: string, dateTime: string): Listing {
@@ -65,10 +70,10 @@ describe("groupListingsByDay", () => {
   });
 
   // These two tests are inherently timezone-dependent: they assert the
-  // local-day bucketing that only holds under the repo's test timezone,
-  // Europe/London (see /etc/localtime on this machine, or set TZ
-  // explicitly when running elsewhere). That dependency is the point —
-  // they exist to prove grouping uses local time, not UTC.
+  // local-day bucketing that only holds under Europe/London, pinned via
+  // `process.env.TZ` above so this is true regardless of the host machine
+  // or CI runner. That dependency is the point — they exist to prove
+  // grouping uses local time, not UTC.
 
   it("splits local days that share a UTC day", () => {
     // Both instants fall on the same UTC calendar day (10 Aug), but in
@@ -122,5 +127,33 @@ describe("groupListingsByDay", () => {
       input.map((l) => l.id),
       ["late", "early"],
     );
+  });
+});
+
+describe("isDayGroupPast", () => {
+  const nowMs = Date.parse("2026-05-08T20:00:00Z");
+
+  it("is false for a day entirely in the future", () => {
+    const [group] = groupListingsByDay([
+      listing("a", "2026-05-09T18:00:00Z"),
+      listing("b", "2026-05-09T21:00:00Z"),
+    ]);
+    assert.equal(isDayGroupPast(group, nowMs), false);
+  });
+
+  it("is true for a day entirely in the past", () => {
+    const [group] = groupListingsByDay([
+      listing("a", "2026-05-07T18:00:00Z"),
+      listing("b", "2026-05-07T21:00:00Z"),
+    ]);
+    assert.equal(isDayGroupPast(group, nowMs), true);
+  });
+
+  it("is false when the first listing has started but a later one has not", () => {
+    const [group] = groupListingsByDay([
+      listing("started", "2026-05-08T18:00:00Z"),
+      listing("notStarted", "2026-05-08T21:00:00Z"),
+    ]);
+    assert.equal(isDayGroupPast(group, nowMs), false);
   });
 });

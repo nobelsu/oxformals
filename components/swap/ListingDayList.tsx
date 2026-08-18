@@ -4,7 +4,10 @@ import { useMemo, type ReactNode } from "react";
 import { SketchDot } from "@/components/ui/SketchDot";
 import { seedFrom } from "@/components/ui/SketchCard";
 import { formatDayLabel } from "@/lib/data/format";
-import { groupListingsByDay } from "@/lib/data/groupListingsByDay";
+import {
+  groupListingsByDay,
+  isDayGroupPast,
+} from "@/lib/data/groupListingsByDay";
 import type { Listing } from "@/lib/data/types";
 import { useNowMs } from "@/lib/hooks/useNowMs";
 
@@ -34,13 +37,30 @@ export function ListingDayList({
   const nowMs = useNowMs();
   const groups = useMemo(() => groupListingsByDay(listings), [listings]);
 
-  if (groups.length === 0) return null;
+  // Render rows before deciding which groups to show: a group whose rows all
+  // filter out to null (e.g. an owner lookup miss in CollegeListingsSection)
+  // must not leave a dated header floating over an empty gutter. Listings and
+  // owner data resolve from independent sources, so this window is real, not
+  // hypothetical.
+  const renderedGroups = groups
+    .map((group) => {
+      const rows = group.listings
+        .map((listing) => {
+          const content = renderRow(listing);
+          return content ? { listing, content } : null;
+        })
+        .filter((row): row is NonNullable<typeof row> => row !== null);
+      return { group, rows };
+    })
+    .filter((entry) => entry.rows.length > 0);
+
+  if (renderedGroups.length === 0) return null;
 
   return (
     <div className={className}>
-      {groups.map((group) => {
+      {renderedGroups.map(({ group, rows }) => {
         const { day, weekday } = formatDayLabel(group.dateTime);
-        const isPastDay = Date.parse(group.dateTime) < nowMs;
+        const isPastDay = isDayGroupPast(group, nowMs);
         const dayInk = isPastDay ? "text-[var(--ink-soft)]" : "text-[var(--ink)]";
 
         return (
@@ -70,18 +90,14 @@ export function ListingDayList({
               </span>
 
               <ul>
-                {group.listings.map((listing) => {
-                  const content = renderRow(listing);
-                  if (!content) return null;
-                  return (
-                    <li
-                      key={listing.id}
-                      className="border-t border-dashed border-[color-mix(in_srgb,var(--ink)_18%,transparent)] first:border-t-0"
-                    >
-                      {content}
-                    </li>
-                  );
-                })}
+                {rows.map(({ listing, content }) => (
+                  <li
+                    key={listing.id}
+                    className="border-t border-dashed border-[color-mix(in_srgb,var(--ink)_18%,transparent)] first:border-t-0"
+                  >
+                    {content}
+                  </li>
+                ))}
               </ul>
             </div>
           </section>

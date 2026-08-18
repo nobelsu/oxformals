@@ -39,3 +39,13 @@ export function groupListingsByDay(listings: Listing[]): ListingDayGroup[] {
 
   return groups;
 }
+
+/**
+ * A day group is "past" only once every listing in it has started — not as
+ * soon as the earliest one has. `group.dateTime` is just the first listing's
+ * start time, so using it alone would dim a whole day (e.g. a 9pm formal
+ * still open) as soon as an earlier one on the same day had begun.
+ */
+export function isDayGroupPast(group: ListingDayGroup, nowMs: number): boolean {
+  return group.listings.every((listing) => Date.parse(listing.dateTime) < nowMs);
+}
