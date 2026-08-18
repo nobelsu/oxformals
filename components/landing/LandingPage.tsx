@@ -3,6 +3,7 @@ import type { api } from "@/convex/_generated/api";
 import { LandingHero } from "@/components/landing/LandingHero";
 import { LandingHowItWorks } from "@/components/landing/LandingHowItWorks";
 import { LandingSocialTeaser } from "@/components/landing/LandingSocialTeaser";
+import { PaintReveal } from "@/components/landing/PaintReveal";
 
 export function LandingPage({
   preloaded,
@@ -14,6 +15,7 @@ export function LandingPage({
       <LandingHero preloaded={preloaded} />
       <LandingHowItWorks />
       <LandingSocialTeaser />
+      <PaintReveal />
     </main>
   );
 }
