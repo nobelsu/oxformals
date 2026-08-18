@@ -258,7 +258,7 @@ export function ListingRow({
           <button
             type="button"
             disabled
-            className={`cursor-not-allowed whitespace-nowrap rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-5 py-2 text-[0.75rem] text-white opacity-70${
+            className={`cursor-not-allowed whitespace-nowrap rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-5 py-2 text-[0.75rem] text-[var(--accent-ink)] opacity-70${
               compact ? " flex-1" : ""
             }`}
           >
@@ -268,7 +268,7 @@ export function ListingRow({
           <button
             type="button"
             onClick={onRequest}
-            className={`whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-2 text-[0.75rem] text-white transition-colors hover:bg-[var(--accent-hover)]${
+            className={`whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-2 text-[0.75rem] text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]${
               compact ? " flex-1" : ""
             }`}
           >

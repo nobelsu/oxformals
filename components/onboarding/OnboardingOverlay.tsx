@@ -188,7 +188,7 @@ function RulesSlide({
           />
           <span className="flex h-6 w-6 items-center justify-center rounded-md border-[2px] border-[var(--ink)] bg-[var(--paper)] transition-colors peer-checked:bg-[var(--accent)] peer-checked:border-[var(--accent)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--accent)]/50">
             {agreed && (
-              <svg viewBox="0 0 12 12" className="w-3.5 h-3.5 text-white">
+              <svg viewBox="0 0 12 12" className="w-3.5 h-3.5 text-[var(--accent-ink)]">
                 <path
                   d="M2.5 6 L5 8.5 L9.5 3.5"
                   stroke="currentColor"
@@ -296,7 +296,7 @@ export function OnboardingOverlay() {
                 type="button"
                 onClick={handleNext}
                 disabled={isLastSlide && (!rulesAgreed || submitting)}
-                className="flex-1 rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 transition-colors text-sm"
+                className="flex-1 rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--accent-ink)] px-4 py-2.5 transition-colors text-sm"
               >
                 {submitting
                   ? "Saving\u2026"

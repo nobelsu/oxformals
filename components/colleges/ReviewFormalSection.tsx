@@ -392,7 +392,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
               type="button"
               disabled={submitting || !ratingsComplete || imageUploading}
               onClick={openSubmitConfirm}
-              className="cursor-pointer rounded-full bg-[var(--accent)] px-5 py-2 text-sm text-white transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="cursor-pointer rounded-full bg-[var(--accent)] px-5 py-2 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? "Saving…" : "Submit review"}
             </button>
@@ -420,7 +420,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
             type="button"
             disabled={submitting}
             onClick={() => void handleConfirmSubmit(true)}
-            className="cursor-pointer rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm text-white transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="cursor-pointer rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Yes, post anonymously
           </button>

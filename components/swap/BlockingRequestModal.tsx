@@ -33,7 +33,7 @@ export function BlockingRequestModal({
           onClose();
           onViewRequests();
         }}
-        className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+        className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
       >
         View my requests
       </button>

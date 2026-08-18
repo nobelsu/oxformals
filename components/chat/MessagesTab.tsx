@@ -137,7 +137,7 @@ export function MessagesTab() {
           <button
             type="button"
             onClick={() => setStartChatOpen(true)}
-            className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+            className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
           >
             New message
           </button>

@@ -161,7 +161,7 @@ export function RequestSwapModal({
               type="button"
               onClick={() => void handleSubmit()}
               disabled={submitting || !effectiveOfferingId}
-              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-5 py-1.5 text-sm disabled:opacity-50"
+              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] px-5 py-1.5 text-sm disabled:opacity-50"
             >
               Send request!
             </button>

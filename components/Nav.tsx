@@ -186,7 +186,7 @@ function NavInner() {
           ) : (
             <Link
               href="/login"
-              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-4 py-1 font-medium"
+              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] px-4 py-1 font-medium"
             >
               Sign in
             </Link>
@@ -246,7 +246,7 @@ function NavInner() {
             <Link
               href="/login"
               onClick={() => setDrawerOpen(false)}
-              className="block rounded-full bg-[var(--accent)] px-4 py-2 text-center font-medium text-white hover:bg-[var(--accent-hover)]"
+              className="block rounded-full bg-[var(--accent)] px-4 py-2 text-center font-medium text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]"
             >
               Sign in
             </Link>

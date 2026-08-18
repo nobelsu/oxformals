@@ -71,7 +71,7 @@ const BROWSE_COLLEGE_CHIP_LIMIT = 3;
 const CHIP_BASE =
   "cursor-pointer rounded-full border-2 px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30";
 const CHIP_IDLE = `${CHIP_BASE} border-[var(--ink)]/30 bg-[var(--bg)] text-[var(--ink)] hover:border-[var(--ink)]/50`;
-const CHIP_ON = `${CHIP_BASE} border-[var(--accent)] bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]`;
+const CHIP_ON = `${CHIP_BASE} border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]`;
 /** Same look as idle chips; span only (no hover / focus ring). */
 const CHIP_MORE_META =
   "inline-flex select-none items-center rounded-full border-2 border-[var(--ink)]/30 bg-[var(--bg)] px-3 py-1.5 text-xs font-medium tabular-nums text-[var(--ink)]";
@@ -581,7 +581,7 @@ export function BrowseTab({
             <button
               type="button"
               onClick={() => setFiltersModalOpen(false)}
-              className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-6 py-2.5 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+              className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-6 py-2.5 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
             >
               Done
             </button>
@@ -710,7 +710,7 @@ export function BrowseTab({
             setShowNoListingPrompt(false);
             onNavigateToRequests();
           }}
-          className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+          className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
         >
           + List my formal
         </button>

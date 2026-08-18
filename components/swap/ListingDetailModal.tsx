@@ -256,7 +256,7 @@ export function ListingDetailModal({
               <button
                 type="button"
                 disabled
-                className="cursor-not-allowed rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-8 py-3 text-sm text-white opacity-70"
+                className="cursor-not-allowed rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-8 py-3 text-sm text-[var(--accent-ink)] opacity-70"
               >
                 {disabledLabel ?? ctaLabel}
               </button>
@@ -267,7 +267,7 @@ export function ListingDetailModal({
                   onRequest();
                   onClose();
                 }}
-                className="rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+                className="rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
               >
                 {ctaLabel}
               </button>

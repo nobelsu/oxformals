@@ -303,7 +303,7 @@ export function LoginForm() {
             <button
               type="submit"
               disabled={submitting}
-              className="mt-2 w-full rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 disabled:cursor-not-allowed text-white py-3 text-base transition-colors"
+              className="mt-2 w-full rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 disabled:cursor-not-allowed text-[var(--accent-ink)] py-3 text-base transition-colors"
             >
               {submitting ? "Sending…" : "Send code"}
             </button>
@@ -356,7 +356,7 @@ export function LoginForm() {
             <button
               type="submit"
               disabled={submitting}
-              className="mt-2 w-full cursor-pointer rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 disabled:cursor-not-allowed text-white py-3 text-base transition-colors"
+              className="mt-2 w-full cursor-pointer rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 disabled:cursor-not-allowed text-[var(--accent-ink)] py-3 text-base transition-colors"
             >
               {submitting ? "Verifying…" : "Verify"}
             </button>
@@ -649,7 +649,7 @@ export function LoginForm() {
             <button
               type="submit"
               disabled={submitting}
-              className="mt-2 w-full rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 disabled:cursor-not-allowed text-white py-3 text-base transition-colors"
+              className="mt-2 w-full rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 disabled:cursor-not-allowed text-[var(--accent-ink)] py-3 text-base transition-colors"
             >
               {submitting ? "One sec…" : "Continue"}
             </button>

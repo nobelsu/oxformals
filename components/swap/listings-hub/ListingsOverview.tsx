@@ -75,7 +75,7 @@ function AttentionRow({
         <span
           className={`rounded-full border px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide ${
             accent
-              ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+              ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
               : "border-[var(--ink)] text-[var(--ink-muted)]"
           }`}
         >

@@ -95,7 +95,7 @@ export function IncomingRequestRow({
             <button
               type="button"
               onClick={onAccept}
-              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-4 py-1 text-sm"
+              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] px-4 py-1 text-sm"
             >
               Accept
             </button>

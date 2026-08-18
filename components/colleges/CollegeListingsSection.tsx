@@ -291,7 +291,7 @@ export function CollegeListingsSection({ college }: Props) {
         </p>
         <Link
           href="/?tab=requests&openList=1"
-          className="flex w-full cursor-pointer items-center justify-center rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+          className="flex w-full cursor-pointer items-center justify-center rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
           onClick={() => setShowNoListingPrompt(false)}
         >
           + List my formal

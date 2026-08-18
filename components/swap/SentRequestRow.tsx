@@ -93,7 +93,7 @@ export function SentRequestRow({
           <button
             type="button"
             onClick={() => onWithdraw(request.id)}
-            className="rounded-full border-[2px] border-[var(--accent)] bg-[var(--accent)] px-4 py-1 text-sm text-white transition-colors hover:border-[var(--accent-hover)] hover:bg-[var(--accent-hover)]"
+            className="rounded-full border-[2px] border-[var(--accent)] bg-[var(--accent)] px-4 py-1 text-sm text-[var(--accent-ink)] transition-colors hover:border-[var(--accent-hover)] hover:bg-[var(--accent-hover)]"
           >
             Withdraw
           </button>

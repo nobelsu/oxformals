@@ -385,7 +385,7 @@ export function ListFormalForm({
       <button
         type="submit"
         disabled={menuPdfUploading}
-        className="self-start rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-5 py-2 text-base transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+        className="self-start rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] px-5 py-2 text-base transition-colors disabled:cursor-not-allowed disabled:opacity-60"
       >
         {editMode ? "Save changes" : "Post listing"}
       </button>
