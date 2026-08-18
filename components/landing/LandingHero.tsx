@@ -64,7 +64,8 @@ export function LandingHero({
     <section className="grid items-center gap-10 py-10 md:grid-cols-2 md:gap-14">
       <div className="flex flex-col items-start">
         <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
-          Find a seat at any Oxford formal.
+          Find a seat at any{" "}
+          <span className="whitespace-nowrap">Oxford formal.</span>
         </h1>
         <p className="mt-3 max-w-[46ch] text-base leading-relaxed text-[var(--ink-muted)]">
           Swap your place, take an empty seat, and eat somewhere you&rsquo;ve
