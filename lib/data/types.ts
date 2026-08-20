@@ -6,6 +6,9 @@ export type ListingStatus = "active" | "confirmed" | "closed" | "expired";
 
 export type ListingType = "swap" | "pay" | "both";
 
+/** The "vibe" of a formal, shown as a small hand-drawn tag on listings. */
+export type FormalType = "matchmaking" | "social" | "networking";
+
 export type RequestType = "swap" | "pay";
 
 export type Listing = {
@@ -25,6 +28,7 @@ export type Listing = {
   menuPdfUrl?: string;
   menuFileContentType?: string;
   listingType: ListingType;
+  formalType: FormalType;
   price?: number;
   status: ListingStatus;
   createdAt: number;

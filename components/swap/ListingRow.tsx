@@ -18,6 +18,7 @@ import { useNowMs } from "@/lib/hooks/useNowMs";
 import { ListingMenu, hasListingMenu } from "@/components/swap/ListingMenu";
 import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
+import { FormalTypeTag } from "@/components/swap/FormalTypeTag";
 import { SeatPips } from "@/components/swap/SeatPips";
 
 type Props = {
@@ -33,6 +34,12 @@ type Props = {
   title?: string;
   /** Narrow contexts (the landing hero): no day rail, so the row states its own date. */
   compact?: boolean;
+  /**
+   * Vertical alignment of the action column against the content. "start"
+   * (default) suits dense flat lists; "center" balances the taller card
+   * blocks used by the browse feed so the CTA doesn't float at the top.
+   */
+  align?: "start" | "center";
 };
 
 export function ListingRow({
@@ -42,14 +49,17 @@ export function ListingRow({
   onRequest,
   onPress,
   disabled,
-  disabledLabel,
   hideInterests,
   title,
   compact = false,
+  align = "start",
 }: Props) {
   const nowMs = useNowMs();
   const isPast = listingIsPast(listing.dateTime, nowMs);
   const ctaLabel = listingRequestCta(listing.listingType);
+  // Card rows (align="center") are taller, so spread the inner blocks more to
+  // fill the space instead of clustering at the top.
+  const spacious = align === "center";
 
   // One clamped seat count feeds both the pips and the tail text so they
   // can never disagree, even on invalid data (negative seats, or seats
@@ -67,6 +77,7 @@ export function ListingRow({
   const yearRoleLine = [
     formatYearLabel(owner.year) || formatYearLabel(listing.year),
     owner.role || listing.role,
+    owner.subject,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -106,11 +117,7 @@ export function ListingRow({
           : undefined
       }
       className={`flex gap-3 py-4 ${
-        compactTagOnly
-          ? "flex-row items-start"
-          : compact
-            ? "flex-col"
-            : "flex-col sm:flex-row sm:items-start sm:gap-4"
+        compactTagOnly ? "flex-row items-start" : "flex-col"
       }${
         onPress
           ? " cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--paper)_70%,transparent)]"
@@ -126,10 +133,14 @@ export function ListingRow({
             <span>{formatListingTime(listing.dateTime)}</span>
           </div>
         ) : null}
-        <h3 className="flex flex-wrap items-baseline gap-x-2 break-words font-display text-[1.4rem] uppercase leading-tight tracking-wide sm:text-[1.9rem]">
-          {title ?? listing.college}
-          {!compact ? (
-            <>
+        {compact ? (
+          <h3 className="flex flex-wrap items-baseline gap-x-2 break-words font-display text-[1.4rem] uppercase leading-tight tracking-wide sm:text-[1.9rem]">
+            {title ?? listing.college}
+          </h3>
+        ) : (
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="flex flex-wrap items-baseline gap-x-2 break-words font-display text-[1.4rem] uppercase leading-tight tracking-wide sm:text-[1.9rem]">
+              {title ?? listing.college}
               {/* Visually-hidden separator: the gap-x-2 flex gap keeps the
                   visual spacing, but adjacent text nodes otherwise run
                   together ("Worcester7:15pm") when copied or read by a
@@ -138,27 +149,41 @@ export function ListingRow({
               <span className="text-[1rem] normal-case tracking-normal text-[var(--ink-muted)]">
                 {formatListingTime(listing.dateTime)}
               </span>
-            </>
-          ) : null}
-        </h3>
-
-        {!isPast || rowTail ? (
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-            {!isPast ? (
-              <SeatPips
-                total={listing.groupSize}
-                taken={listing.groupSize - safeSeatsAvailable}
-              />
-            ) : null}
-            {rowTail ? (
-              <span className="text-[1rem] text-[var(--ink-muted)]">
-                {rowTail}
-              </span>
-            ) : null}
+            </h3>
+            <span
+              className="mt-1 shrink-0"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <ListingTypeTag listingType={listing.listingType} />
+            </span>
           </div>
-        ) : null}
+        )}
 
-        <div className="mt-2 flex flex-wrap items-center gap-2">
+        <div
+          className={`${
+            spacious ? "mt-3.5" : "mt-1.5"
+          } flex flex-wrap items-center gap-x-2 gap-y-1`}
+        >
+          {!isPast ? (
+            <SeatPips
+              total={listing.groupSize}
+              taken={listing.groupSize - safeSeatsAvailable}
+            />
+          ) : null}
+          {rowTail ? (
+            <span className="text-[1rem] text-[var(--ink-muted)]">
+              {rowTail}
+            </span>
+          ) : null}
+          <FormalTypeTag formalType={listing.formalType} />
+        </div>
+
+        <div
+          className={`${
+            spacious ? "mt-4" : "mt-2"
+          } flex flex-wrap items-center gap-2`}
+        >
           <Link
             href={`/profile/${owner.id}`}
             onClick={(e) => e.stopPropagation()}
@@ -195,7 +220,7 @@ export function ListingRow({
 
         {hasListingMenu(listing.menu, listing.menuPdfUrl) ? (
           <div
-            className="mt-2"
+            className={spacious ? "mt-4" : "mt-2"}
             // Only the file link needs to swallow the click/keydown before it
             // reaches the row's onPress (otherwise opening the menu file also
             // "selects" the row behind it). Scoped to the link itself rather
@@ -220,13 +245,17 @@ export function ListingRow({
         ) : null}
 
         {listing.message ? (
-          <p className="mt-2 line-clamp-2 break-words text-pretty text-[1rem] italic text-[var(--ink-muted)]">
+          <p
+            className={`${
+              spacious ? "mt-4" : "mt-2"
+            } line-clamp-2 break-words text-pretty text-[1rem] italic text-[var(--ink-muted)]`}
+          >
             &ldquo;{listing.message}&rdquo;
           </p>
         ) : null}
 
         {!hideInterests && owner.interests.length > 0 ? (
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className={`${spacious ? "mt-4" : "mt-2"} flex flex-wrap gap-1.5`}>
             {owner.interests.map((tag) => (
               <Chip key={tag} size="sm" as="span" className="!text-[0.75rem]">
                 {tag}
@@ -236,46 +265,56 @@ export function ListingRow({
         ) : null}
       </div>
 
-      <div
-        className={
-          compactTagOnly
-            ? "flex shrink-0 flex-row items-center gap-2"
-            : compact
-              ? "flex w-full shrink-0 flex-row items-center gap-2"
-              : "flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-end"
-        }
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
-      >
-        <ListingTypeTag listingType={listing.listingType} />
-        {showStatusInsteadOfCta ? (
-          <ListingStatusTag
-            status={listing.status}
-            seatsAvailable={safeSeatsAvailable}
-            size="sm"
-          />
-        ) : disabled ? (
-          <button
-            type="button"
-            disabled
-            className={`cursor-not-allowed whitespace-nowrap rounded-full border-[2px] border-[var(--ink)] bg-[color-mix(in_srgb,var(--accent)_50%,var(--bg))] px-5 py-2 text-[0.875rem] text-[var(--accent-ink)] opacity-70${
-              compact ? " flex-1" : ""
-            }`}
-          >
-            {disabledLabel ?? ctaLabel}
-          </button>
-        ) : onRequest ? (
-          <button
-            type="button"
-            onClick={onRequest}
-            className={`whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-2 text-[0.875rem] text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]${
-              compact ? " flex-1" : ""
-            }`}
-          >
-            {ctaLabel}
-          </button>
-        ) : null}
-      </div>
+      {compact ? (
+        <div
+          className={
+            compactTagOnly
+              ? "flex shrink-0 flex-row items-center gap-2"
+              : "flex w-full shrink-0 flex-row items-center gap-2"
+          }
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <ListingTypeTag listingType={listing.listingType} />
+          {showStatusInsteadOfCta ? (
+            <ListingStatusTag
+              status={listing.status}
+              seatsAvailable={safeSeatsAvailable}
+              size="sm"
+            />
+          ) : disabled ? null : onRequest ? (
+            <button
+              type="button"
+              onClick={onRequest}
+              className="flex-1 whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-2 text-[0.875rem] text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
+            >
+              {ctaLabel}
+            </button>
+          ) : null}
+        </div>
+      ) : showStatusInsteadOfCta || (!disabled && onRequest) ? (
+        <div
+          className={`flex justify-end ${spacious ? "mt-2" : ""}`}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          {showStatusInsteadOfCta ? (
+            <ListingStatusTag
+              status={listing.status}
+              seatsAvailable={safeSeatsAvailable}
+              size="sm"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={onRequest}
+              className="whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-2 text-[0.875rem] text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
+            >
+              {ctaLabel}
+            </button>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

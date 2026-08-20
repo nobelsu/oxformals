@@ -58,6 +58,7 @@ export function mapListing(doc: ConvexListingDoc): Listing {
       ? { menuFileContentType: doc.menuFileContentType }
       : {}),
     listingType: doc.listingType ?? "swap",
+    formalType: doc.formalType ?? "social",
     ...(doc.price !== undefined ? { price: doc.price } : {}),
     status: doc.status,
     createdAt: doc._creationTime,

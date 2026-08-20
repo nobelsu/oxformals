@@ -15,6 +15,7 @@ import { type NewListingInput } from "@/lib/data/dataClient";
 import { normalizeCollegeName } from "@/lib/data/colleges";
 import { mapListing, mapUser } from "@/lib/data/mapConvex";
 import type {
+  FormalType,
   GroupSize,
   Listing,
   ListingType,
@@ -60,6 +61,7 @@ export type DataContextValue = {
       menuPdfId?: string;
       clearMenuPdf?: boolean;
       listingType?: ListingType;
+      formalType?: FormalType;
       price?: number;
     },
   ) => void;
@@ -200,6 +202,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         message: input.message,
         menu: input.menu,
         listingType: input.listingType,
+        formalType: input.formalType,
         ...(input.menuPdfId !== undefined
           ? { menuPdfId: input.menuPdfId as Id<"_storage"> }
           : {}),
@@ -218,6 +221,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         message: input.message,
         menu: input.menu,
         listingType: input.listingType,
+        formalType: input.formalType,
         ...(input.price !== undefined ? { price: input.price } : {}),
         status: "active",
         createdAt: Date.now(),
@@ -346,6 +350,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         menuPdfId?: string;
         clearMenuPdf?: boolean;
         listingType?: ListingType;
+        formalType?: FormalType;
         price?: number;
       },
     ) => {
@@ -363,6 +368,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
             : {}),
         ...(patch.listingType !== undefined
           ? { listingType: patch.listingType }
+          : {}),
+        ...(patch.formalType !== undefined
+          ? { formalType: patch.formalType }
           : {}),
         ...(patch.price !== undefined ? { price: patch.price } : {}),
       });

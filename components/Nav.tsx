@@ -3,13 +3,91 @@
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { UnreadBadge } from "@/components/chat/UnreadBadge";
 import { Drawer } from "@/components/ui/Drawer";
 import { api } from "@/convex/_generated/api";
 import { BROWSE_ROUTE } from "@/lib/ui/routes";
 import { useAuth } from "./auth/useAuth";
 import { NavSettingsModal } from "./NavSettingsModal";
+
+function useNavTheme() {
+  const [inverted, setInverted] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    const check = () => {
+      const navRect = nav.getBoundingClientRect();
+      const midY = navRect.top + navRect.height / 2;
+      const midX = navRect.left + navRect.width / 2;
+      nav.style.setProperty("pointer-events", "none", "important");
+      nav.style.visibility = "hidden";
+      const el = document.elementFromPoint(midX, midY);
+      nav.style.removeProperty("pointer-events");
+      nav.style.visibility = "";
+      if (!el) return;
+
+      const inFinale = !!el.closest("[data-nav-hide]");
+      setHidden(inFinale);
+      if (inFinale) return;
+
+      let r = 0, g = 0, b = 0;
+      let found = false;
+
+      if (el instanceof HTMLCanvasElement) {
+        try {
+          const rect = el.getBoundingClientRect();
+          const scaleX = el.width / rect.width;
+          const scaleY = el.height / rect.height;
+          const cx = (midX - rect.left) * scaleX;
+          const cy = (midY - rect.top) * scaleY;
+          const ctx2d = el.getContext("2d");
+          if (ctx2d) {
+            const px = ctx2d.getImageData(Math.round(cx), Math.round(cy), 1, 1).data;
+            if (px[3] > 20) {
+              r = px[0]; g = px[1]; b = px[2];
+              found = true;
+            }
+          }
+        } catch { /* tainted canvas or other error — fall through */ }
+      }
+
+      if (!found) {
+        let target: Element | null = el instanceof HTMLCanvasElement ? el.parentElement : el;
+        while (target) {
+          const bg = getComputedStyle(target).backgroundColor;
+          if (bg && bg !== "transparent" && bg !== "rgba(0, 0, 0, 0)") {
+            const match = bg.match(/\d+/g);
+            if (match) {
+              [r, g, b] = match.map(Number);
+              found = true;
+            }
+            break;
+          }
+          target = target.parentElement;
+        }
+      }
+
+      if (!found) return;
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      setInverted(luminance < 0.5);
+    };
+
+    check();
+    const id = setInterval(check, 80);
+    window.addEventListener("scroll", check, { passive: true });
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("scroll", check);
+    };
+  }, []);
+
+  return { navRef, inverted, hidden };
+}
 
 const TABS = [
   { id: "browse", label: "Browse" },
@@ -21,7 +99,10 @@ const TABS = [
 
 export function Nav() {
   const pathname = usePathname();
-  if (pathname?.startsWith("/login") || pathname?.startsWith("/letter")) {
+  if (
+    pathname?.startsWith("/login") ||
+    pathname?.startsWith("/letter")
+  ) {
     return null;
   }
 
@@ -34,7 +115,7 @@ export function Nav() {
 
 function NavShell() {
   return (
-    <nav className="w-full shrink-0 bg-[var(--bg)]">
+    <nav className="sticky top-0 z-50 w-full shrink-0 backdrop-blur-md bg-[var(--bg)]/80">
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 py-5" />
     </nav>
   );
@@ -44,11 +125,16 @@ function NavInner() {
   const { status, isAuthenticated, user, signOut } = useAuth();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [landingScrolled, setLandingScrolled] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isRequestsDetail = pathname?.startsWith("/requests/") ?? false;
   const isCollegeDetail = pathname?.startsWith("/college/") ?? false;
+  const isLegalPage =
+    pathname?.startsWith("/privacy") || pathname?.startsWith("/terms");
+  const isBareRoot =
+    pathname === "/" && !searchParams.get("tab") && !searchParams.get("listing");
   const activeTab = isRequestsDetail
     ? "requests"
     : isCollegeDetail
@@ -62,11 +148,10 @@ function NavInner() {
   // signed-in users too and caused the Browse highlight to flicker in on
   // hydration instead of showing immediately.
   const isLandingPage =
-    pathname === "/" &&
-    !searchParams.get("tab") &&
-    !searchParams.get("listing") &&
+    isBareRoot &&
     status === "ready" &&
     !isAuthenticated;
+
   const onTabbedPage = (pathname === "/" && !isLandingPage) || isRequestsDetail;
   const activeTabLabel =
     TABS.find((t) => t.id === activeTab)?.label ?? "Browse";
@@ -80,6 +165,192 @@ function NavInner() {
     setDrawerOpen(false);
   }, [pathname, searchParams]);
 
+  useEffect(() => {
+    if (!isLandingPage) {
+      setLandingScrolled(false);
+      return;
+    }
+
+    const onScroll = () => {
+      setLandingScrolled(window.scrollY > 56);
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isLandingPage]);
+
+  const { navRef, inverted, hidden } = useNavTheme();
+
+  if (isLegalPage) {
+    return (
+      <nav
+        ref={navRef}
+        className={`sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${
+          hidden
+            ? "pointer-events-none opacity-0"
+            : inverted
+              ? "nav-inverted pointer-events-none"
+              : "relative isolate backdrop-blur-md"
+        }`}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-bg/95 via-bg/70 to-transparent"
+        />
+        <div className="pointer-events-auto mx-auto w-full max-w-5xl px-4 py-5 sm:px-6">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+            <div className="flex items-center justify-start">
+              <Link
+                href="/"
+                className="font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)]"
+              >
+                Oxformals
+              </Link>
+            </div>
+            <div className="flex items-center justify-center whitespace-nowrap text-sm text-[var(--nav-ink-muted)]">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
+              >
+                <span aria-hidden>←</span>
+                Return
+              </Link>
+            </div>
+            <div className="flex items-center justify-end">
+              <Link
+                href="/login"
+                className="rounded-full bg-[var(--accent)] px-4 py-1 font-medium text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
+              >
+                Sign in
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
+  if (isLandingPage) {
+    return (
+      <nav
+        ref={navRef}
+        className={`sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${
+          hidden
+            ? "pointer-events-none opacity-0"
+            : inverted
+              ? "nav-inverted pointer-events-none"
+              : "relative isolate backdrop-blur-md"
+        }`}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-bg/95 via-bg/70 to-transparent"
+        />
+        <div className="pointer-events-auto mx-auto w-full max-w-5xl px-4 py-5 sm:px-6">
+          <div className="relative grid grid-cols-[1fr_auto_1fr] items-center">
+            <div
+              className={`col-start-2 flex items-center justify-center gap-5 whitespace-nowrap text-sm text-[var(--nav-ink-muted)] transition-all duration-300 ${
+                landingScrolled
+                  ? "pointer-events-none -translate-y-1 opacity-0"
+                  : "translate-y-0 opacity-100"
+              }`}
+            >
+              <Link
+                href="/privacy"
+                className="underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
+              >
+                Privacy
+              </Link>
+              <span aria-hidden>·</span>
+              <Link
+                href="/terms"
+                className="underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
+              >
+                Terms
+              </Link>
+            </div>
+            <div
+              className={`absolute top-1/2 z-10 transition-[left,transform] duration-300 ease-out ${
+                landingScrolled
+                  ? "left-1/2 -translate-x-1/2 -translate-y-1/2 scale-110"
+                  : "left-0 -translate-y-1/2"
+              }`}
+            >
+              <Link
+                href="/"
+                className="block font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)] transition-transform duration-300 ease-out"
+              >
+                Oxformals
+              </Link>
+            </div>
+            <div className="col-start-3 flex items-center justify-end">
+              <Link
+                href="/login"
+                className="rounded-full bg-[var(--accent)] px-4 py-1 font-medium text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
+              >
+                Sign in
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
+
+  // Logged-out visitors who followed "Browse formals" off the landing page get
+  // a stripped-back nav (brand · Return · Sign in) instead of the full tab bar —
+  // the tabs are useless to them, and Return takes them back to the marketing
+  // page, mirroring the legal-page nav.
+  if (
+    onTabbedPage &&
+    status === "ready" &&
+    !isAuthenticated &&
+    activeTab === "browse"
+  ) {
+    return (
+      <nav
+        ref={navRef}
+        className={`browse-theme-navy sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${
+          hidden
+            ? "pointer-events-none opacity-0"
+            : inverted
+              ? "nav-inverted pointer-events-none"
+              : "backdrop-blur-md bg-[var(--nav-bg)]/80"
+        }`}
+      >
+        <div className="pointer-events-auto mx-auto grid w-full max-w-5xl grid-cols-[1fr_auto_1fr] items-center px-4 py-5 sm:px-6">
+          <div className="flex items-center justify-start">
+            <Link
+              href="/"
+              className="font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)]"
+            >
+              Oxformals
+            </Link>
+          </div>
+          <div className="flex items-center justify-center whitespace-nowrap text-sm text-[var(--nav-ink-muted)]">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
+            >
+              <span aria-hidden>←</span>
+              Return
+            </Link>
+          </div>
+          <div className="flex items-center justify-end">
+            <Link
+              href="/login"
+              className="rounded-full bg-[var(--accent)] px-4 py-1 font-medium text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
+            >
+              Sign in
+            </Link>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
   function hrefFor(tab: string): string {
     if (tab === "browse") return BROWSE_ROUTE;
     return `/?tab=${tab}`;
@@ -91,18 +362,18 @@ function NavInner() {
   }
 
   return (
-    <nav className="w-full shrink-0 bg-[var(--bg)]">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-5 sm:grid-cols-[1fr_auto_1fr] sm:gap-4 sm:px-6">
+    <nav ref={navRef} className={`browse-theme-navy sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${hidden ? "pointer-events-none opacity-0" : inverted ? "nav-inverted pointer-events-none" : "backdrop-blur-md bg-[var(--nav-bg)]/80"}`}>
+      <div className="pointer-events-auto mx-auto grid w-full max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-5 sm:grid-cols-[1fr_auto_1fr] sm:gap-4 sm:px-6">
         <div className="flex items-center justify-start">
           <Link
             href="/"
-            className="hidden font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--ink)] sm:block"
+            className="hidden font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)] sm:block"
           >
             Oxformals
           </Link>
           <button
             type="button"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] sm:hidden"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--nav-ink)] text-[var(--nav-ink)] transition-colors hover:bg-[var(--nav-ink)] hover:text-[var(--nav-bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)] sm:hidden"
             aria-label="Open menu"
             aria-expanded={drawerOpen}
             aria-controls="nav-drawer-panel"
@@ -123,7 +394,7 @@ function NavInner() {
         </div>
 
         <div className="flex min-w-0 items-center justify-center sm:col-start-2">
-          <p className="min-w-0 truncate text-center font-display text-lg uppercase tracking-[0.2em] text-[var(--ink)] sm:hidden">
+          <p className="min-w-0 truncate text-center font-display text-lg uppercase tracking-[0.2em] text-[var(--nav-ink)] sm:hidden">
             {isCollegeDetail
               ? "Rankings"
               : onTabbedPage
@@ -146,19 +417,19 @@ function NavInner() {
           </ul>
         </div>
 
-        <div className="flex items-center justify-end gap-3 text-sm whitespace-nowrap">
+        <div className="flex min-w-0 items-center justify-end gap-2 text-sm whitespace-nowrap sm:gap-3">
           {status !== "ready" ? null : isAuthenticated && user ? (
             <>
-              <span className="hidden sm:inline whitespace-nowrap text-[var(--ink-muted)]">
+              <span className="hidden sm:inline whitespace-nowrap text-[var(--nav-ink-muted)]">
                 {user.name.split(" ")[0]}
-                <span className="text-[var(--ink-soft)]"> · {user.college}</span>
+                <span className="text-[var(--nav-ink-muted)]"> · {user.college}</span>
               </span>
               <button
                 type="button"
                 onClick={() => {
                   void signOut().then(() => router.push("/"));
                 }}
-                className="hidden whitespace-nowrap rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 font-medium text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] transition-colors sm:inline-block"
+                className="hidden whitespace-nowrap rounded-full border-[2px] border-[var(--nav-ink)] px-3 py-0.5 font-medium text-[var(--nav-ink)] hover:bg-[var(--nav-ink)] hover:text-[var(--nav-bg)] transition-colors sm:inline-block"
               >
                 Sign out
               </button>
@@ -168,7 +439,7 @@ function NavInner() {
                 aria-expanded={settingsOpen}
                 aria-controls="nav-settings-panel"
                 onClick={() => setSettingsOpen(true)}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--nav-ink)] text-[var(--nav-ink)] transition-colors hover:bg-[var(--nav-ink)] hover:text-[var(--nav-bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)]"
               >
                 <svg
                   aria-hidden="true"
@@ -288,8 +559,8 @@ function NavTabLink({
       onClick={onNavigate}
       className={`inline-flex items-center gap-2 font-display uppercase tracking-[0.2em] whitespace-nowrap pb-0.5 transition-opacity ${
         isActive
-          ? "text-[var(--ink)]"
-          : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+          ? "text-[var(--nav-ink)]"
+          : "text-[var(--nav-ink-muted)] hover:text-[var(--nav-ink)]"
       } ${className}`}
     >
       <span

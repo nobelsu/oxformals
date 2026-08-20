@@ -6,9 +6,9 @@ import { Reveal } from "@/components/landing/Reveal";
 
 // TODO(numbers): placeholder figures — swap for the real ones the user supplies.
 const STATS = [
-  { value: 1200, suffix: "+", label: "seats swapped" },
+  { value: 100, suffix: "+", label: "formals" },
   { value: 38, suffix: "", label: "colleges & halls" },
-  { value: 4500, suffix: "+", label: "students on board" },
+  { value: 600, suffix: "+", label: "students on board" },
   { value: 0, suffix: "", prefix: "£", label: "to join" },
 ] as const;
 
@@ -96,10 +96,17 @@ export function LandingStats() {
   }, []);
 
   return (
-    <section className="flex min-h-[70svh] flex-col justify-center border-t-[2px] border-dashed border-[color-mix(in_srgb,var(--ink)_20%,transparent)] py-16">
+    <section className="flex min-h-[70svh] flex-col justify-center py-16">
       <Reveal>
         <h2 className="text-center font-display text-3xl uppercase tracking-wide">
-          Oxford&rsquo;s formal swap, by the numbers
+          Oxford formal swapping,{" "}
+          <span className="relative inline-block">
+            <span
+              aria-hidden
+              className="absolute inset-x-[-0.15em] bottom-[0.05em] top-[0.42em] -z-0 -rotate-1 rounded-[0.2em] bg-[var(--accent-wash)]"
+            />
+            <span className="relative z-[1]">by the numbers</span>
+          </span>
         </h2>
       </Reveal>
       <div

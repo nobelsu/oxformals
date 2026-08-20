@@ -22,6 +22,7 @@ function listing(id: string, dateTime: string): Listing {
     message: "",
     menu: "",
     listingType: "swap",
+    formalType: "social",
     status: "active",
     createdAt: 0,
   };

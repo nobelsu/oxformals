@@ -9,6 +9,7 @@ import { BROWSE_ROUTE } from "@/lib/ui/routes";
 import { HeroShowcase, type HeroSlide } from "@/components/landing/HeroShowcase";
 import { HeroFeedSlide } from "@/components/landing/HeroFeedSlide";
 import { HeroReviewSlide } from "@/components/landing/HeroReviewSlide";
+import { HeroFormalUnderline } from "@/components/landing/HeroFormalUnderline";
 
 export function LandingHero({
   preloaded,
@@ -61,15 +62,23 @@ export function LandingHero({
   ];
 
   return (
-    <section className="grid min-h-[88svh] items-center gap-10 py-10 md:grid-cols-2 md:gap-14">
+    <section className="grid items-center gap-10 md:grid-cols-2 md:gap-14">
       <div className="flex flex-col items-start">
         <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
-          Find a seat at any{" "}
-          <span className="whitespace-nowrap">Oxford formal.</span>
+          Your seat at any{" "}
+          <span className="whitespace-nowrap">
+            Oxford{" "}
+            <span className="relative inline-block">
+              formal
+              <HeroFormalUnderline />
+            </span>
+            .
+          </span>
         </h1>
         <p className="mt-3 max-w-[46ch] text-base leading-relaxed text-[var(--ink-muted)]">
-          Swap your place, take an empty seat, and eat somewhere you&rsquo;ve
-          never been.
+          Swap seats, book a place, and eat
+          <br />
+          somewhere you&rsquo;ve never been.
         </p>
 
         <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -77,7 +86,7 @@ export function LandingHero({
             href="/login"
             className="inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
           >
-            Sign in with Oxford email
+            Take a seat
           </Link>
           <Link
             href={BROWSE_ROUTE}
@@ -86,11 +95,6 @@ export function LandingHero({
             Browse formals
           </Link>
         </div>
-
-        <p className="mt-4 text-sm text-[var(--ink-soft)]">
-          Oxford students only &middot; verified with your{" "}
-          <code className="text-[0.85em]">@ox.ac.uk</code> email
-        </p>
       </div>
 
       <HeroShowcase slides={heroSlides} />

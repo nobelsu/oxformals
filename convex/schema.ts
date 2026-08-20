@@ -68,6 +68,15 @@ export default defineSchema({
     listingType: v.optional(
       v.union(v.literal("swap"), v.literal("pay"), v.literal("both")),
     ),
+    // The "vibe" of the formal. Optional for back-compat; unset rows are treated
+    // as "social" by the client mapper and the backfill migration.
+    formalType: v.optional(
+      v.union(
+        v.literal("matchmaking"),
+        v.literal("social"),
+        v.literal("networking"),
+      ),
+    ),
     price: v.optional(v.number()),
     attendanceAppliedAt: v.optional(v.number()),
     attendanceGuestCount: v.optional(v.number()),

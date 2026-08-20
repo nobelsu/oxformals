@@ -31,6 +31,12 @@ const listingTypeValidator = v.union(
   v.literal("both"),
 );
 
+const formalTypeValidator = v.union(
+  v.literal("matchmaking"),
+  v.literal("social"),
+  v.literal("networking"),
+);
+
 const requestTypeValidator = v.union(v.literal("swap"), v.literal("pay"));
 
 const menuPdfIdOrClear = v.optional(v.union(v.id("_storage"), v.null()));
@@ -240,6 +246,7 @@ export const createListing = mutation({
     menu: v.optional(v.string()),
     menuPdfId: v.optional(v.id("_storage")),
     listingType: listingTypeValidator,
+    formalType: v.optional(formalTypeValidator),
     price: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -278,6 +285,7 @@ export const createListing = mutation({
       menu: (args.menu ?? "").trim(),
       status: "active",
       listingType: args.listingType,
+      formalType: args.formalType ?? "social",
       ...(args.menuPdfId !== undefined ? { menuPdfId: args.menuPdfId } : {}),
       ...(args.listingType === "swap"
         ? {}
@@ -674,6 +682,7 @@ export const updateListing = mutation({
     menu: v.optional(v.string()),
     menuPdfId: menuPdfIdOrClear,
     listingType: v.optional(listingTypeValidator),
+    formalType: v.optional(formalTypeValidator),
     price: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -722,6 +731,10 @@ export const updateListing = mutation({
 
     if (args.message !== undefined) {
       patch.message = args.message.trim();
+    }
+
+    if (args.formalType !== undefined) {
+      patch.formalType = args.formalType;
     }
 
     if (args.menu !== undefined) {

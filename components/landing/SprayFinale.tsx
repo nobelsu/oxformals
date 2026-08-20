@@ -9,6 +9,10 @@ const TAGLINE = "find your next formal";
 /** Reveal-brush radius (cursor wipes to the layer beneath) in CSS px. */
 const REVEAL_RADIUS = 66;
 
+function themeRoot(el: Element | null): Element {
+  return el?.closest("[data-landing-theme]") ?? document.documentElement;
+}
+
 function parseHexColor(value: string): [number, number, number] | null {
   const hex = value.trim().replace("#", "");
   if (hex.length === 3) {
@@ -24,6 +28,21 @@ function parseHexColor(value: string): [number, number, number] | null {
     return rgb as [number, number, number];
   }
   return null;
+}
+
+function parseColor(value: string): [number, number, number] | null {
+  const trimmed = value.trim();
+  const rgbMatch = trimmed.match(
+    /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/,
+  );
+  if (rgbMatch) {
+    return [
+      Number(rgbMatch[1]),
+      Number(rgbMatch[2]),
+      Number(rgbMatch[3]),
+    ];
+  }
+  return parseHexColor(trimmed);
 }
 
 function wrapLines(
@@ -62,7 +81,7 @@ function wrapLines(
  * card is a plain, fully-legible rose page — no canvas, no listeners — and the
  * whole stage stays scrollable.
  */
-export function SprayFinale({ cover }: { cover: ReactNode }) {
+export function SprayFinale({ cover = null }: { cover?: ReactNode }) {
   const skip = useReducedOrCoarse();
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -132,8 +151,8 @@ export function SprayFinale({ cover }: { cover: ReactNode }) {
   // initial veil down so the tagline shows before any interaction.
   useEffect(() => {
     if (skip) return;
-    const root = getComputedStyle(document.documentElement);
-    coverRef.current = parseHexColor(root.getPropertyValue("--accent"));
+    const root = getComputedStyle(themeRoot(canvasRef.current));
+    coverRef.current = parseColor(root.getPropertyValue("--accent"));
     inkRef.current = root.getPropertyValue("--tag-ink").trim();
     let cancelled = false;
     const draw = () => {
@@ -263,19 +282,18 @@ export function SprayFinale({ cover }: { cover: ReactNode }) {
   const taglineClass =
     "max-w-[13ch] text-center font-display text-[clamp(3.5rem,13vw,9rem)] font-bold lowercase leading-[0.88] tracking-tight";
 
-  // The last Sand section, made into an opaque full-width sheet that covers the
-  // pinned card and slides up off it as you scroll into the stage.
-  const coverSheet = (
+  const coverSheet = cover ? (
     <div className="absolute inset-x-0 top-0 z-10 flex h-svh items-center overflow-hidden bg-[var(--bg)]">
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">{cover}</div>
     </div>
-  );
+  ) : null;
 
   if (skip) {
     return (
       <section
         aria-label="Find your next formal"
         className="relative h-[210svh] w-full"
+        data-nav-hide
       >
         <div className="sticky top-0 z-0 flex h-svh items-center justify-center overflow-hidden bg-[var(--accent)] px-6">
           <p className={`${taglineClass} text-[var(--tag-ink)]`}>{TAGLINE}</p>
@@ -289,6 +307,7 @@ export function SprayFinale({ cover }: { cover: ReactNode }) {
     <section
       aria-label="Find your next formal"
       className="relative h-[210svh] w-full"
+      data-nav-hide
     >
       <div
         className="sticky top-0 z-0 h-svh cursor-none select-none overflow-hidden"

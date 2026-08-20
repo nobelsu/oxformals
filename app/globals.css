@@ -100,6 +100,56 @@ html {
   --font-display-face: var(--font-schoolbell), "Schoolbell", cursive;
 }
 
+/* Landing preview — navy primary with a warmer, more present pink wash
+   (logged-out marketing only). Navy stays the main accent (CTAs, underline,
+   stats); --accent-wash is a richer rose-pink so the pink reads clearly and
+   carries more of the page's decorative surfaces. */
+html:has([data-landing-theme="navy"]),
+[data-landing-theme="navy"] {
+  --accent: #1e3a5f;
+  --accent-hover: #152d4a;
+  --accent-ink: #ffffff;
+  --accent-wash: #f2c4cb;
+  --accent-wash-ink: #1a1810;
+  --accent-wash-strong: #e79aa6;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:has([data-landing-theme="navy"]),
+  [data-landing-theme="navy"] {
+    --accent: #6b9fd4;
+    --accent-hover: #5a8fc4;
+    --accent-ink: #0f172a;
+    --accent-wash: #f2c4cb;
+    --accent-wash-ink: #1a1810;
+    --accent-wash-strong: #e79aa6;
+  }
+}
+
+/* Landing's navy accent + pink wash, scoped to the browse feed (the landing
+   rule leaks via `html:has(...)`, this one deliberately does not). Background
+   and surface tokens are intentionally left as the app default so browse keeps
+   the sand ground — only the accent/wash colours match the landing. */
+.browse-theme-navy {
+  --accent: #1e3a5f;
+  --accent-hover: #152d4a;
+  --accent-ink: #ffffff;
+  --accent-wash: #f2c4cb;
+  --accent-wash-ink: #1a1810;
+  --accent-wash-strong: #e79aa6;
+}
+
+@media (prefers-color-scheme: dark) {
+  .browse-theme-navy {
+    --accent: #6b9fd4;
+    --accent-hover: #5a8fc4;
+    --accent-ink: #0f172a;
+    --accent-wash: #f2c4cb;
+    --accent-wash-ink: #1a1810;
+    --accent-wash-strong: #e79aa6;
+  }
+}
+
 html[data-ui-font="schoolbell"] {
   --font-app: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-display-face: var(--font-schoolbell), "Schoolbell", cursive;

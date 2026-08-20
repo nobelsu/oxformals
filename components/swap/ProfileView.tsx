@@ -46,6 +46,7 @@ function mapProfileListing(doc: {
   menuPdfUrl?: string | null;
   menuFileContentType?: string | null;
   listingType?: "swap" | "pay" | "both";
+  formalType?: "matchmaking" | "social" | "networking";
   price?: number;
   status: "active" | "confirmed" | "closed" | "expired";
 }): Listing {
@@ -66,6 +67,7 @@ function mapProfileListing(doc: {
       ? { menuFileContentType: doc.menuFileContentType }
       : {}),
     listingType: doc.listingType ?? "swap",
+    formalType: doc.formalType ?? "social",
     ...(doc.price !== undefined ? { price: doc.price } : {}),
     status: doc.status,
     createdAt: doc._creationTime,

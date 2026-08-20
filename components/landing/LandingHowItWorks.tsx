@@ -2,19 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePaintCanvas";
+import { HandwrittenItsEasy } from "./HandwrittenItsEasy";
 
 const STEPS = [
   {
     title: "List your formal",
-    body: "Post a seat at your college — a swap, or a paid guest place.",
+    body: "Post a seat at your college — a swap, or a paid guest spot.",
   },
   {
     title: "Request a seat",
-    body: "Ask to swap yours for theirs, or just take an open place.",
+    body: "Ask to swap yours for theirs, or just pay.",
   },
   {
     title: "Go somewhere new",
-    body: "Meet your host, eat, then rate the hall you visited.",
+    body: "Meet your host, feast, then rate your visit.",
   },
 ];
 
@@ -22,6 +23,8 @@ const STEPS = [
 const FRAMES = STEPS.length + 1;
 /** Viewport-heights of scroll granted to each frame — how long it freezes. */
 const SCROLL_PER_FRAME = 80;
+/** Extra scroll multiplier for the finale frame so the handwriting reveal feels slower. */
+const FINALE_SCROLL_MULTIPLIER = 5;
 
 /**
  * Scroll-pinned walkthrough. A tall runway holds a `position: sticky` panel that
@@ -34,8 +37,8 @@ const SCROLL_PER_FRAME = 80;
 export function LandingHowItWorks() {
   const reduced = usePrefersReducedMotion();
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const finaleTextRef = useRef<HTMLParagraphElement | null>(null);
   const [active, setActive] = useState(0);
+  const [finaleProgress, setFinaleProgress] = useState(0);
 
   useEffect(() => {
     if (reduced) return;
@@ -48,16 +51,16 @@ export function LandingHowItWorks() {
       const range = wrap.offsetHeight - window.innerHeight;
       const scrolled = Math.min(Math.max(-rect.top, 0), Math.max(range, 1));
       const p = range > 0 ? scrolled / range : 0;
-      setActive(Math.min(FRAMES - 1, Math.floor(p * FRAMES)));
-      // Scrub the closing line's left-to-right "writing" reveal across the last
-      // frame's slice of the scroll.
-      const finale = finaleTextRef.current;
-      if (finale) {
-        const fp = Math.min(1, Math.max(0, p * FRAMES - (FRAMES - 1)));
-        // ease so it lands fully written a touch before the frame ends
-        const eased = Math.min(1, fp * 1.15);
-        finale.style.clipPath = `inset(-15% ${(1 - eased) * 100}% -15% 0)`;
-      }
+      // The total runway is (FRAMES-1) normal slices + 1 stretched finale slice.
+      const totalWeight = (FRAMES - 1) + FINALE_SCROLL_MULTIPLIER;
+      const normalSlice = 1 / totalWeight;
+      const finaleStart = (FRAMES - 1) * normalSlice;
+      const frame = p < finaleStart
+        ? Math.floor(p / normalSlice)
+        : FRAMES - 1;
+      setActive(Math.min(FRAMES - 1, frame));
+      const fp = Math.min(1, Math.max(0, (p - finaleStart) / (1 - finaleStart)));
+      setFinaleProgress(fp);
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
@@ -74,7 +77,7 @@ export function LandingHowItWorks() {
 
   if (reduced) {
     return (
-      <section className="flex min-h-[85svh] flex-col justify-center bg-[var(--ink)] px-4 py-16 text-[var(--bg)] sm:px-6">
+      <section className="flex min-h-[85svh] flex-col justify-center bg-[var(--bg)] px-4 py-16 text-[var(--ink)] sm:px-6">
         <h2 className="font-display text-3xl uppercase tracking-wide">
           How it works
         </h2>
@@ -104,11 +107,11 @@ export function LandingHowItWorks() {
     <section
       ref={wrapRef}
       aria-label="How it works"
-      className="relative bg-[var(--ink)] text-[var(--bg)]"
-      style={{ height: `${FRAMES * SCROLL_PER_FRAME}svh` }}
+      className="relative bg-[var(--bg)] text-[var(--ink)]"
+      style={{ height: `${(FRAMES - 1) * SCROLL_PER_FRAME + SCROLL_PER_FRAME * FINALE_SCROLL_MULTIPLIER}svh` }}
     >
       <div className="sticky top-0 flex h-svh flex-col items-center justify-center overflow-hidden px-6">
-        <span className="absolute left-1/2 top-[12svh] -translate-x-1/2 font-display text-sm uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--bg)_55%,var(--ink))]">
+        <span className="absolute left-1/2 top-[12svh] -translate-x-1/2 font-display text-sm uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--ink)_55%,var(--bg))]">
           How it works
         </span>
 
@@ -133,7 +136,7 @@ export function LandingHowItWorks() {
                 <h3 className="mt-4 text-2xl font-bold sm:text-3xl">
                   {step.title}
                 </h3>
-                <p className="mt-3 max-w-[40ch] text-base leading-relaxed text-[color-mix(in_srgb,var(--bg)_72%,var(--ink))]">
+                <p className="mt-3 max-w-[40ch] text-base leading-relaxed text-[color-mix(in_srgb,var(--ink)_72%,var(--bg))]">
                   {step.body}
                 </p>
               </div>
@@ -146,13 +149,7 @@ export function LandingHowItWorks() {
             className="absolute inset-0 flex items-center justify-center text-center transition-[opacity,transform] duration-500 ease-out"
             style={{ opacity: active === FRAMES - 1 ? 1 : 0 }}
           >
-            <p
-              ref={finaleTextRef}
-              style={{ clipPath: "inset(-15% 100% -15% 0)" }}
-              className="font-display text-[clamp(3rem,13vw,8rem)] lowercase leading-[0.9] tracking-tight text-[var(--accent)]"
-            >
-              it&rsquo;s that easy.
-            </p>
+            <HandwrittenItsEasy progress={finaleProgress} />
           </div>
         </div>
 
@@ -167,7 +164,7 @@ export function LandingHowItWorks() {
                 backgroundColor:
                   active >= i
                     ? "var(--accent)"
-                    : "color-mix(in srgb, var(--bg) 30%, transparent)",
+                    : "color-mix(in srgb, var(--ink) 30%, transparent)",
               }}
             />
           ))}

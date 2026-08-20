@@ -1,13 +1,19 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { MY_FORMALS_SENTINEL } from "./CollegeFilter";
-import { Hero } from "./Hero";
 import { ListingDayList } from "./ListingDayList";
 import { ListingDetailModal } from "./ListingDetailModal";
 import { ListingRow } from "./ListingRow";
@@ -15,17 +21,12 @@ import { BlockingRequestModal } from "./BlockingRequestModal";
 import { RequestPayModal } from "./RequestPayModal";
 import { RequestSwapModal } from "./RequestSwapModal";
 import { RequestTypeChooserModal } from "./RequestTypeChooserModal";
-import { StatsStrip } from "./StatsStrip";
 import { SwapConfirmedModal } from "./SwapConfirmedModal";
 import { listingSupportsSwap } from "@/lib/data/listingType";
 import type { RequestType } from "@/lib/data/types";
-import {
-  BrowseDateCalendar,
-  BROWSE_DATE_CALENDAR_INSTRUCTIONS,
-} from "./BrowseDateCalendar";
 import { isoToLocalDateKey } from "@/lib/data/format";
 import { findBlockingOutgoingRequestForTarget } from "@/lib/data/requestFilters";
-import { ROLE_OPTIONS } from "@/lib/data/roles";
+import { BrowseFiltersModal } from "./BrowseFiltersModal";
 import type { Listing } from "@/lib/data/types";
 
 type Props = {
@@ -34,64 +35,8 @@ type Props = {
   onSignInRequired: () => void;
 };
 
-const BROWSE_TAB_FONT_CSS = `
-.browse-tab-root > section:first-of-type h1 {
-  font-size: clamp(3.375rem, 9vw, 5.625rem);
-  line-height: 1;
-}
-.browse-tab-root > section:first-of-type > p {
-  font-size: 1.03125rem;
-  line-height: 1.45;
-}
-@media (min-width: 640px) {
-  .browse-tab-root > section:first-of-type > p {
-    font-size: 1.21875rem;
-  }
-}
-.browse-tab-root > section:first-of-type button,
-.browse-tab-root > section:first-of-type .browse-college-more {
-  font-size: 0.84375rem;
-}
-.browse-tab-root > section:nth-of-type(2) .text-4xl {
-  font-size: 2.4375rem;
-}
-.browse-tab-root > section:nth-of-type(2) .text-sm {
-  font-size: 0.796875rem;
-}
-.browse-tab-root > div.flex-col .flex-wrap button {
-  font-size: 0.796875rem;
-}
-`;
-
 const FILTER_FIELD_CLS =
   "min-w-0 origin-center rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base shadow-[0_0_0_0_transparent] transition-[border-color,transform,box-shadow] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] will-change-transform focus:outline-none focus:border-[var(--accent-hover)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_52%,transparent),0_12px_32px_-14px_color-mix(in_srgb,var(--accent-hover)_68%,transparent)] focus:scale-[1.012] motion-reduce:transition-none motion-reduce:focus:scale-100 motion-reduce:focus:shadow-[0_0_0_0_transparent]";
-
-const BROWSE_COLLEGE_CHIP_LIMIT = 3;
-
-const CHIP_BASE =
-  "cursor-pointer rounded-full border-2 px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30";
-const CHIP_IDLE = `${CHIP_BASE} border-[var(--ink)]/30 bg-[var(--bg)] text-[var(--ink)] hover:border-[var(--ink)]/50`;
-const CHIP_ON = `${CHIP_BASE} border-[var(--accent-wash)] bg-[var(--accent-wash)] text-[var(--accent-wash-ink)] hover:bg-[var(--accent-hover)] hover:text-[var(--accent-ink)]`;
-/** Same look as idle chips; span only (no hover / focus ring). */
-const CHIP_MORE_META =
-  "inline-flex select-none items-center rounded-full border-2 border-[var(--ink)]/30 bg-[var(--bg)] px-3 py-1.5 text-xs font-medium tabular-nums text-[var(--ink)]";
-
-function FilterIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M4 6h16M7 12h10M10 18h4" />
-    </svg>
-  );
-}
 
 function ClearInputIcon({ className }: { className?: string }) {
   return (
@@ -106,6 +51,42 @@ function ClearInputIcon({ className }: { className?: string }) {
       aria-hidden
     >
       <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  );
+}
+
+function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {/* Glyph bounding box centered on the viewBox so it sits dead-centre. */}
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m20 20-4.2-4.2" />
+    </svg>
+  );
+}
+
+function FilterIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 6h16M7 12h10M10 18h4" />
     </svg>
   );
 }
@@ -134,8 +115,24 @@ export function BrowseTab({
   const [pickedCalendarDates, setPickedCalendarDates] = useState<string[]>(
     [],
   );
-  const [filtersModalOpen, setFiltersModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  // Search is a global control living in the nav; the query travels through the
+  // `?q=` URL param so the nav field and the mobile in-page field stay in sync.
+  const searchQuery = searchParams.get("q") ?? "";
+  const setSearchQuery = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      // Store the raw value (spaces intact) so multi-word typing works; the
+      // filter trims when matching. Blank/whitespace-only clears the param.
+      if (value.trim()) params.set("q", value);
+      else params.delete("q");
+      // Keep results visible: a query only makes sense on the browse tab.
+      params.set("tab", "browse");
+      params.delete("listing");
+      router.replace(`/?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams],
+  );
+  const [filterOpen, setFilterOpen] = useState(false);
   const [detailListing, setDetailListing] = useState<Listing | null>(null);
   const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
   const [pendingRequestType, setPendingRequestType] = useState<RequestType | null>(
@@ -152,35 +149,21 @@ export function BrowseTab({
     otherUserId: string | null;
   } | null>(null);
 
-  const { topBrowseColleges, moreBrowseCollegesCount } = useMemo(() => {
+  // Every college with an open listing, most-listed first — feeds the College
+  // dropdown in the filter bar.
+  const browseColleges = useMemo(() => {
     const counts = new Map<string, number>();
     for (const l of listings) {
       if (l.status !== "active") continue;
       counts.set(l.college, (counts.get(l.college) ?? 0) + 1);
     }
-    const sorted = Array.from(counts.entries()).sort((a, b) => {
-      if (b[1] !== a[1]) return b[1] - a[1];
-      return a[0].localeCompare(b[0]);
-    });
-    const topBrowseColleges = sorted
-      .slice(0, BROWSE_COLLEGE_CHIP_LIMIT)
+    return Array.from(counts.entries())
+      .sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return a[0].localeCompare(b[0]);
+      })
       .map(([name]) => name);
-    const moreBrowseCollegesCount = Math.max(
-      0,
-      sorted.length - BROWSE_COLLEGE_CHIP_LIMIT,
-    );
-    return { topBrowseColleges, moreBrowseCollegesCount };
   }, [listings]);
-
-  useEffect(() => {
-    const styleId = "browse-tab-type-scale";
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement("style");
-      style.id = styleId;
-      style.textContent = BROWSE_TAB_FONT_CSS;
-      document.head.appendChild(style);
-    }
-  }, []);
 
   useEffect(() => {
     if (!listingParam || clearedListingParamRef.current === listingParam) {
@@ -203,34 +186,17 @@ export function BrowseTab({
 
   const wishlistSet = useMemo(() => new Set(wishlist), [wishlist]);
 
-  const topBrowseCollegesSet = useMemo(
-    () => new Set(topBrowseColleges),
-    [topBrowseColleges],
-  );
-
   const effectiveCollegeFilter = useMemo(() => {
+    // "My favourites" only applies when the user is signed in with a wishlist;
+    // otherwise any college name (or null) passes straight through.
     if (
       collegeFilter === MY_FORMALS_SENTINEL &&
       (!isAuthenticated || wishlist.length === 0)
     ) {
       return null;
     }
-    if (
-      collegeFilter !== null &&
-      collegeFilter !== MY_FORMALS_SENTINEL
-    ) {
-      return topBrowseCollegesSet.has(collegeFilter) ? collegeFilter : null;
-    }
-    if (collegeFilter === MY_FORMALS_SENTINEL) {
-      return MY_FORMALS_SENTINEL;
-    }
-    return null;
-  }, [
-    collegeFilter,
-    isAuthenticated,
-    wishlist.length,
-    topBrowseCollegesSet,
-  ]);
+    return collegeFilter;
+  }, [collegeFilter, isAuthenticated, wishlist.length]);
 
   const collegeFilteredListings = useMemo(
     () =>
@@ -277,9 +243,12 @@ export function BrowseTab({
   }, [collegeFilteredListings, pickedCalendarDates, searchQuery, getUser]);
 
   const hasActiveFilters =
-    pickedCalendarDates.length > 0 || roleFilter !== null;
+    collegeFilter !== null ||
+    pickedCalendarDates.length > 0 ||
+    roleFilter !== null;
 
   function clearAllFilters() {
+    setCollegeFilter(null);
     setPickedCalendarDates([]);
     setRoleFilter(null);
   }
@@ -299,7 +268,6 @@ export function BrowseTab({
     [listings, user],
   );
 
-  const openSwaps = collegeFilteredListings.length;
 
   function openRequestFlow(listing: Listing, requestType: RequestType) {
     if (user) {
@@ -358,140 +326,142 @@ export function BrowseTab({
 
   return (
     <>
-      <div className="browse-tab-root flex flex-col gap-10">
-        <Hero
-          footer={
-            <div className="mx-auto w-full max-w-xl px-4 pb-1">
-              <div className="flex w-full min-w-0 flex-col gap-5 text-left">
-                <form
-                  className="flex min-w-0 items-center gap-2"
-                  onSubmit={handleBrowseSearchSubmit}
-                >
-                  <div className="relative min-w-0 flex-1">
-                    <input
-                      id="browse-hero-search"
-                      type="text"
-                      inputMode="search"
-                      enterKeyHint="search"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search for college, menu, role, host..."
-                      aria-label="Search for college, menu, role, host"
-                      autoComplete="off"
-                      className={`w-full min-w-0 ${FILTER_FIELD_CLS} ${
-                        searchQuery !== "" ? "pr-11" : ""
-                      }`}
-                    />
-                    {searchQuery !== "" ? (
-                      <button
-                        type="button"
-                        onClick={() => setSearchQuery("")}
-                        className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:bg-[var(--ink)]/10 hover:text-[var(--ink)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30"
-                        aria-label="Clear search"
-                      >
-                        <ClearInputIcon className="h-4 w-4" />
-                      </button>
-                    ) : null}
-                  </div>
+      <div className="browse-tab-root browse-theme-navy flex flex-col gap-6">
+        {/* Search + filters bar — sticky below nav on sm+ (scrolls away on
+            mobile so the day-rail's sticky day headers never collide with it) */}
+        <div className="bg-[var(--bg)] pb-3 pt-3 sm:sticky sm:top-[var(--app-nav-height)] sm:z-10">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 border-b border-dashed border-[color-mix(in_srgb,var(--ink)_18%,transparent)] pb-3">
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)] sm:text-3xl">
+              Upcoming formals
+            </h1>
+            <div className="flex shrink-0 items-center gap-2">
+              {/* Desktop search — expands on focus. Mobile uses the full-width
+                  field below. */}
+              <label
+                className={`group hidden h-10 items-center overflow-hidden rounded-full border-2 bg-[var(--paper)] transition-[width,border-color] duration-300 ease-out sm:flex ${
+                  searchQuery
+                    ? "w-60 border-[var(--accent)]"
+                    : "w-10 border-[var(--ink)]/25 focus-within:w-60 focus-within:border-[var(--accent)]"
+                }`}
+              >
+                <span className="grid h-full w-9 shrink-0 place-items-center text-[var(--ink-muted)]">
+                  <SearchIcon className="h-4 w-4" />
+                </span>
+                <input
+                  type="text"
+                  inputMode="search"
+                  enterKeyHint="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search college, host..."
+                  aria-label="Search for college, menu, role, host"
+                  autoComplete="off"
+                  className="min-w-0 flex-1 bg-transparent pr-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+                />
+                {searchQuery ? (
                   <button
                     type="button"
-                    onClick={() => setFiltersModalOpen(true)}
-                    className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30"
-                    aria-label="Open filters"
-                    aria-expanded={filtersModalOpen}
+                    onClick={() => setSearchQuery("")}
+                    aria-label="Clear search"
+                    className="mr-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
                   >
-                    <FilterIcon className="h-5 w-5" />
-                    {hasActiveFilters ? (
-                      <span
-                        className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--accent-wash)] ring-2 ring-[var(--bg)]"
-                        aria-hidden
-                      />
-                    ) : null}
+                    <ClearInputIcon className="h-3.5 w-3.5" />
                   </button>
-                </form>
-                <div
-                  className="flex flex-wrap items-center justify-center gap-2"
-                  role="group"
-                  aria-label="College"
-                >
-                  <button
-                    type="button"
-                    aria-pressed={effectiveCollegeFilter === null}
-                    onClick={() => setCollegeFilter(null)}
-                    className={
-                      effectiveCollegeFilter === null ? CHIP_ON : CHIP_IDLE
-                    }
-                  >
-                    All colleges
-                  </button>
-                  {isAuthenticated && wishlist.length > 0 ? (
-                    <button
-                      type="button"
-                      aria-pressed={
-                        effectiveCollegeFilter === MY_FORMALS_SENTINEL
-                      }
-                      onClick={() => setCollegeFilter(MY_FORMALS_SENTINEL)}
-                      className={
-                        effectiveCollegeFilter === MY_FORMALS_SENTINEL
-                          ? CHIP_ON
-                          : CHIP_IDLE
-                      }
-                    >
-                      My favourites
-                    </button>
-                  ) : null}
-                  {topBrowseColleges.map((name) => (
-                    <button
-                      key={name}
-                      type="button"
-                      aria-pressed={effectiveCollegeFilter === name}
-                      onClick={() => setCollegeFilter(name)}
-                      className={
-                        effectiveCollegeFilter === name ? CHIP_ON : CHIP_IDLE
-                      }
-                    >
-                      {name}
-                    </button>
-                  ))}
-                  {moreBrowseCollegesCount > 0 ? (
-                    <span
-                      className={`browse-college-more ${CHIP_MORE_META}`}
-                      title={`${moreBrowseCollegesCount} more colleges with open swaps — use search or All colleges`}
-                    >
-                      + {moreBrowseCollegesCount}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
+                ) : null}
+              </label>
+              {/* Filters — everything (college, dates, role) lives in here. */}
+              <button
+                type="button"
+                onClick={() => setFilterOpen(true)}
+                aria-label="Filters"
+                aria-expanded={filterOpen}
+                className="relative hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-[var(--ink)]/25 bg-[var(--paper)] text-[var(--ink)] transition-colors hover:border-[var(--ink)]/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30 sm:flex"
+              >
+                <FilterIcon className="h-5 w-5" />
+                {hasActiveFilters ? (
+                  <span
+                    className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[var(--accent)] ring-2 ring-[var(--paper)]"
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
             </div>
-          }
-        />
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-4">
-          <StatsStrip openSwaps={openSwaps} />
+          </div>
+          {/* Mobile: full-width search + filter button (desktop has both above). */}
+          <div className="flex items-center gap-2 sm:hidden">
+            <form
+              className="flex min-w-0 flex-1 items-center"
+              onSubmit={handleBrowseSearchSubmit}
+            >
+              <div className="relative min-w-0 flex-1">
+                <input
+                  id="browse-hero-search"
+                  type="text"
+                  inputMode="search"
+                  enterKeyHint="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search college, menu, host..."
+                  aria-label="Search for college, menu, role, host"
+                  autoComplete="off"
+                  className={`w-full min-w-0 ${FILTER_FIELD_CLS} ${
+                    searchQuery !== "" ? "pr-11" : ""
+                  }`}
+                />
+                {searchQuery !== "" ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:bg-[var(--ink)]/10 hover:text-[var(--ink)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30"
+                    aria-label="Clear search"
+                  >
+                    <ClearInputIcon className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </div>
+            </form>
+            <button
+              type="button"
+              onClick={() => setFilterOpen(true)}
+              aria-label="Filters"
+              aria-expanded={filterOpen}
+              className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30"
+            >
+              <FilterIcon className="h-5 w-5" />
+              {hasActiveFilters ? (
+                <span
+                  className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--accent)] ring-2 ring-[var(--bg)]"
+                  aria-hidden
+                />
+              ) : null}
+            </button>
+          </div>
+        </div>
         </div>
 
         {browseListings.length === 0 ? (
-          <SketchCard className="p-10 text-center text-[var(--ink-muted)] text-[0.9375rem] sm:text-[1.125rem] leading-snug">
-            {hasCollegeMatches ? (
-              <>
-                Nothing matches your filters. Try another college above, open
-                filters to choose dates or role, or clear your search.
-              </>
-            ) : (
-              <>
-                No open swaps here yet. Try another college or list your own
-                formal.
-              </>
-            )}
-          </SketchCard>
+          <div className="mx-auto w-full max-w-3xl">
+            <SketchCard className="p-8 text-center text-[var(--ink-muted)] text-[0.875rem] sm:text-[1rem] leading-snug">
+              {hasCollegeMatches ? (
+                <>
+                  Nothing matches your filters. Try another college, adjust the
+                  date or role, or clear your search.
+                </>
+              ) : (
+                <>
+                  No open swaps here yet. Try another college or list your own
+                  formal.
+                </>
+              )}
+            </SketchCard>
+          </div>
         ) : (
-          <div
-            data-browse-listings
-            className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen px-4 sm:px-6"
-          >
+          <div data-browse-listings>
             <ListingDayList
               listings={browseListings}
-              className="mx-auto w-full max-w-6xl"
+              variant="card"
+              className="mx-auto w-full max-w-3xl"
               renderRow={(l) => {
                 const owner = getUser(l.ownerUserId);
                 if (!owner) return null;
@@ -504,6 +474,7 @@ export function BrowseTab({
                     listing={l}
                     owner={owner}
                     memberUsers={members}
+                    align="center"
                     onPress={() => setDetailListing(l)}
                     onRequest={() => handleRequestClick(l)}
                     disabled={!isAuthenticated}
@@ -516,78 +487,20 @@ export function BrowseTab({
         )}
       </div>
 
-      <Modal
-        open={filtersModalOpen}
-        onClose={() => setFiltersModalOpen(false)}
-        title="Filters"
-        compact
-        panelClassName="max-w-lg"
-        bodyScrollable={false}
-      >
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <h3 className="font-display text-sm uppercase tracking-wide text-[var(--ink)]">
-              Dates
-            </h3>
-            <p className="text-left text-[0.7rem] leading-snug text-[var(--ink-muted)] sm:text-xs">
-              {BROWSE_DATE_CALENDAR_INSTRUCTIONS}
-            </p>
-            <BrowseDateCalendar
-              embedded
-              value={pickedCalendarDates}
-              onChange={setPickedCalendarDates}
-            />
-          </div>
-          <div
-            className="flex flex-col gap-2 border-t border-[var(--ink)]/15 pt-4"
-            role="group"
-            aria-label="Role"
-          >
-            <h3 className="font-display text-sm uppercase tracking-wide text-[var(--ink)]">
-              Role
-            </h3>
-            <div className="flex flex-wrap justify-center gap-2">
-              <button
-                type="button"
-                aria-pressed={roleFilter === null}
-                onClick={() => setRoleFilter(null)}
-                className={roleFilter === null ? CHIP_ON : CHIP_IDLE}
-              >
-                All roles
-              </button>
-              {ROLE_OPTIONS.map((role) => (
-                <button
-                  key={role}
-                  type="button"
-                  aria-pressed={roleFilter === role}
-                  onClick={() => setRoleFilter(role)}
-                  className={roleFilter === role ? CHIP_ON : CHIP_IDLE}
-                >
-                  {role}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            {hasActiveFilters ? (
-              <button
-                type="button"
-                onClick={clearAllFilters}
-                className="w-full cursor-pointer rounded-full border-2 border-[var(--ink)] bg-[var(--bg)] px-6 py-2.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)]/5"
-              >
-                Clear filters
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setFiltersModalOpen(false)}
-              className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-6 py-2.5 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      </Modal>
+      <BrowseFiltersModal
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        colleges={browseColleges}
+        collegeFilter={collegeFilter}
+        onCollegeChange={setCollegeFilter}
+        showFavourites={isAuthenticated && wishlist.length > 0}
+        roleFilter={roleFilter}
+        onRoleChange={setRoleFilter}
+        pickedCalendarDates={pickedCalendarDates}
+        onDatesChange={setPickedCalendarDates}
+        onClearAll={clearAllFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
 
       <ListingDetailModal
         open={!!detailListing}

@@ -9,7 +9,13 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { normalizeCollegeName } from "@/lib/data/colleges";
 import type { NewListingInput } from "@/lib/data/dataClient";
-import { GROUP_SIZES, type GroupSize, type ListingType } from "@/lib/data/types";
+import {
+  GROUP_SIZES,
+  type FormalType,
+  type GroupSize,
+  type ListingType,
+} from "@/lib/data/types";
+import { FormalTypeTag } from "@/components/swap/FormalTypeTag";
 import {
   isMenuImageContentType,
   MENU_FILE_ACCEPT,
@@ -36,6 +42,7 @@ export type ListingFormValues = {
   menuPdfUrl?: string;
   menuFileContentType?: string;
   listingType: ListingType;
+  formalType?: FormalType;
   price?: number;
 };
 
@@ -90,6 +97,9 @@ export function ListFormalForm({
   const [menu, setMenu] = useState(initialValues?.menu ?? "");
   const [listingType, setListingType] = useState<ListingType>(
     initialValues?.listingType ?? "swap",
+  );
+  const [formalType, setFormalType] = useState<FormalType>(
+    initialValues?.formalType ?? "social",
   );
   const [price, setPrice] = useState(
     initialValues?.price !== undefined ? String(initialValues.price) : "",
@@ -199,6 +209,7 @@ export function ListFormalForm({
       message: message.trim(),
       menu: menu.trim(),
       listingType,
+      formalType,
       ...(menuPdfStorageId !== undefined ? { menuPdfId: menuPdfStorageId } : {}),
       ...(clearMenuPdf ? { clearMenuPdf: true } : {}),
       ...(priceNum !== undefined ? { price: priceNum } : {}),
@@ -214,6 +225,7 @@ export function ListFormalForm({
       setPendingMenuPreviewUrl(null);
       setClearMenuPdf(false);
       setListingType("swap");
+      setFormalType("social");
       setPrice("");
     }
   }
@@ -290,6 +302,29 @@ export function ListFormalForm({
                 {s}
               </Chip>
             ))}
+          </div>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-2 sm:col-span-2">
+          <span className="text-sm text-[var(--ink-muted)]">Formal type</span>
+          <div className="flex flex-wrap gap-2">
+            {(["matchmaking", "social", "networking"] as FormalType[]).map(
+              (t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setFormalType(t)}
+                  aria-pressed={formalType === t}
+                  className={`cursor-pointer rounded-full transition ${
+                    formalType === t
+                      ? "ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--paper)]"
+                      : "opacity-55 hover:opacity-100"
+                  }`}
+                >
+                  <FormalTypeTag formalType={t} />
+                </button>
+              ),
+            )}
           </div>
         </div>
       </div>

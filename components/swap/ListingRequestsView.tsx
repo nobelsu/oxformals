@@ -662,6 +662,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
               menuPdfUrl: listing.menuPdfUrl,
               menuFileContentType: listing.menuFileContentType,
               listingType: listing.listingType,
+              formalType: listing.formalType,
               price: listing.price,
             }}
             minGroupSize={listing.members.length}
@@ -685,6 +686,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                   : {}),
                 ...(input.clearMenuPdf ? { clearMenuPdf: true } : {}),
                 listingType: input.listingType,
+                formalType: input.formalType,
                 ...(input.price !== undefined ? { price: input.price } : {}),
               });
               setEditModalOpen(false);

@@ -10,7 +10,7 @@ export type HeroSlide = {
   content: ReactNode;
 };
 
-const ADVANCE_MS = 4500;
+const ADVANCE_MS = 2000;
 
 /**
  * The hero's right panel: auto-advancing, swipeable showcase of a few product

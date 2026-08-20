@@ -17,6 +17,12 @@ type Props = {
   className?: string;
   /** Sticky offset + background for the mobile day header. Override inside a modal. */
   stickyClassName?: string;
+  /**
+   * "flat" (default): rows separated by dashed hairlines — used inside profiles,
+   * pickers and college pages. "card": each listing is a distinct raised block
+   * with its own border and spacing — the Luma-style browse feed.
+   */
+  variant?: "flat" | "card";
 };
 
 /**
@@ -33,7 +39,9 @@ export function ListingDayList({
   renderRow,
   className = "",
   stickyClassName = "top-[var(--app-nav-height)] bg-[var(--bg)]",
+  variant = "flat",
 }: Props) {
+  const isCard = variant === "card";
   const nowMs = useNowMs();
   const groups = useMemo(() => groupListingsByDay(listings), [listings]);
 
@@ -58,7 +66,8 @@ export function ListingDayList({
 
   return (
     <div className={className}>
-      {renderedGroups.map(({ group, rows }) => {
+      {renderedGroups.map(({ group, rows }, groupIndex) => {
+        const isLastGroup = groupIndex === renderedGroups.length - 1;
         const { day, weekday } = formatDayLabel(group.dateTime);
         const isPastDay = isDayGroupPast(group, nowMs);
         const dayInk = isPastDay ? "text-[var(--ink-soft)]" : "text-[var(--ink)]";
@@ -82,22 +91,35 @@ export function ListingDayList({
               </div>
             </div>
 
-            <div className="relative sm:border-l-2 sm:border-dashed sm:border-[color-mix(in_srgb,var(--ink)_28%,transparent)] sm:pl-6">
+            <div
+              className={`relative sm:border-l-2 sm:border-dashed sm:border-[color-mix(in_srgb,var(--ink)_28%,transparent)] sm:pl-6 ${
+                isCard && !isLastGroup ? "pb-6 sm:pb-8" : ""
+              }`}
+            >
               <span
                 className={`pointer-events-none absolute left-[-8px] top-6 hidden sm:block ${dayInk}`}
               >
                 <SketchDot seed={seedFrom(group.dateKey)} />
               </span>
 
-              <ul>
-                {rows.map(({ listing, content }) => (
-                  <li
-                    key={listing.id}
-                    className="border-t border-dashed border-[color-mix(in_srgb,var(--ink)_18%,transparent)] first:border-t-0"
-                  >
-                    {content}
-                  </li>
-                ))}
+              <ul className={isCard ? "flex flex-col gap-6 sm:gap-8" : ""}>
+                {rows.map(({ listing, content }) =>
+                  isCard ? (
+                    <li
+                      key={listing.id}
+                      className="flex min-h-[9.5rem] flex-col justify-center rounded-[26px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] px-5 py-4 shadow-[0_2px_18px_-10px_rgba(0,0,0,0.18)] transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--ink)_22%,transparent)] hover:shadow-[0_18px_40px_-18px_rgba(0,0,0,0.28)] sm:min-h-[11rem] sm:px-6 sm:py-5"
+                    >
+                      {content}
+                    </li>
+                  ) : (
+                    <li
+                      key={listing.id}
+                      className="border-t border-dashed border-[color-mix(in_srgb,var(--ink)_18%,transparent)] first:border-t-0"
+                    >
+                      {content}
+                    </li>
+                  ),
+                )}
               </ul>
             </div>
           </section>

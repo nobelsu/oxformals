@@ -15,6 +15,7 @@ import { RateFormalIndicator } from "@/components/colleges/RateFormalIndicator";
 import { ListingMenu } from "@/components/swap/ListingMenu";
 import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
+import { FormalTypeTag } from "@/components/swap/FormalTypeTag";
 import { useAuth } from "@/components/auth/useAuth";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
@@ -109,6 +110,7 @@ export function ListingDetailModal({
               {listing.college}
             </h2>
             <ListingTypeTag listingType={listing.listingType} />
+            <FormalTypeTag formalType={listing.formalType} />
             <ListingFormalBadges
               isPast={isPast}
               showCompleted={!isGuestMember}

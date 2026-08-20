@@ -30,6 +30,7 @@ import type * as listingFormat from "../listingFormat.js";
 import type * as listingHelpers from "../listingHelpers.js";
 import type * as listingMembership from "../listingMembership.js";
 import type * as listings from "../listings.js";
+import type * as migrations from "../migrations.js";
 import type * as pushNotifications from "../pushNotifications.js";
 import type * as storage from "../storage.js";
 import type * as testAuth from "../testAuth.js";
@@ -67,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   listingHelpers: typeof listingHelpers;
   listingMembership: typeof listingMembership;
   listings: typeof listings;
+  migrations: typeof migrations;
   pushNotifications: typeof pushNotifications;
   storage: typeof storage;
   testAuth: typeof testAuth;
