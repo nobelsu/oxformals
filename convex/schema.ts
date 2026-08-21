@@ -219,4 +219,11 @@ export default defineSchema({
     .index("by_listingId_and_userId", ["listingId", "userId"])
     .index("by_userId", ["userId"])
     .index("by_listingId", ["listingId"]),
+  userBadges: defineTable({
+    userId: v.id("users"),
+    badgeId: v.string(),
+    earnedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_badgeId", ["userId", "badgeId"]),
 });
