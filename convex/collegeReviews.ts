@@ -7,6 +7,7 @@ import {
   hasDeclinedAttendance,
   hasRespondedToAttendance,
 } from "./formalAttendance";
+import { awardNewBadges } from "./badges";
 import {
   deleteReviewImagesIfPresent,
   getConfirmAttendanceEligibility,
@@ -295,6 +296,9 @@ export const submitReview = mutation({
       updatedAt: args.nowMs,
     });
     await recordReviewInsert(ctx, college, ratings, args.nowMs);
+    if (!args.isAnonymous) {
+      await awardNewBadges(ctx, userId, args.nowMs);
+    }
     return reviewId;
   },
 });
@@ -341,6 +345,9 @@ export const updateReview = mutation({
       newRatings,
       args.nowMs,
     );
+    if (!args.isAnonymous) {
+      await awardNewBadges(ctx, userId, args.nowMs);
+    }
     return null;
   },
 });
