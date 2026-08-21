@@ -1,6 +1,7 @@
 import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { collectBadgeInputs } from "./badges";
 import { COLLEGE_BADGES, MILESTONE_BADGES } from "../lib/data/badges";
 
@@ -62,23 +63,23 @@ function earnedBadgesWithDerivedDates(
 /**
  * One-off backfill: award every badge existing users already qualify for,
  * with derived earnedAt dates. Idempotent — held badges are never
- * re-inserted, so re-running awards nothing new. Batched 100 users per
- * transaction with scheduler continuation (same pattern as
- * users.backfillCollegeWishlists).
+ * re-inserted, so re-running awards nothing new. Batched via cursor
+ * pagination: each invocation processes one page of users and continues
+ * from the previous batch's cursor.
  *
- * Run with: `npx convex run migrations:backfillUserBadges`
+ * Run with: npx convex run migrations:backfillUserBadges '{"paginationOpts":{"numItems":100,"cursor":null}}'
  */
 export const backfillUserBadges = internalMutation({
-  args: {},
+  args: { paginationOpts: paginationOptsValidator },
   returns: v.object({
     awarded: v.number(),
     scanned: v.number(),
     done: v.boolean(),
   }),
-  handler: async (ctx) => {
-    const users = await ctx.db.query("users").take(100);
+  handler: async (ctx, args) => {
+    const page = await ctx.db.query("users").paginate(args.paginationOpts);
     let awarded = 0;
-    for (const user of users) {
+    for (const user of page.page) {
       const inputs = await collectBadgeInputs(ctx, user._id);
       const existing = await ctx.db
         .query("userBadges")
@@ -95,10 +96,15 @@ export const backfillUserBadges = internalMutation({
         awarded += 1;
       }
     }
-    const done = users.length < 100;
+    const done = page.isDone;
     if (!done) {
-      await ctx.scheduler.runAfter(0, internal.migrations.backfillUserBadges, {});
+      await ctx.scheduler.runAfter(0, internal.migrations.backfillUserBadges, {
+        paginationOpts: {
+          numItems: args.paginationOpts.numItems,
+          cursor: page.continueCursor,
+        },
+      });
     }
-    return { awarded, scanned: users.length, done };
+    return { awarded, scanned: page.page.length, done };
   },
 });
