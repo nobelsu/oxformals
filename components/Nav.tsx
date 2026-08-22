@@ -99,10 +99,7 @@ const TABS = [
 
 export function Nav() {
   const pathname = usePathname();
-  if (
-    pathname?.startsWith("/login") ||
-    pathname?.startsWith("/letter")
-  ) {
+  if (pathname?.startsWith("/letter")) {
     return null;
   }
 
@@ -133,6 +130,7 @@ function NavInner() {
   const isCollegeDetail = pathname?.startsWith("/college/") ?? false;
   const isLegalPage =
     pathname?.startsWith("/privacy") || pathname?.startsWith("/terms");
+  const isLoginPage = pathname?.startsWith("/login") ?? false;
   const isBareRoot =
     pathname === "/" && !searchParams.get("tab") && !searchParams.get("listing");
   const activeTab = isRequestsDetail
@@ -181,6 +179,44 @@ function NavInner() {
   }, [isLandingPage]);
 
   const { navRef, inverted, hidden } = useNavTheme();
+
+  if (isLoginPage) {
+    return (
+      <nav className="sticky top-0 z-50 w-full shrink-0 relative isolate backdrop-blur-md">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-bg/95 via-bg/70 to-transparent"
+        />
+        <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+            <div className="flex items-center justify-start">
+              <Link
+                href="/"
+                className="font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)]"
+              >
+                Oxformals
+              </Link>
+            </div>
+            <div className="col-start-2 flex items-center justify-center gap-4 whitespace-nowrap text-sm text-[var(--nav-ink-muted)]">
+              <Link
+                href="/privacy"
+                className="underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
+              >
+                Privacy
+              </Link>
+              <span aria-hidden>·</span>
+              <Link
+                href="/terms"
+                className="underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
+              >
+                Terms
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   if (isLegalPage) {
     return (
@@ -312,7 +348,7 @@ function NavInner() {
     return (
       <nav
         ref={navRef}
-        className={`browse-theme-navy sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${
+        className={`sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${
           hidden
             ? "pointer-events-none opacity-0"
             : inverted
@@ -362,7 +398,7 @@ function NavInner() {
   }
 
   return (
-    <nav ref={navRef} className={`browse-theme-navy sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${hidden ? "pointer-events-none opacity-0" : inverted ? "nav-inverted pointer-events-none" : "backdrop-blur-md bg-[var(--nav-bg)]/80"}`}>
+    <nav ref={navRef} className={`sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${hidden ? "pointer-events-none opacity-0" : inverted ? "nav-inverted pointer-events-none" : "backdrop-blur-md bg-[var(--nav-bg)]/80"}`}>
       <div className="pointer-events-auto mx-auto grid w-full max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-5 sm:grid-cols-[1fr_auto_1fr] sm:gap-4 sm:px-6">
         <div className="flex items-center justify-start">
           <Link

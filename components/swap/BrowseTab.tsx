@@ -326,7 +326,7 @@ export function BrowseTab({
 
   return (
     <>
-      <div className="browse-tab-root browse-theme-navy flex flex-col gap-6">
+      <div className="browse-tab-root flex flex-col gap-6">
         {/* Search + filters bar — sticky below nav on sm+ (scrolls away on
             mobile so the day-rail's sticky day headers never collide with it) */}
         <div className="bg-[var(--bg)] pb-3 pt-3 sm:sticky sm:top-[var(--app-nav-height)] sm:z-10">

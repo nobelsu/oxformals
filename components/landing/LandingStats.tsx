@@ -101,11 +101,19 @@ export function LandingStats() {
         <h2 className="text-center font-display text-3xl uppercase tracking-wide">
           Oxford formal swapping,{" "}
           <span className="relative inline-block">
+            {/* Light mode: filled highlighter behind the word. */}
             <span
               aria-hidden
-              className="absolute inset-x-[-0.15em] bottom-[0.05em] top-[0.42em] -z-0 -rotate-1 rounded-[0.2em] bg-[var(--accent-wash)]"
+              className="absolute inset-x-[-0.15em] bottom-[0.05em] top-[0.42em] -z-0 -rotate-1 rounded-[0.2em] bg-[var(--accent-wash)] dark:hidden"
             />
-            <span className="relative z-[1]">by the numbers</span>
+            {/* Dark mode: an accent underline instead (highlight is unreadable on dark). */}
+            <span
+              aria-hidden
+              className="absolute inset-x-0 bottom-[0.04em] hidden h-[3px] -rotate-1 rounded-full bg-[var(--accent)] dark:block"
+            />
+            <span className="relative z-[1] text-[var(--accent-wash-ink)] dark:text-[var(--ink)]">
+              by the numbers
+            </span>
           </span>
         </h2>
       </Reveal>

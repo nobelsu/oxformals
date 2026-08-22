@@ -100,54 +100,14 @@ html {
   --font-display-face: var(--font-schoolbell), "Schoolbell", cursive;
 }
 
-/* Landing preview — navy primary with a warmer, more present pink wash
-   (logged-out marketing only). Navy stays the main accent (CTAs, underline,
-   stats); --accent-wash is a richer rose-pink so the pink reads clearly and
-   carries more of the page's decorative surfaces. */
+/* Landing preview (logged-out marketing only) — keeps the app's rose accent,
+   just a slightly richer, more present pink wash for its decorative surfaces.
+   (The `="navy"` attribute value is legacy; the palette is rose now.) */
 html:has([data-landing-theme="navy"]),
 [data-landing-theme="navy"] {
-  --accent: #1e3a5f;
-  --accent-hover: #152d4a;
-  --accent-ink: #ffffff;
   --accent-wash: #f2c4cb;
   --accent-wash-ink: #1a1810;
   --accent-wash-strong: #e79aa6;
-}
-
-@media (prefers-color-scheme: dark) {
-  html:has([data-landing-theme="navy"]),
-  [data-landing-theme="navy"] {
-    --accent: #6b9fd4;
-    --accent-hover: #5a8fc4;
-    --accent-ink: #0f172a;
-    --accent-wash: #f2c4cb;
-    --accent-wash-ink: #1a1810;
-    --accent-wash-strong: #e79aa6;
-  }
-}
-
-/* Landing's navy accent + pink wash, scoped to the browse feed (the landing
-   rule leaks via `html:has(...)`, this one deliberately does not). Background
-   and surface tokens are intentionally left as the app default so browse keeps
-   the sand ground — only the accent/wash colours match the landing. */
-.browse-theme-navy {
-  --accent: #1e3a5f;
-  --accent-hover: #152d4a;
-  --accent-ink: #ffffff;
-  --accent-wash: #f2c4cb;
-  --accent-wash-ink: #1a1810;
-  --accent-wash-strong: #e79aa6;
-}
-
-@media (prefers-color-scheme: dark) {
-  .browse-theme-navy {
-    --accent: #6b9fd4;
-    --accent-hover: #5a8fc4;
-    --accent-ink: #0f172a;
-    --accent-wash: #f2c4cb;
-    --accent-wash-ink: #1a1810;
-    --accent-wash-strong: #e79aa6;
-  }
 }
 
 html[data-ui-font="schoolbell"] {
@@ -172,20 +132,6 @@ html[data-ui-font="schoolbell"] {
 html[data-ui-font="inter"] {
   --font-app: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display-face: var(--font-app);
-  --bg: #eef2f7;
-  --paper: #f7f9fc;
-  --ink: #0f172a;
-  --ink-muted: #475569;
-  --ink-soft: #94a3b8;
-  --tag: #1e293b;
-  --tag-ink: #f1f5f9;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-ink: #ffffff;
-  --accent-wash: #3b82f6;
-  --accent-wash-ink: #0f172a;
-  --danger: #dc2626;
-  --danger-ink: #ffffff;
 }
 
 html[data-ui-font="dm_sans"] {
@@ -230,39 +176,11 @@ html[data-ui-font="georgia"] {
   --font-app: "Georgia", "Palatino Linotype", "Book Antiqua", "Palatino",
     "Times New Roman", Times, serif;
   --font-display-face: var(--font-app);
-  --bg: #e8e4dc;
-  --paper: #f2efe8;
-  --ink: #111111;
-  --ink-muted: #4a4a4a;
-  --ink-soft: #737373;
-  --tag: #1c1917;
-  --tag-ink: #fafaf9;
-  --accent: #1e40af;
-  --accent-hover: #1d4ed8;
-  --accent-ink: #ffffff;
-  --accent-wash: #1e40af;
-  --accent-wash-ink: #ffffff;
-  --danger: #b91c1c;
-  --danger-ink: #ffffff;
 }
 
 html[data-ui-font="arial"] {
   --font-app: "Arial", "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
   --font-display-face: var(--font-app);
-  --bg: #ffffff;
-  --paper: #f5f5f5;
-  --ink: #171717;
-  --ink-muted: #525252;
-  --ink-soft: #a3a3a3;
-  --tag: #262626;
-  --tag-ink: #fafafa;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-ink: #ffffff;
-  --accent-wash: #2563eb;
-  --accent-wash-ink: #ffffff;
-  --danger: #dc2626;
-  --danger-ink: #ffffff;
 }
 
 html[data-ui-font="system_ui"] {
@@ -338,23 +256,6 @@ html[data-ui-font="system_ui"] .font-display {
     --danger-ink: #1a1810;
   }
 
-  html[data-ui-font="inter"] {
-    --bg: #0f172a;
-    --paper: #1e293b;
-    --ink: #e2e8f0;
-    --ink-muted: #94a3b8;
-    --ink-soft: #64748b;
-    --tag: #f1f5f9;
-    --tag-ink: #0f172a;
-    --accent: #60a5fa;
-    --accent-hover: #3b82f6;
-    --accent-ink: #0f172a;
-    --accent-wash: #60a5fa;
-    --accent-wash-ink: #0f172a;
-    --danger: #f87171;
-    --danger-ink: #0f172a;
-  }
-
   html[data-ui-font="dm_sans"] {
     --bg: #2a1f1d;
     --paper: #352824;
@@ -387,40 +288,6 @@ html[data-ui-font="system_ui"] .font-display {
     --accent-wash-ink: #1a1410;
     --danger: #fb7185;
     --danger-ink: #1a1410;
-  }
-
-  html[data-ui-font="georgia"] {
-    --bg: #171717;
-    --paper: #262626;
-    --ink: #fafafa;
-    --ink-muted: #a3a3a3;
-    --ink-soft: #737373;
-    --tag: #fafafa;
-    --tag-ink: #171717;
-    --accent: #93c5fd;
-    --accent-hover: #60a5fa;
-    --accent-ink: #171717;
-    --accent-wash: #93c5fd;
-    --accent-wash-ink: #171717;
-    --danger: #fca5a5;
-    --danger-ink: #171717;
-  }
-
-  html[data-ui-font="arial"] {
-    --bg: #0a0a0a;
-    --paper: #171717;
-    --ink: #fafafa;
-    --ink-muted: #a3a3a3;
-    --ink-soft: #737373;
-    --tag: #fafafa;
-    --tag-ink: #0a0a0a;
-    --accent: #60a5fa;
-    --accent-hover: #3b82f6;
-    --accent-ink: #0a0a0a;
-    --accent-wash: #60a5fa;
-    --accent-wash-ink: #0a0a0a;
-    --danger: #f87171;
-    --danger-ink: #0a0a0a;
   }
 
   html[data-ui-font="system_ui"] {
