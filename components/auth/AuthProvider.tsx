@@ -8,7 +8,7 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import type { SignInResult, SignupInput, User } from "@/lib/auth/types";
@@ -66,6 +66,15 @@ export type AuthContextValue = {
   requestCode: (email: string) => Promise<SignInResult>;
   /** Step 2: verify the code and establish the session. */
   verifyCode: (email: string, code: string) => Promise<void>;
+  /** Sign in with an already-set password. */
+  signInWithPassword: (email: string, password: string) => Promise<void>;
+  /**
+   * Whether the signed-in user has a password set.
+   * `undefined` while loading or when signed out.
+   */
+  hasPassword: boolean | undefined;
+  /** Attach a password to the current (OTP-verified) account. */
+  setPassword: (password: string) => Promise<void>;
   completeSignup: (input: SignupInput) => Promise<User>;
   signOut: () => Promise<void>;
   updateProfile: (
@@ -83,10 +92,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useAuthActions();
 
   const convexUserDoc = useQuery(api.users.current);
+  const hasPassword = useQuery(
+    api.password.hasPassword,
+    jwtAuthenticated ? {} : "skip",
+  );
 
   const completeOnboardingMut = useMutation(api.users.completeOnboarding);
   const patchProfileMut = useMutation(api.users.patchProfile);
   const agreeToRulesMut = useMutation(api.users.agreeToRules);
+  const setPasswordAction = useAction(api.password.setPassword);
 
   const status: Status =
     authLoading || (jwtAuthenticated && convexUserDoc === undefined)
@@ -166,6 +180,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signInWithProvider("resend", formData);
     },
     [signInWithProvider],
+  );
+
+  const signInWithPassword = useCallback(
+    async (email: string, password: string) => {
+      const formData = new FormData();
+      formData.set("email", email.trim());
+      formData.set("password", password);
+      formData.set("flow", "signIn");
+      await signInWithProvider("password", formData);
+    },
+    [signInWithProvider],
+  );
+
+  const setPassword = useCallback(
+    async (password: string) => {
+      await setPasswordAction({ password });
+    },
+    [setPasswordAction],
   );
 
   const completeSignup = useCallback(
@@ -286,6 +318,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authEmail,
       requestCode,
       verifyCode,
+      signInWithPassword,
+      hasPassword,
+      setPassword,
       completeSignup,
       signOut,
       updateProfile,
@@ -300,6 +335,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authEmail,
       requestCode,
       verifyCode,
+      signInWithPassword,
+      hasPassword,
+      setPassword,
       completeSignup,
       signOut,
       updateProfile,

@@ -12,7 +12,7 @@ type Props = {
 };
 
 export function NavSettingsModal({ open, onClose }: Props) {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, hasPassword, setPassword } = useAuth();
   const fontPickerRef = useRef<HTMLDivElement | null>(null);
   const [fontPickerOpen, setFontPickerOpen] = useState(false);
   const [fontBusy, setFontBusy] = useState(false);
@@ -21,6 +21,11 @@ export function NavSettingsModal({ open, onClose }: Props) {
   const [notificationsError, setNotificationsError] = useState<string | null>(
     null,
   );
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSaved, setPasswordSaved] = useState(false);
 
   const notificationsOn = user?.emailNotifications !== false;
 
@@ -28,8 +33,36 @@ export function NavSettingsModal({ open, onClose }: Props) {
     setFontPickerOpen(false);
     setFontError(null);
     setNotificationsError(null);
+    setPasswordInput("");
+    setPasswordConfirm("");
+    setPasswordError(null);
+    setPasswordSaved(false);
     onClose();
   }, [onClose]);
+
+  const onSetPassword = useCallback(async () => {
+    if (passwordBusy) return;
+    setPasswordError(null);
+    if (passwordInput.length < 8) {
+      setPasswordError("Password must be at least 8 characters.");
+      return;
+    }
+    if (passwordInput !== passwordConfirm) {
+      setPasswordError("Passwords don't match.");
+      return;
+    }
+    setPasswordBusy(true);
+    try {
+      await setPassword(passwordInput);
+      setPasswordInput("");
+      setPasswordConfirm("");
+      setPasswordSaved(true);
+    } catch {
+      setPasswordError("Could not set your password — try again.");
+    } finally {
+      setPasswordBusy(false);
+    }
+  }, [passwordBusy, passwordInput, passwordConfirm, setPassword]);
 
   useEffect(() => {
     if (!open || !fontPickerOpen) return;
@@ -169,6 +202,54 @@ export function NavSettingsModal({ open, onClose }: Props) {
             <p className="mt-2 text-sm text-[var(--danger)]">{notificationsError}</p>
           ) : null}
         </div>
+
+        {hasPassword !== undefined ? (
+          <div className="min-w-0 border-t border-[var(--ink-soft)] pt-5">
+            <span className="text-sm text-[var(--ink-muted)]">Password</span>
+            {hasPassword || passwordSaved ? (
+              <p className="mt-2 text-sm text-[var(--ink-muted)]">
+                Password is set. You can sign in with your email and password.
+              </p>
+            ) : (
+              <div className="mt-3 flex flex-col gap-3">
+                <p className="text-sm text-[var(--ink-muted)]">
+                  Set a password to sign in without an email code.
+                </p>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="New password (min 8 characters)"
+                  disabled={passwordBusy}
+                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-4 py-2.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none focus:border-[var(--accent-hover)] disabled:opacity-60"
+                />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  placeholder="Confirm password"
+                  disabled={passwordBusy}
+                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-4 py-2.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none focus:border-[var(--accent-hover)] disabled:opacity-60"
+                />
+                <button
+                  type="button"
+                  disabled={passwordBusy}
+                  onClick={() => {
+                    void onSetPassword();
+                  }}
+                  className="w-full cursor-pointer rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 disabled:cursor-not-allowed text-[var(--accent-ink)] py-2.5 text-base transition-colors"
+                >
+                  {passwordBusy ? "Saving…" : "Set password"}
+                </button>
+              </div>
+            )}
+            {passwordError ? (
+              <p className="mt-2 text-sm text-[var(--danger)]">{passwordError}</p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </Modal>
   );
