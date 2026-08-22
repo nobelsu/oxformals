@@ -67,7 +67,7 @@ function earnedBadgesWithDerivedDates(
  * pagination: each invocation processes one page of users and continues
  * from the previous batch's cursor.
  *
- * Run with: npx convex run migrations:backfillUserBadges '{"paginationOpts":{"numItems":100,"cursor":null}}'
+ * Run with: npx convex run migrations:backfillUserBadges '{"paginationOpts":{"numItems":25,"cursor":null}}'
  */
 export const backfillUserBadges = internalMutation({
   args: { paginationOpts: paginationOptsValidator },
@@ -77,7 +77,13 @@ export const backfillUserBadges = internalMutation({
     done: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    const page = await ctx.db.query("users").paginate(args.paginationOpts);
+    // Hard-cap the batch: each user can cost hundreds of document reads, and
+    // an over-large batch would blow the transaction read limit and kill the
+    // scheduled continuation.
+    const pageSize = Math.min(args.paginationOpts.numItems, 25);
+    const page = await ctx.db
+      .query("users")
+      .paginate({ ...args.paginationOpts, numItems: pageSize });
     let awarded = 0;
     for (const user of page.page) {
       const inputs = await collectBadgeInputs(ctx, user._id);
@@ -100,7 +106,7 @@ export const backfillUserBadges = internalMutation({
     if (!done) {
       await ctx.scheduler.runAfter(0, internal.migrations.backfillUserBadges, {
         paginationOpts: {
-          numItems: args.paginationOpts.numItems,
+          numItems: pageSize,
           cursor: page.continueCursor,
         },
       });

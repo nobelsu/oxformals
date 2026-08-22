@@ -1461,4 +1461,4 @@ git commit -m "FIX: Profile revamp verification fixes"
 
 ## Deployment note (post-merge)
 
-After this lands on the deployed branch: push schema (`npx convex dev` / deploy), then run `npx convex run migrations:backfillUserBadges` **once** against production to award historical badges.
+After this lands on the deployed branch: push schema (`npx convex dev` / deploy), then run `npx convex run migrations:backfillUserBadges '{"paginationOpts":{"numItems":25,"cursor":null}}'` **once** against production to award historical badges.
