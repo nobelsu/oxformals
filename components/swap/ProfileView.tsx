@@ -7,15 +7,12 @@ import { createPortal } from "react-dom";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import type { ListingWithMenuPdfUrl } from "@/convex/listingHelpers";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Avatar, PRESET_AVATARS, PresetAvatarIcon, initialsFor } from "@/components/ui/Avatar";
-import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
-import { CollegeReviewCard } from "@/components/colleges/CollegeReviewCard";
-import { ListingDayList } from "@/components/swap/ListingDayList";
-import { ListingRow } from "@/components/swap/ListingRow";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
 import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
 import { RequestPayModal } from "@/components/swap/RequestPayModal";
@@ -23,12 +20,16 @@ import { RequestSwapModal } from "@/components/swap/RequestSwapModal";
 import { RequestTypeChooserModal } from "@/components/swap/RequestTypeChooserModal";
 import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
+import { ProfileActivityStream } from "./ProfileActivityStream";
+import { BadgeCaseModal } from "./BadgeCaseModal";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
 import { listingSupportsSwap } from "@/lib/data/listingType";
 import { findBlockingOutgoingRequestForTarget } from "@/lib/data/requestFilters";
 import type { GroupSize, Listing, RequestType } from "@/lib/data/types";
 import { formatYearLabel } from "@/lib/data/format";
+import { TOTAL_BADGE_COUNT, badgeById } from "@/lib/data/badges";
+import type { ProfileActivityItem } from "@/lib/data/groupActivityByDay";
 
 function mapProfileListing(doc: {
   _id: string;
@@ -167,28 +168,19 @@ export function ProfileView({
     theirs: Listing | null;
     otherUserId: string | null;
   } | null>(null);
-  const [profileTab, setProfileTab] = useState<"listings" | "reviews">("listings");
+  const [badgeCaseOpen, setBadgeCaseOpen] = useState(false);
   const closeAvatar = useCallback(() => setAvatarOpen(false), []);
-
-  useEffect(() => {
-    setProfileTab("listings");
-  }, [userId]);
 
   const profile = useQuery(api.users.getPublicProfile, {
     userId: userId as Id<"users">,
   });
 
-  const publicReviews = useQuery(api.collegeReviews.listPublicReviewsForUser, {
+  const activity = useQuery(api.profileActivity.getProfileActivity, {
     userId: userId as Id<"users">,
   });
-
-  // Stable array identity across renders — ListingDayList memoises its day
-  // grouping on this reference, so a fresh array here would re-run that
-  // grouping on every unrelated state change in this component.
-  const activeListings = useMemo(
-    () => (profile?.listings ?? []).map(mapProfileListing),
-    [profile?.listings],
-  );
+  const earnedBadges = useQuery(api.badges.getUserBadges, {
+    userId: userId as Id<"users">,
+  });
 
   const myActiveListings = useMemo(
     () =>
@@ -343,6 +335,31 @@ export function ProfileView({
   const editProfileClass =
     "shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]";
 
+  const stats = activity?.stats;
+  // The query returns raw enriched listing docs; ListingRow needs the
+  // client-mapped `Listing` shape (id/createdAt/formalType defaults), so
+  // listing items go through the existing mapProfileListing helper.
+  const streamItems = ((activity?.items ?? []) as ProfileActivityItem[]).map(
+    (item) =>
+      item.kind === "listing"
+        ? {
+            kind: "listing" as const,
+            ts: item.ts,
+            // The wire value is the enriched listing doc, not the mapped
+            // `Listing` the union type claims.
+            listing: mapProfileListing(
+              item.listing as unknown as ListingWithMenuPdfUrl,
+            ),
+          }
+        : item,
+  );
+  const earnedCount = earnedBadges?.length ?? 0;
+  const memberUsersFor = (l: Listing) =>
+    l.members
+      .filter((mid) => mid !== l.ownerUserId)
+      .map(getUser)
+      .filter((u): u is NonNullable<typeof u> => !!u);
+
   return (
     <Outer className={outerClass}>
       {!embedded ? (
@@ -356,234 +373,201 @@ export function ProfileView({
         </div>
       ) : null}
 
-      <SketchCard seed={userId.length} className="overflow-hidden p-6">
-        <div className="flex flex-col gap-5">
-          <div className="flex min-w-0 flex-1 items-start justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-4">
-          <div
-            role="button"
-            tabIndex={0}
-            className="shrink-0 cursor-pointer transition-transform hover:scale-105"
-            onClick={() => setAvatarOpen(true)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setAvatarOpen(true);
-              }
-            }}
-            aria-label={`View ${name}'s avatar`}
-          >
-            <Avatar name={name} size="xl" source={avatar} />
-          </div>
-          {avatarOpen && (
-            <AvatarLightbox source={avatar} name={name} onClose={closeAvatar} />
-          )}
-          <div className="min-w-0 flex-1">
-            <h1 className="font-display text-3xl uppercase tracking-wide">
-              {name}
-            </h1>
-            {profileLine && (
-              <p className="mt-1 text-sm leading-snug text-[var(--ink-muted)]">
-                {profileLine}
-              </p>
-            )}
-              </div>
-            </div>
-            {isOwnProfile ? (
-              onEditProfile ? (
-                <button
-                  type="button"
-                  onClick={onEditProfile}
-                  className={editProfileClass}
-                >
-                  Edit
-                </button>
-              ) : (
-                <Link href="/?tab=mine&edit=1" className={editProfileClass}>
-                  Edit
-                </Link>
-              )
-            ) : isAuthenticated ? (
-              <MessageUserButton
-                otherUserId={userId as Id<"users">}
-                className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() =>
-                  router.push(
-                    `/login?next=${encodeURIComponent(`/profile/${userId}`)}`,
-                  )
-                }
-                className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-              >
-                Message
-              </button>
-            )}
-          </div>
-
-          {(instagramHandle || whatsappPhone) && (
-            <div className="flex w-full min-w-0 flex-wrap gap-2">
-              {instagramHandle && (
-                <a
-                  href={`https://instagram.com/${instagramHandle}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex h-9 max-w-full min-w-0 items-center gap-1.5 rounded-full border-[2px] border-[var(--ink)] px-3 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="2" width="20" height="20" rx="5" />
-                    <circle cx="12" cy="12" r="5" />
-                    <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
-                  </svg>
-                  <span className="truncate">@{instagramHandle}</span>
-                </a>
-              )}
-              {whatsappPhone && (
-                <a
-                  href={`https://wa.me/${whatsappPhone.replace(/[^\d+]/g, "")}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex h-9 max-w-full min-w-0 items-center gap-1.5 rounded-full border-[2px] border-[var(--ink)] px-3 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="currentColor">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                  </svg>
-                  <span className="truncate">{whatsappPhone}</span>
-                </a>
-              )}
-            </div>
-          )}
+      {/* Header — left-aligned compact */}
+      <div className="flex items-center gap-3.5">
+        <div
+          role="button"
+          tabIndex={0}
+          className="shrink-0 cursor-pointer transition-transform hover:scale-105"
+          onClick={() => setAvatarOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setAvatarOpen(true);
+            }
+          }}
+          aria-label={`View ${name}'s avatar`}
+        >
+          <Avatar name={name} size="lg" source={avatar} />
         </div>
-
-        {interests.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {interests.map((tag) => (
-              <Chip key={tag} size="md" as="span">
-                {tag}
-              </Chip>
-            ))}
-          </div>
+        {avatarOpen && (
+          <AvatarLightbox source={avatar} name={name} onClose={closeAvatar} />
         )}
-
-        {dietaryRequirements && (
-          <p className="mt-3 text-sm text-[var(--ink-muted)]">
-            <span className="font-medium text-[var(--ink)]">Allergens / Dietary requirements:</span>{" "}
-            {dietaryRequirements}
-          </p>
-        )}
-
-        {subject && (
-          <p className="mt-3 text-sm text-[var(--ink-muted)]">
-            <span className="font-medium text-[var(--ink)]">Subject:</span>{" "}
-            {subject}
-          </p>
-        )}
-
-      </SketchCard>
-
-      <section>
-        <div className="flex flex-wrap items-center gap-3">
-          <div
-            className="inline-flex rounded-full border-[2px] border-[var(--ink)] p-0.5"
-            role="tablist"
-            aria-label="Profile content"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={profileTab === "listings"}
-              onClick={() => setProfileTab("listings")}
-              className={`cursor-pointer rounded-full px-4 py-1.5 text-sm transition-all duration-200 ease-out motion-reduce:transition-none ${
-                profileTab === "listings"
-                  ? "bg-[var(--ink)] text-[var(--bg)]"
-                  : "text-[var(--ink)] hover:bg-[var(--paper)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 active:scale-[0.98]"
-              }`}
-            >
-              Listings
-              {activeListings.length > 0 ? (
-                <span className="ml-1.5 opacity-80">({activeListings.length})</span>
-              ) : null}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={profileTab === "reviews"}
-              onClick={() => setProfileTab("reviews")}
-              className={`cursor-pointer rounded-full px-4 py-1.5 text-sm transition-all duration-200 ease-out motion-reduce:transition-none ${
-                profileTab === "reviews"
-                  ? "bg-[var(--ink)] text-[var(--bg)]"
-                  : "text-[var(--ink)] hover:bg-[var(--paper)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 active:scale-[0.98]"
-              }`}
-            >
-              Reviews
-              {publicReviews && publicReviews.length > 0 ? (
-                <span className="ml-1.5 opacity-80">({publicReviews.length})</span>
-              ) : null}
-            </button>
-          </div>
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-[1.75rem] leading-tight">{name}</h1>
+          {profileLine ? (
+            <p className="mt-0.5 text-sm text-[var(--ink-soft)]">{profileLine}</p>
+          ) : null}
         </div>
-
-        {profileTab === "listings" ? (
-          <>
-            {activeListings.length === 0 ? (
-              <p className="mt-4 text-[var(--ink-muted)]">
-                {isOwnProfile
-                  ? "You don\u2019t have any active listings."
-                  : `${name.split(" ")[0]} doesn\u2019t have any active listings right now.`}
-              </p>
-            ) : (
-              <ListingDayList
-                className="mt-4"
-                listings={activeListings}
-                renderRow={(l) => {
-                  const members = l.members
-                    .filter((mid) => mid !== l.ownerUserId)
-                    .map(getUser)
-                    .filter((u): u is NonNullable<typeof u> => !!u);
-                  return (
-                    <ListingRow
-                      listing={l}
-                      owner={ownerAsUser}
-                      memberUsers={members}
-                      onPress={() => setDetailListing(l)}
-                      onRequest={isOwnProfile ? undefined : () => handleRequestClick(l)}
-                      disabled={listingDisabled}
-                      hideInterests
-                      disabledLabel={
-                        isOwnProfile
-                          ? "Your listing"
-                          : !isAuthenticated
-                            ? "Sign in to request"
-                            : undefined
-                      }
-                    />
-                  );
-                }}
-              />
-            )}
-          </>
-        ) : publicReviews === undefined ? (
-          <p className="mt-4 text-[var(--ink-muted)]">Loading reviews…</p>
-        ) : publicReviews.length === 0 ? (
-          <p className="mt-4 text-[var(--ink-muted)]">
-            {isOwnProfile
-              ? "You haven\u2019t posted any public reviews yet. Reviews marked anonymous won\u2019t appear here."
-              : `${name.split(" ")[0]} hasn\u2019t posted any public reviews yet.`}
-          </p>
+        {isOwnProfile ? (
+          onEditProfile ? (
+            <button type="button" onClick={onEditProfile} className={editProfileClass}>
+              Edit
+            </button>
+          ) : (
+            <Link href="/?tab=mine&edit=1" className={editProfileClass}>
+              Edit
+            </Link>
+          )
+        ) : isAuthenticated ? (
+          <MessageUserButton
+            otherUserId={userId as Id<"users">}
+            className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
+          />
         ) : (
-          <div className="mt-4 flex flex-col gap-4">
-            {publicReviews.map((review) => (
-              <CollegeReviewCard
-                key={review.id}
-                review={review}
-                variant="profile"
-              />
-            ))}
+          <button
+            type="button"
+            onClick={() =>
+              router.push(
+                `/login?next=${encodeURIComponent(`/profile/${userId}`)}`,
+              )
+            }
+            className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+          >
+            Message
+          </button>
+        )}
+      </div>
+
+      {(instagramHandle || whatsappPhone) && (
+        <div className="flex flex-wrap gap-2">
+          {instagramHandle && (
+            <a
+              href={`https://instagram.com/${instagramHandle}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-8 max-w-full min-w-0 items-center gap-1.5 rounded-full border-[1.5px] border-[color-mix(in_srgb,var(--ink)_35%,transparent)] px-3 text-[0.85rem] text-[var(--ink-soft)] transition-colors hover:border-[var(--ink)] hover:text-[var(--ink)]"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" />
+                <circle cx="12" cy="12" r="5" />
+                <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+              </svg>
+              <span className="truncate">@{instagramHandle}</span>
+            </a>
+          )}
+          {whatsappPhone && (
+            <a
+              href={`https://wa.me/${whatsappPhone.replace(/[^\d+]/g, "")}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-8 max-w-full min-w-0 items-center gap-1.5 rounded-full border-[1.5px] border-[color-mix(in_srgb,var(--ink)_35%,transparent)] px-3 text-[0.85rem] text-[var(--ink-soft)] transition-colors hover:border-[var(--ink)] hover:text-[var(--ink)]"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+              </svg>
+              <span className="truncate">{whatsappPhone}</span>
+            </a>
+          )}
+        </div>
+      )}
+
+      {(dietaryRequirements || subject) && (
+        <div className="-mt-4 space-y-0.5 text-sm text-[var(--ink-muted)]">
+          {dietaryRequirements ? (
+            <p>
+              <span className="font-medium text-[var(--ink)]">
+                Allergens / Dietary requirements:
+              </span>{" "}
+              {dietaryRequirements}
+            </p>
+          ) : null}
+          {subject ? (
+            <p>
+              <span className="font-medium text-[var(--ink)]">Subject:</span>{" "}
+              {subject}
+            </p>
+          ) : null}
+        </div>
+      )}
+
+      {/* Stat strip */}
+      <div className="flex items-baseline gap-6">
+        <span className="text-[1.05rem]">
+          <span className="font-extrabold text-[var(--accent)]">
+            {stats ? stats.activeCount : "–"}
+          </span>{" "}
+          <span className="text-[0.75rem] uppercase tracking-[0.05em] text-[var(--ink-muted)]">
+            active
+          </span>
+        </span>
+        <span className="text-[1.05rem]">
+          <span className="font-extrabold">{stats ? stats.reviewCount : "–"}</span>{" "}
+          <span className="text-[0.75rem] uppercase tracking-[0.05em] text-[var(--ink-muted)]">
+            reviews
+          </span>
+        </span>
+        <span className="text-[1.05rem]">
+          <span className="font-extrabold">{stats ? stats.attendedCount : "–"}</span>{" "}
+          <span className="text-[0.75rem] uppercase tracking-[0.05em] text-[var(--ink-muted)]">
+            formals
+          </span>
+        </span>
+      </div>
+
+      {/* Badge row */}
+      <button
+        type="button"
+        onClick={() => setBadgeCaseOpen(true)}
+        className="flex cursor-pointer items-center gap-2 self-start"
+      >
+        {(earnedBadges ?? []).slice(0, 4).map((b) => {
+          const def = badgeById(b.badgeId);
+          if (!def) return null;
+          return (
+            <span
+              key={b.badgeId}
+              className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[var(--ink)] bg-[var(--bg)] text-base"
+            >
+              {def.icon}
+            </span>
+          );
+        })}
+        <span className="text-[0.85rem] text-[var(--ink-muted)]">
+          {earnedCount} of {TOTAL_BADGE_COUNT} ›
+        </span>
+      </button>
+
+      {/* Activity stream */}
+      <section aria-label="Activity">
+        <h2 className="text-[0.7rem] font-bold uppercase tracking-[0.08em] text-[var(--ink-muted)]">
+          Activity
+        </h2>
+        {activity === undefined ? (
+          <p className="mt-3 text-[var(--ink-muted)]">Loading activity…</p>
+        ) : streamItems.length === 0 ? (
+          <div className="mt-3 rounded-[18px] border-[1.5px] border-dashed border-[color-mix(in_srgb,var(--ink)_25%,transparent)] px-5 py-8 text-center text-[var(--ink-muted)]">
+            {isOwnProfile
+              ? "No activity yet — list a formal to get started."
+              : `${name.split(" ")[0]} hasn\u2019t been active yet.`}
           </div>
+        ) : (
+          <ProfileActivityStream
+            className="mt-3"
+            items={streamItems}
+            owner={ownerAsUser}
+            memberUsersFor={memberUsersFor}
+            onPress={(l) => setDetailListing(l)}
+            onRequest={
+              isOwnProfile ? undefined : (l) => handleRequestClick(l)
+            }
+            disabled={listingDisabled}
+            disabledLabel={
+              isOwnProfile
+                ? "Your listing"
+                : !isAuthenticated
+                  ? "Sign in to request"
+                  : undefined
+            }
+          />
         )}
       </section>
+
+      <BadgeCaseModal
+        open={badgeCaseOpen}
+        onClose={() => setBadgeCaseOpen(false)}
+        earned={earnedBadges}
+      />
 
       <ListingDetailModal
         open={!!detailListing}
