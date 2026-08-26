@@ -40,12 +40,15 @@ type Props = {
    * blocks used by the browse feed so the CTA doesn't float at the top.
    */
   align?: "start" | "center";
+<<<<<<< HEAD
   /**
    * "Header band" card layout (browse + feed): a washed college/date band over
    * a padded body of seats, menu, host and CTA. Renders the inner content only
    * — the caller supplies the rounded, overflow-clipped card chrome.
    */
   card?: boolean;
+=======
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
 };
 
 export function ListingRow({
@@ -59,7 +62,10 @@ export function ListingRow({
   title,
   compact = false,
   align = "start",
+<<<<<<< HEAD
   card = false,
+=======
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
 }: Props) {
   const nowMs = useNowMs();
   const isPast = listingIsPast(listing.dateTime, nowMs);
@@ -103,6 +109,7 @@ export function ListingRow({
   const hasAction = showStatusInsteadOfCta || !!disabled || !!onRequest;
   const compactTagOnly = compact && !hasAction;
 
+<<<<<<< HEAD
   // "Split rail" card layout — Variant B: content on the left, a tags + CTA
   // rail on the right. Renders inner content only; the caller (browse day-list
   // / feed row) provides the rounded, clipped card chrome.
@@ -224,6 +231,8 @@ export function ListingRow({
     );
   }
 
+=======
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
   return (
     <div
       role={onPress ? "button" : undefined}
@@ -244,7 +253,11 @@ export function ListingRow({
             }
           : undefined
       }
+<<<<<<< HEAD
       className={`flex gap-3 ${spacious ? "py-0" : "py-4"} ${
+=======
+      className={`flex gap-3 py-4 ${
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
         compactTagOnly ? "flex-row items-start" : "flex-col"
       }${
         onPress
@@ -290,7 +303,11 @@ export function ListingRow({
 
         <div
           className={`${
+<<<<<<< HEAD
             spacious ? "mt-2" : "mt-1.5"
+=======
+            spacious ? "mt-3.5" : "mt-1.5"
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
           } flex flex-wrap items-center gap-x-2 gap-y-1`}
         >
           {!isPast ? (
@@ -309,7 +326,11 @@ export function ListingRow({
 
         <div
           className={`${
+<<<<<<< HEAD
             spacious ? "mt-2.5" : "mt-2"
+=======
+            spacious ? "mt-4" : "mt-2"
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
           } flex flex-wrap items-center gap-2`}
         >
           <Link
@@ -348,7 +369,11 @@ export function ListingRow({
 
         {hasListingMenu(listing.menu, listing.menuPdfUrl) ? (
           <div
+<<<<<<< HEAD
             className={spacious ? "mt-2.5" : "mt-2"}
+=======
+            className={spacious ? "mt-4" : "mt-2"}
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
             // Only the file link needs to swallow the click/keydown before it
             // reaches the row's onPress (otherwise opening the menu file also
             // "selects" the row behind it). Scoped to the link itself rather
@@ -375,7 +400,11 @@ export function ListingRow({
         {listing.message ? (
           <p
             className={`${
+<<<<<<< HEAD
               spacious ? "mt-2.5" : "mt-2"
+=======
+              spacious ? "mt-4" : "mt-2"
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
             } line-clamp-2 break-words text-pretty text-[1rem] italic text-[var(--ink-muted)]`}
           >
             &ldquo;{listing.message}&rdquo;
@@ -383,7 +412,11 @@ export function ListingRow({
         ) : null}
 
         {!hideInterests && owner.interests.length > 0 ? (
+<<<<<<< HEAD
           <div className={`${spacious ? "mt-2.5" : "mt-2"} flex flex-wrap gap-1.5`}>
+=======
+          <div className={`${spacious ? "mt-4" : "mt-2"} flex flex-wrap gap-1.5`}>
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
             {owner.interests.map((tag) => (
               <Chip key={tag} size="sm" as="span" className="!text-[0.75rem]">
                 {tag}

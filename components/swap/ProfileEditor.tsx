@@ -7,11 +7,11 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { Avatar, PRESET_AVATARS, PresetAvatarIcon } from "@/components/ui/Avatar";
 import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
-import { SketchCard } from "@/components/ui/SketchCard";
 import type { AvatarSource } from "@/lib/auth/types";
 import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
 import { ROLE_OPTIONS } from "@/lib/data/roles";
@@ -22,6 +22,47 @@ const MAX_DATA_URL_BYTES = 250 * 1024;
 const COLLEGE_LIST = OXFORD_COLLEGES as readonly string[];
 
 const MAX_INTEREST_LENGTH = 40;
+
+const UNDERLINE_INPUT =
+  "w-full border-0 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_28%,transparent)] bg-transparent px-0 py-1.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:border-[var(--ink)] focus:outline-none";
+
+const SECTION_HEADING =
+  "font-display text-[1.75rem] leading-tight text-[var(--ink)]";
+
+const DROPDOWN_PANEL =
+  "absolute left-0 right-0 top-[calc(100%+0.35rem)] z-20 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-2 shadow-[0_2px_14px_-10px_rgba(0,0,0,0.25)]";
+
+function Field({
+  label,
+  htmlFor,
+  className = "",
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const cls = `flex min-w-0 flex-col gap-1 ${className}`.trim();
+  if (htmlFor) {
+    return (
+      <label htmlFor={htmlFor} className={cls}>
+        {children}
+        <span className="text-xs tracking-wide text-[var(--ink-muted)]">
+          {label}
+        </span>
+      </label>
+    );
+  }
+  return (
+    <div className={cls}>
+      {children}
+      <span className="text-xs tracking-wide text-[var(--ink-muted)]">
+        {label}
+      </span>
+    </div>
+  );
+}
 
 function normalizeInterest(raw: string): string {
   return raw.trim().replace(/\s+/g, " ").slice(0, MAX_INTEREST_LENGTH);
@@ -72,6 +113,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
   const { user, updateProfile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const rolePickerRef = useRef<HTMLDivElement | null>(null);
+  const avatarPickerRef = useRef<HTMLDivElement | null>(null);
 
   const [nameDraft, setNameDraft] = useState(user?.name ?? "");
   const [collegeDraft, setCollegeDraft] = useState(user?.college ?? "");
@@ -89,6 +131,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
   );
   const [subjectDraft, setSubjectDraft] = useState(user?.subject ?? "");
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const [interestsDraft, setInterestsDraft] = useState<string[]>(
     user?.interests ?? [],
   );
@@ -116,6 +159,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     setAvatarDraft(user.avatar);
     setCollegePickerOpen(false);
     setRolePickerOpen(false);
+    setAvatarPickerOpen(false);
     setError(null);
     setInterestInput("");
   }, [user]);
@@ -127,19 +171,27 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
   }, [user, resetDraftsFromUser]);
 
   useEffect(() => {
-    if (!rolePickerOpen) return;
+    if (!rolePickerOpen && !avatarPickerOpen) return;
     function handlePointerDown(event: MouseEvent) {
       const target = event.target as Node;
-      const clickedOutsideRole = rolePickerRef.current
-        ? !rolePickerRef.current.contains(target)
-        : true;
-      if (clickedOutsideRole) {
+      if (
+        rolePickerOpen &&
+        rolePickerRef.current &&
+        !rolePickerRef.current.contains(target)
+      ) {
         setRolePickerOpen(false);
+      }
+      if (
+        avatarPickerOpen &&
+        avatarPickerRef.current &&
+        !avatarPickerRef.current.contains(target)
+      ) {
+        setAvatarPickerOpen(false);
       }
     }
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [rolePickerOpen]);
+  }, [rolePickerOpen, avatarPickerOpen]);
 
   const collegeSelectOptions = useMemo(() => {
     const c = collegeDraft.trim();
@@ -204,6 +256,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
         return;
       }
       setAvatarDraft({ kind: "image", dataUrl });
+      setAvatarPickerOpen(false);
     } catch {
       setError("Could not read that image.");
     } finally {
@@ -213,10 +266,12 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
 
   function pickPreset(id: string) {
     setAvatarDraft({ kind: "preset", id });
+    setAvatarPickerOpen(false);
   }
 
   function clearAvatar() {
     setAvatarDraft(undefined);
+    setAvatarPickerOpen(false);
   }
 
   const save = useCallback(async () => {
@@ -313,272 +368,282 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
   }
 
   return (
-    <SketchCard seed={5} className="p-6">
-      <h3 className="font-display text-3xl uppercase tracking-wide">
-        Edit my profile
-      </h3>
-      <p className="mt-1 text-base text-[var(--ink-muted)]">
-        College, year, and role are saved with each formal you list. Avatar and
-        interests show on browse cards.
-      </p>
-
-      <div className="mt-6 border-b border-[var(--ink-soft)] pb-6">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex-1 space-y-4">
-            <label className="flex flex-col gap-2">
-              <span className="text-sm text-[var(--ink-muted)]">Name</span>
-              <input
-                type="text"
-                value={nameDraft}
-                onChange={(e) => setNameDraft(e.target.value)}
-                placeholder="Your full name"
-                className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-              />
-            </label>
-
-            <div className="flex gap-4">
-              <label className="flex flex-[2] flex-col gap-2">
-                <span className="text-sm text-[var(--ink-muted)]">College</span>
-                <OutlineCombobox
-                  open={collegePickerOpen}
-                  onOpenChange={(next) => {
-                    setCollegePickerOpen(next);
-                    if (next) setRolePickerOpen(false);
-                  }}
-                  value={collegeDraft}
-                  options={collegeComboboxOptions}
-                  onChange={(v) => {
-                    setCollegeDraft(v);
-                    setCollegePickerOpen(false);
-                  }}
-                  placeholder="Choose college"
-                />
-              </label>
-
-              <label className="flex flex-1 flex-col gap-2">
-                <span className="text-sm text-[var(--ink-muted)]">Year</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="\d+"
-                  value={yearDraft}
-                  onChange={(e) =>
-                    setYearDraft(e.target.value.replace(/\D/g, "").slice(0, 2))
-                  }
-                  placeholder="2"
-                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-                />
-              </label>
-            </div>
-
-            <div className="flex gap-4">
-              <label className="flex flex-1 flex-col gap-2">
-                <span className="text-sm text-[var(--ink-muted)]">Role</span>
-                <div ref={rolePickerRef} className="relative">
+    <div className="flex flex-col">
+      <h1 className={SECTION_HEADING}>Edit my profile</h1>
+      <div className="mt-8 flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
+        <div ref={avatarPickerRef} className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setAvatarPickerOpen((open) => !open);
+              setCollegePickerOpen(false);
+              setRolePickerOpen(false);
+            }}
+            disabled={busy}
+            aria-expanded={avatarPickerOpen}
+            aria-haspopup="dialog"
+            aria-label={busy ? "Loading photo" : "Change profile picture"}
+            className="group relative rounded-full disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Avatar name={user.name} size="2xl" source={avatarDraft} />
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-[var(--ink)]/0 text-[0.65rem] font-medium uppercase tracking-[0.08em] text-[var(--accent-ink)] opacity-0 transition-opacity group-hover:bg-[var(--ink)]/45 group-hover:opacity-100">
+              {busy ? "…" : "Change"}
+            </span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          {avatarPickerOpen ? (
+            <div
+              role="dialog"
+              aria-label="Choose a profile picture"
+              className="absolute left-0 top-[calc(100%+0.65rem)] z-30 w-44 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-3 shadow-[0_8px_28px_-12px_rgba(0,0,0,0.45)]"
+            >
+              <div className="grid grid-cols-4 gap-2">
+                {PRESET_AVATARS.map((p) => (
                   <button
+                    key={p.id}
                     type="button"
-                    onClick={() => {
-                      setRolePickerOpen((open) => !open);
-                      setCollegePickerOpen(false);
-                    }}
-                    className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 pr-12 text-left text-base text-[var(--ink)] focus:outline-none"
+                    onClick={() => pickPreset(p.id)}
+                    aria-pressed={presetActiveId === p.id}
+                    aria-label={`Use ${p.label} avatar`}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full border-[1.5px] text-[var(--ink)] transition-colors ${
+                      presetActiveId === p.id
+                        ? "border-[var(--ink)] bg-[var(--ink)] text-[var(--bg)]"
+                        : "border-[color-mix(in_srgb,var(--ink)_22%,transparent)] hover:border-[var(--ink)]"
+                    }`}
                   >
-                    {roleDraft || "Choose role"}
+                    <PresetAvatarIcon id={p.id} className="h-4 w-4" />
                   </button>
-                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]">
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 12 8"
-                      className="h-3.5 w-3.5"
-                      fill="none"
-                    >
-                      <path
-                        d="M1 1.5 6 6.5 11 1.5"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </span>
-                  {rolePickerOpen ? (
-                    <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--bg)] p-2 shadow-sm">
-                      <div className="flex flex-col gap-1">
-                        {roleSelectOptions.map((option) => {
-                          const selected = option === roleDraft;
-                          return (
-                            <button
-                              key={option}
-                              type="button"
-                              onClick={() => {
-                                setRoleDraft(option);
-                                setRolePickerOpen(false);
-                              }}
-                              className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                                selected
-                                  ? "bg-[var(--ink)] text-[var(--bg)]"
-                                  : "text-[var(--ink)] hover:bg-[var(--paper)]"
-                              }`}
-                            >
-                              {option}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </label>
-
-              <label className="flex flex-1 flex-col gap-2">
-                <span className="text-sm text-[var(--ink-muted)]">
-                  Instagram handle
-                </span>
-                <input
-                  type="text"
-                  value={instagramHandleDraft}
-                  onChange={(e) => setInstagramHandleDraft(e.target.value)}
-                  placeholder="@yourhandle"
-                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-                />
-              </label>
-            </div>
-
-            <label className="flex flex-col gap-2">
-              <span className="text-sm text-[var(--ink-muted)]">
-                WhatsApp phone
-              </span>
-              <input
-                type="tel"
-                inputMode="tel"
-                value={whatsappPhoneDraft}
-                onChange={(e) => setWhatsappPhoneDraft(e.target.value)}
-                placeholder="+44 7..."
-                className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-              />
-            </label>
-
-            <div className="flex gap-4">
-              <label className="flex min-w-0 flex-1 flex-col gap-2">
-                <span className="text-sm text-[var(--ink-muted)]">
-                  Allergens / Dietary requirements
-                </span>
-                <input
-                  type="text"
-                  value={dietaryRequirementsDraft}
-                  onChange={(e) => setDietaryRequirementsDraft(e.target.value)}
-                  placeholder="e.g. Vegetarian, nut allergy"
-                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-                />
-              </label>
-
-              <label className="flex min-w-0 flex-1 flex-col gap-2">
-                <span className="text-sm text-[var(--ink-muted)]">Subject</span>
-                <input
-                  type="text"
-                  value={subjectDraft}
-                  onChange={(e) => setSubjectDraft(e.target.value)}
-                  placeholder="e.g. PPE, Engineering"
-                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-                />
-              </label>
-            </div>
-          </div>
-
-          <div className="flex w-full max-w-[22rem] flex-col items-center gap-4 self-center lg:w-[22rem] lg:shrink-0">
-            <div className="flex w-full items-center justify-center gap-3">
-              <Avatar name={user.name} size="xl" source={avatarDraft} />
-              <div className="flex flex-col gap-2">
+                ))}
+              </div>
+              <div className="mt-3 flex flex-col gap-1.5 border-t border-[color-mix(in_srgb,var(--ink)_12%,transparent)] pt-2.5">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={busy}
-                  className="rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="text-left text-xs text-[var(--ink)] transition-colors hover:text-[var(--accent)] disabled:opacity-60"
                 >
-                  {busy ? "Loading…" : "Upload image"}
+                  {busy ? "Loading…" : "Upload photo"}
                 </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
                 <button
                   type="button"
                   onClick={clearAvatar}
-                  className="rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                  className="text-left text-xs text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
                 >
                   Use initials
                 </button>
               </div>
             </div>
-
-            <div className="grid w-fit grid-cols-4 gap-1 self-center">
-              {PRESET_AVATARS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => pickPreset(p.id)}
-                  aria-pressed={presetActiveId === p.id}
-                  aria-label={`Use ${p.label} avatar`}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full border-[2px] text-xl leading-none transition-colors ${
-                    presetActiveId === p.id
-                      ? "border-[var(--ink)] bg-[var(--ink)] text-[var(--bg)]"
-                      : "border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-                  }`}
-                >
-                  <PresetAvatarIcon id={p.id} className="h-5 w-5" />
-                </button>
-              ))}
-            </div>
-
-            {error ? (
-              <p className="text-center text-sm text-[var(--danger)] lg:text-left">
-                {error}
-              </p>
-            ) : null}
-            </div>
-          </div>
+          ) : null}
         </div>
 
-      <div className="mt-6 pt-5">
-        <p className="text-base text-[var(--ink-muted)]">
-          Interests show up on your listings so people know what you&apos;re
-          into.
-        </p>
-        <div className="mt-3">
-          <div className="rounded-3xl border-[2px] border-[var(--ink)] bg-[var(--bg)] px-3 py-3">
-            {interestsDraft.length > 0 ? (
-              <div className="mb-2 flex flex-wrap gap-2">
-                {interestsDraft.map((interest, index) => (
-                  <span
-                    key={`${interest}-${index}`}
-                    className="inline-flex max-w-full min-h-9 items-center gap-2 rounded-full border border-[var(--ink)] bg-[var(--paper)] px-3.5 py-1 text-sm text-[var(--ink)]"
+        <div className="min-w-0 flex-1 space-y-5">
+          <Field label="name" htmlFor="profile-name" className="max-w-[12rem]">
+            <input
+              id="profile-name"
+              type="text"
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              placeholder="Your full name"
+              className={UNDERLINE_INPUT}
+            />
+          </Field>
+
+          {error ? (
+            <p className="text-sm text-[var(--danger)]">{error}</p>
+          ) : null}
+
+          <div className="grid grid-cols-2 gap-x-5 gap-y-5 sm:grid-cols-4">
+            <Field label="college">
+              <OutlineCombobox
+                variant="underline"
+                open={collegePickerOpen}
+                onOpenChange={(next) => {
+                  setCollegePickerOpen(next);
+                  if (next) setRolePickerOpen(false);
+                }}
+                value={collegeDraft}
+                options={collegeComboboxOptions}
+                onChange={(v) => {
+                  setCollegeDraft(v);
+                  setCollegePickerOpen(false);
+                }}
+                placeholder="Choose college"
+              />
+            </Field>
+
+            <Field label="year" htmlFor="profile-year">
+              <input
+                id="profile-year"
+                type="text"
+                inputMode="numeric"
+                pattern="\d+"
+                value={yearDraft}
+                onChange={(e) =>
+                  setYearDraft(e.target.value.replace(/\D/g, "").slice(0, 2))
+                }
+                placeholder="2"
+                className={UNDERLINE_INPUT}
+              />
+            </Field>
+
+            <Field label="role">
+              <div ref={rolePickerRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRolePickerOpen((open) => !open);
+                    setCollegePickerOpen(false);
+                  }}
+                  className={`w-full rounded-none border-0 border-b-[1.5px] bg-transparent py-1.5 pr-7 text-left text-base focus:outline-none ${
+                    rolePickerOpen
+                      ? "border-[var(--ink)]"
+                      : "border-[color-mix(in_srgb,var(--ink)_28%,transparent)] focus:border-[var(--ink)]"
+                  } ${roleDraft ? "text-[var(--ink)]" : "text-[var(--ink-soft)]"}`}
+                >
+                  {roleDraft || "Choose role"}
+                </button>
+                <span className="pointer-events-none absolute right-0 top-2.5 text-[var(--ink-muted)]">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 12 8"
+                    className="h-3.5 w-3.5"
+                    fill="none"
                   >
-                    <span className="truncate">{interest}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeInterest(index)}
-                      className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-                      aria-label={`Remove ${interest}`}
-                    >
-                      x
-                    </button>
-                  </span>
-                ))}
+                    <path
+                      d="M1 1.5 6 6.5 11 1.5"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                {rolePickerOpen ? (
+                  <div className={DROPDOWN_PANEL}>
+                    <div className="flex flex-col gap-1">
+                      {roleSelectOptions.map((option) => {
+                        const selected = option === roleDraft;
+                        return (
+                          <button
+                            key={option}
+                            type="button"
+                            onClick={() => {
+                              setRoleDraft(option);
+                              setRolePickerOpen(false);
+                            }}
+                            className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                              selected
+                                ? "bg-[var(--ink)] text-[var(--bg)]"
+                                : "text-[var(--ink)] hover:bg-[var(--bg)]"
+                            }`}
+                          >
+                            {option}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-            <div className="flex items-center gap-2">
+            </Field>
+
+            <Field label="subject" htmlFor="profile-subject">
+              <input
+                id="profile-subject"
+                type="text"
+                value={subjectDraft}
+                onChange={(e) => setSubjectDraft(e.target.value)}
+                placeholder="e.g. PPE"
+                className={UNDERLINE_INPUT}
+              />
+            </Field>
+          </div>
+        </div>
+      </div>
+
+      <section className="mt-10" aria-labelledby="profile-socials-heading">
+        <h2 id="profile-socials-heading" className={SECTION_HEADING}>
+          Socials
+        </h2>
+        <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+          <Field label="instagram" htmlFor="profile-instagram">
+            <input
+              id="profile-instagram"
+              type="text"
+              value={instagramHandleDraft}
+              onChange={(e) => setInstagramHandleDraft(e.target.value)}
+              placeholder="@yourhandle"
+              className={UNDERLINE_INPUT}
+            />
+          </Field>
+          <Field label="whatsapp phone #" htmlFor="profile-whatsapp">
+            <input
+              id="profile-whatsapp"
+              type="tel"
+              inputMode="tel"
+              value={whatsappPhoneDraft}
+              onChange={(e) => setWhatsappPhoneDraft(e.target.value)}
+              placeholder="+44 7..."
+              className={UNDERLINE_INPUT}
+            />
+          </Field>
+        </div>
+      </section>
+
+      <section className="mt-10" aria-labelledby="profile-formal-heading">
+        <h2 id="profile-formal-heading" className={SECTION_HEADING}>
+          Formal-stuff
+        </h2>
+        <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+          <Field label="allergens?" htmlFor="profile-allergens">
+            <input
+              id="profile-allergens"
+              type="text"
+              value={dietaryRequirementsDraft}
+              onChange={(e) => setDietaryRequirementsDraft(e.target.value)}
+              placeholder="e.g. Vegetarian, nut allergy"
+              className={UNDERLINE_INPUT}
+            />
+          </Field>
+
+          <Field label="interests">
+            <div className="flex min-h-[2.35rem] flex-wrap items-center gap-1.5 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_28%,transparent)] pb-1.5 focus-within:border-[var(--ink)]">
+              {interestsDraft.map((interest, index) => (
+                <span
+                  key={`${interest}-${index}`}
+                  className="inline-flex max-w-full items-center gap-1 rounded-full border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] px-2.5 py-0.5 text-sm text-[var(--ink)]"
+                >
+                  <span className="truncate">{interest}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeInterest(index)}
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                    aria-label={`Remove ${interest}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
               <input
                 type="text"
                 enterKeyHint="done"
                 value={interestInput}
-                onChange={(e) => setInterestInput(e.target.value.slice(0, MAX_INTEREST_LENGTH))}
+                onChange={(e) =>
+                  setInterestInput(e.target.value.slice(0, MAX_INTEREST_LENGTH))
+                }
                 onKeyDown={onInterestKeyDown}
                 maxLength={MAX_INTEREST_LENGTH}
-                placeholder="Type an interest…"
-                className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+                placeholder={
+                  interestsDraft.length === 0 ? "Type an interest…" : ""
+                }
+                aria-label="Add an interest"
+                className="min-w-[6rem] flex-1 border-0 bg-transparent py-0.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
               />
               <button
                 type="button"
@@ -588,23 +653,21 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
                 }}
                 disabled={!normalizeInterest(interestInput)}
                 aria-label="Add interest"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-30 disabled:pointer-events-none"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:pointer-events-none disabled:opacity-30"
               >
-                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
                   <path d="M10 3a1 1 0 0 1 1 1v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H4a1 1 0 1 1 0-2h5V4a1 1 0 0 1 1-1Z" />
                 </svg>
               </button>
             </div>
-          </div>
+          </Field>
         </div>
-
-      </div>
+      </section>
 
       {saved ? (
-        <div className="mt-6 flex justify-end">
-          <span className="text-sm text-[var(--ink-muted)]">Saved</span>
-        </div>
+        <p className="mt-6 text-sm text-[var(--ink-muted)]">Saved</p>
       ) : null}
-    </SketchCard>
+    </div>
   );
 }
+

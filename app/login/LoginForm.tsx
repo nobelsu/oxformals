@@ -72,11 +72,22 @@ function formatVerifyError(message: string): string {
 
 function PasswordToggle({
   visible,
+<<<<<<< HEAD
   onToggle,
 }: {
   visible: boolean;
   onToggle: () => void;
 }) {
+=======
+  show,
+  onToggle,
+}: {
+  visible: boolean;
+  show: boolean;
+  onToggle: () => void;
+}) {
+  if (!show) return null;
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
   return (
     <button
       type="button"
@@ -141,7 +152,10 @@ export function LoginForm() {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [passwordDone, setPasswordDone] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+<<<<<<< HEAD
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+=======
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
   const [greetingIdx, setGreetingIdx] = useState(0);
   const [name, setName] = useState("");
   const [college, setCollege] = useState("");
@@ -597,12 +611,20 @@ export function LoginForm() {
                   placeholder="Your password"
                   className={`${inputCls} pr-12`}
                 />
+<<<<<<< HEAD
                 {password.length > 0 && (
                   <PasswordToggle
                     visible={showPassword}
                     onToggle={() => setShowPassword((v) => !v)}
                   />
                 )}
+=======
+                <PasswordToggle
+                  visible={showPassword}
+                  show={password.length > 0}
+                  onToggle={() => setShowPassword((v) => !v)}
+                />
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
               </div>
             </label>
 
@@ -640,12 +662,20 @@ export function LoginForm() {
         ) : step === "set-password" ? (
           <form onSubmit={onSetPassword} className="flex flex-col gap-4">
             <p className="text-[var(--ink-muted)] leading-relaxed">
+<<<<<<< HEAD
               Set a password for faster sign in.
+=======
+              Set a password for faster sign-in next time.
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
             </p>
 
             <label className="flex flex-col gap-2">
               <span className="text-sm text-[var(--ink-muted)]">
+<<<<<<< HEAD
                 Set password
+=======
+                New password
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
               </span>
               <div className="relative">
                 <input
@@ -657,12 +687,20 @@ export function LoginForm() {
                   placeholder="At least 8 characters"
                   className={`${inputCls} pr-12`}
                 />
+<<<<<<< HEAD
                 {password.length > 0 && (
                   <PasswordToggle
                     visible={showPassword}
                     onToggle={() => setShowPassword((v) => !v)}
                   />
                 )}
+=======
+                <PasswordToggle
+                  visible={showPassword}
+                  show={password.length > 0}
+                  onToggle={() => setShowPassword((v) => !v)}
+                />
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
               </div>
             </label>
 
@@ -670,6 +708,7 @@ export function LoginForm() {
               <span className="text-sm text-[var(--ink-muted)]">
                 Confirm password
               </span>
+<<<<<<< HEAD
               <div className="relative">
                 <input
                   type={showPasswordConfirm ? "text" : "password"}
@@ -686,6 +725,16 @@ export function LoginForm() {
                   />
                 )}
               </div>
+=======
+              <input
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+                placeholder="Re-enter password"
+                className={inputCls}
+              />
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
             </label>
 
             {error && <p className="text-sm text-[var(--danger)]">{error}</p>}

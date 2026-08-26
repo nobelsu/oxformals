@@ -12,7 +12,11 @@ import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Avatar, PRESET_AVATARS, PresetAvatarIcon, initialsFor } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Modal";
+<<<<<<< HEAD
 import { SketchCard } from "@/components/ui/SketchCard";
+=======
+import { SketchLock } from "@/components/ui/SketchLock";
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
 import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
 import { RequestPayModal } from "@/components/swap/RequestPayModal";
@@ -22,7 +26,10 @@ import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { ProfileActivityStream } from "./ProfileActivityStream";
 import { BadgeCaseModal } from "./BadgeCaseModal";
+<<<<<<< HEAD
 import { SettingsModal } from "@/components/SettingsModal";
+=======
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
 import { listingSupportsSwap } from "@/lib/data/listingType";
@@ -391,6 +398,7 @@ export function ProfileView({
           aria-label={`View ${name}'s avatar`}
         >
           <Avatar name={name} size="lg" source={avatar} />
+<<<<<<< HEAD
         </div>
         {avatarOpen && (
           <AvatarLightbox source={avatar} name={name} onClose={closeAvatar} />
@@ -481,12 +489,136 @@ export function ProfileView({
             </p>
           ) : null}
         </div>
+=======
+        </div>
+        {avatarOpen && (
+          <AvatarLightbox source={avatar} name={name} onClose={closeAvatar} />
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <h1 className="font-display text-[1.75rem] leading-tight">
+              {name}
+            </h1>
+            <button
+              type="button"
+              onClick={() => setBadgeCaseOpen(true)}
+              aria-label={`Badges, ${earnedCount} of ${TOTAL_BADGE_COUNT} earned. Open badge case.`}
+              className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1 transition-opacity hover:opacity-80"
+            >
+              {Array.from({ length: 4 }, (_, i) => {
+                const earned = (earnedBadges ?? [])[i];
+                const def = earned ? badgeById(earned.badgeId) : undefined;
+                return (
+                  <span
+                    key={def?.id ?? `empty-${i}`}
+                    title={def?.name ?? "Locked badge"}
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 bg-[var(--bg)] text-sm ${
+                      def
+                        ? "border-[var(--ink)]"
+                        : "border-dashed border-[var(--ink-soft)] opacity-55"
+                    }`}
+                  >
+                    {def ? def.icon : <SketchLock className="h-3.5 w-3.5" />}
+                  </span>
+                );
+              })}
+            </button>
+          </div>
+          {profileLine ? (
+            <p className="mt-0.5 text-sm text-[var(--ink-soft)]">{profileLine}</p>
+          ) : null}
+        </div>
+        {isOwnProfile ? (
+          onEditProfile ? (
+            <button type="button" onClick={onEditProfile} className={editProfileClass}>
+              Edit
+            </button>
+          ) : (
+            <Link href="/?tab=mine&edit=1" className={editProfileClass}>
+              Edit
+            </Link>
+          )
+        ) : isAuthenticated ? (
+          <MessageUserButton
+            otherUserId={userId as Id<"users">}
+            className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() =>
+              router.push(
+                `/login?next=${encodeURIComponent(`/profile/${userId}`)}`,
+              )
+            }
+            className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+          >
+            Message
+          </button>
+        )}
+      </div>
+
+      {(instagramHandle || whatsappPhone) && (
+        <div className="flex flex-wrap gap-2">
+          {instagramHandle && (
+            <a
+              href={`https://instagram.com/${instagramHandle}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-8 max-w-full min-w-0 items-center gap-1.5 rounded-full border-[1.5px] border-[color-mix(in_srgb,var(--ink)_35%,transparent)] px-3 text-[0.85rem] text-[var(--ink-soft)] transition-colors hover:border-[var(--ink)] hover:text-[var(--ink)]"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" />
+                <circle cx="12" cy="12" r="5" />
+                <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+              </svg>
+              <span className="truncate">@{instagramHandle}</span>
+            </a>
+          )}
+          {whatsappPhone && (
+            <a
+              href={`https://wa.me/${whatsappPhone.replace(/[^\d+]/g, "")}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-8 max-w-full min-w-0 items-center gap-1.5 rounded-full border-[1.5px] border-[color-mix(in_srgb,var(--ink)_35%,transparent)] px-3 text-[0.85rem] text-[var(--ink-soft)] transition-colors hover:border-[var(--ink)] hover:text-[var(--ink)]"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+              </svg>
+              <span className="truncate">{whatsappPhone}</span>
+            </a>
+          )}
+        </div>
+      )}
+
+      {(dietaryRequirements || subject) && (
+        <div className="-mt-4 space-y-0.5 text-sm text-[var(--ink-muted)]">
+          {dietaryRequirements ? (
+            <p>
+              <span className="font-medium text-[var(--ink)]">
+                Allergens / Dietary requirements:
+              </span>{" "}
+              {dietaryRequirements}
+            </p>
+          ) : null}
+          {subject ? (
+            <p>
+              <span className="font-medium text-[var(--ink)]">Subject:</span>{" "}
+              {subject}
+            </p>
+          ) : null}
+        </div>
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
       )}
 
       {/* Stat strip */}
       <div className="flex items-baseline gap-6">
         <span className="text-[1.05rem]">
+<<<<<<< HEAD
           <span className="font-extrabold text-[var(--accent)]">
+=======
+          <span className="font-extrabold text-[#4d9a5c] dark:text-[#86c28a]">
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
             {stats ? stats.activeCount : "–"}
           </span>{" "}
           <span className="text-[0.75rem] uppercase tracking-[0.05em] text-[var(--ink-muted)]">
@@ -507,6 +639,7 @@ export function ProfileView({
         </span>
       </div>
 
+<<<<<<< HEAD
       {/* Badge row */}
       <button
         type="button"
@@ -530,6 +663,8 @@ export function ProfileView({
         </span>
       </button>
 
+=======
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
       {/* Activity stream */}
       <section aria-label="Activity">
         <h2 className="text-[0.7rem] font-bold uppercase tracking-[0.08em] text-[var(--ink-muted)]">
@@ -565,6 +700,7 @@ export function ProfileView({
         )}
       </section>
 
+<<<<<<< HEAD
       {isOwnProfile ? (
         <div className="flex flex-wrap justify-center gap-3 border-t-[2px] border-[var(--ink)]/10 pt-8">
           <button
@@ -593,6 +729,8 @@ export function ProfileView({
         />
       ) : null}
 
+=======
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
       <BadgeCaseModal
         open={badgeCaseOpen}
         onClose={() => setBadgeCaseOpen(false)}
