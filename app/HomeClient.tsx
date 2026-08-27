@@ -4,13 +4,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { MessagesTab } from "@/components/chat/MessagesTab";
-import { RankingsTab } from "@/components/colleges/RankingsTab";
+import { CollegesTab } from "@/components/colleges/CollegesTab";
+import { FeedTab } from "@/components/feed/FeedTab";
 import { BrowseTab } from "@/components/swap/BrowseTab";
 import { MineTab } from "@/components/swap/MineTab";
 import { RequestsTab } from "@/components/swap/RequestsTab";
 import { SignInGate } from "@/components/swap/SignInGate";
 
-const TABS = ["browse", "rankings", "requests", "chats", "mine"] as const;
+const TABS = ["feed", "browse", "colleges", "requests", "chats", "mine"] as const;
 type Tab = (typeof TABS)[number];
 
 function isTab(x: string | null): x is Tab {
@@ -23,10 +24,10 @@ export function HomeClient() {
   const searchParams = useSearchParams();
   const urlTab = searchParams.get("tab");
 
-  const [tab, setTab] = useState<Tab>(isTab(urlTab) ? urlTab : "browse");
+  const [tab, setTab] = useState<Tab>(isTab(urlTab) ? urlTab : "feed");
 
   useEffect(() => {
-    const nextFromUrl: Tab = isTab(urlTab) ? urlTab : "browse";
+    const nextFromUrl: Tab = isTab(urlTab) ? urlTab : "feed";
     if (nextFromUrl !== tab) {
       setTab(nextFromUrl);
     }
@@ -36,7 +37,7 @@ export function HomeClient() {
     (next: Tab, options?: { openListFormal?: boolean }) => {
       setTab(next);
       const params = new URLSearchParams(searchParams.toString());
-      if (next === "browse") {
+      if (next === "feed") {
         params.delete("tab");
       } else {
         params.set("tab", next);
@@ -70,8 +71,8 @@ export function HomeClient() {
         />
       );
     }
-    if (tab === "rankings") {
-      return <RankingsTab />;
+    if (tab === "colleges") {
+      return <CollegesTab />;
     }
     // Same hydration rule as the landing branch above: `isAuthenticated` is
     // false while auth resolves, so gating on it alone flashes the sign-in wall
@@ -79,6 +80,9 @@ export function HomeClient() {
     if (status !== "ready") return null;
     if (!isAuthenticated) {
       return <SignInGate />;
+    }
+    if (tab === "feed") {
+      return <FeedTab />;
     }
     if (tab === "requests") {
       return <RequestsTab />;

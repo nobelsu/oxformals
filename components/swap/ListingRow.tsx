@@ -40,6 +40,12 @@ type Props = {
    * blocks used by the browse feed so the CTA doesn't float at the top.
    */
   align?: "start" | "center";
+  /**
+   * "Header band" card layout (browse + feed): a washed college/date band over
+   * a padded body of seats, menu, host and CTA. Renders the inner content only
+   * — the caller supplies the rounded, overflow-clipped card chrome.
+   */
+  card?: boolean;
 };
 
 export function ListingRow({
@@ -53,6 +59,7 @@ export function ListingRow({
   title,
   compact = false,
   align = "start",
+  card = false,
 }: Props) {
   const nowMs = useNowMs();
   const isPast = listingIsPast(listing.dateTime, nowMs);
@@ -96,6 +103,127 @@ export function ListingRow({
   const hasAction = showStatusInsteadOfCta || !!disabled || !!onRequest;
   const compactTagOnly = compact && !hasAction;
 
+  // "Split rail" card layout — Variant B: content on the left, a tags + CTA
+  // rail on the right. Renders inner content only; the caller (browse day-list
+  // / feed row) provides the rounded, clipped card chrome.
+  if (card) {
+    const rail = (
+      <span
+        className="flex shrink-0 flex-col items-end justify-between gap-3 self-stretch"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <span className="flex flex-col items-end gap-1.5">
+          <ListingTypeTag listingType={listing.listingType} />
+          <FormalTypeTag formalType={listing.formalType} />
+        </span>
+        {showStatusInsteadOfCta ? (
+          <ListingStatusTag
+            status={listing.status}
+            seatsAvailable={safeSeatsAvailable}
+            size="sm"
+          />
+        ) : disabled ? null : onRequest ? (
+          <button
+            type="button"
+            onClick={onRequest}
+            className="whitespace-nowrap rounded-full bg-[var(--accent)] px-6 py-2.5 text-[0.95rem] font-semibold text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
+          >
+            {ctaLabel}
+          </button>
+        ) : null}
+      </span>
+    );
+
+    return (
+      <div
+        role={onPress ? "button" : undefined}
+        tabIndex={onPress ? 0 : undefined}
+        aria-label={
+          onPress
+            ? `${title ?? listing.college} · ${formatListingTime(listing.dateTime)}`
+            : undefined
+        }
+        onClick={onPress}
+        onKeyDown={
+          onPress
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onPress();
+                }
+              }
+            : undefined
+        }
+        className={`flex gap-4 px-5 py-4 sm:px-6 sm:py-5 ${
+          onPress
+            ? "cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_3%,transparent)]"
+            : ""
+        }`}
+      >
+        {/* Left content */}
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <div className="flex flex-wrap items-baseline gap-x-2.5">
+            <h3 className="break-words font-display text-[1.6rem] uppercase leading-none tracking-wide sm:text-[1.9rem]">
+              {title ?? listing.college}
+            </h3>
+            <span className="text-[0.95rem] font-medium text-[var(--ink-muted)]">
+              {formatListingTime(listing.dateTime)}
+            </span>
+          </div>
+
+          {!isPast ? (
+            <span className="inline-flex items-center gap-2">
+              <SeatPips
+                total={listing.groupSize}
+                taken={listing.groupSize - safeSeatsAvailable}
+              />
+              {rowTail ? (
+                <span className="text-[0.95rem] text-[var(--ink-muted)]">
+                  {rowTail}
+                </span>
+              ) : null}
+            </span>
+          ) : rowTail ? (
+            <span className="text-[0.95rem] text-[var(--ink-muted)]">
+              {rowTail}
+            </span>
+          ) : null}
+
+          {listing.menu ? (
+            <p className="line-clamp-1 break-words text-[0.9rem] text-[var(--ink-muted)]">
+              <span className="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[var(--ink-soft)]">
+                On the menu{" "}
+              </span>
+              {listing.menu}
+            </p>
+          ) : null}
+
+          <Link
+            href={`/profile/${owner.id}`}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            className="mt-auto flex min-w-0 items-center gap-2.5 pt-1 hover:underline"
+          >
+            <Avatar name={owner.name} size="md" source={owner.avatar} />
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate font-semibold">
+                {owner.name.split(" ")[0]}
+              </span>
+              {profileLine ? (
+                <span className="truncate text-[0.85rem] text-[var(--ink-soft)]">
+                  {profileLine}
+                </span>
+              ) : null}
+            </span>
+          </Link>
+        </div>
+
+        {rail}
+      </div>
+    );
+  }
+
   return (
     <div
       role={onPress ? "button" : undefined}
@@ -116,7 +244,7 @@ export function ListingRow({
             }
           : undefined
       }
-      className={`flex gap-3 py-4 ${
+      className={`flex gap-3 ${spacious ? "py-0" : "py-4"} ${
         compactTagOnly ? "flex-row items-start" : "flex-col"
       }${
         onPress
@@ -162,7 +290,7 @@ export function ListingRow({
 
         <div
           className={`${
-            spacious ? "mt-3.5" : "mt-1.5"
+            spacious ? "mt-2" : "mt-1.5"
           } flex flex-wrap items-center gap-x-2 gap-y-1`}
         >
           {!isPast ? (
@@ -181,7 +309,7 @@ export function ListingRow({
 
         <div
           className={`${
-            spacious ? "mt-4" : "mt-2"
+            spacious ? "mt-2.5" : "mt-2"
           } flex flex-wrap items-center gap-2`}
         >
           <Link
@@ -220,7 +348,7 @@ export function ListingRow({
 
         {hasListingMenu(listing.menu, listing.menuPdfUrl) ? (
           <div
-            className={spacious ? "mt-4" : "mt-2"}
+            className={spacious ? "mt-2.5" : "mt-2"}
             // Only the file link needs to swallow the click/keydown before it
             // reaches the row's onPress (otherwise opening the menu file also
             // "selects" the row behind it). Scoped to the link itself rather
@@ -247,7 +375,7 @@ export function ListingRow({
         {listing.message ? (
           <p
             className={`${
-              spacious ? "mt-4" : "mt-2"
+              spacious ? "mt-2.5" : "mt-2"
             } line-clamp-2 break-words text-pretty text-[1rem] italic text-[var(--ink-muted)]`}
           >
             &ldquo;{listing.message}&rdquo;
@@ -255,7 +383,7 @@ export function ListingRow({
         ) : null}
 
         {!hideInterests && owner.interests.length > 0 ? (
-          <div className={`${spacious ? "mt-4" : "mt-2"} flex flex-wrap gap-1.5`}>
+          <div className={`${spacious ? "mt-2.5" : "mt-2"} flex flex-wrap gap-1.5`}>
             {owner.interests.map((tag) => (
               <Chip key={tag} size="sm" as="span" className="!text-[0.75rem]">
                 {tag}

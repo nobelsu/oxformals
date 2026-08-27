@@ -84,10 +84,10 @@ export function CollegeOverallRank({ rank }: Props) {
       <span className="text-sm text-[var(--ink-muted)]">
         overall ·{" "}
         <Link
-          href="/?tab=rankings"
+          href="/?tab=colleges"
           className="underline underline-offset-2 transition-colors hover:text-[var(--ink)]"
         >
-          league table
+          all colleges
         </Link>
       </span>
     </p>

@@ -94,10 +94,10 @@ export function CollegePage({ college }: Props) {
     <div className="flex flex-col gap-8">
       <div>
         <Link
-          href="/?tab=rankings"
+          href="/?tab=colleges"
           className="text-sm text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
         >
-          ← Rankings
+          ← Colleges
         </Link>
         <h1 className="mt-3 font-display text-4xl uppercase tracking-wide">
           {college}

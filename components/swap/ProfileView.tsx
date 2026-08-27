@@ -22,6 +22,7 @@ import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { ProfileActivityStream } from "./ProfileActivityStream";
 import { BadgeCaseModal } from "./BadgeCaseModal";
+import { SettingsModal } from "@/components/SettingsModal";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
 import { listingSupportsSwap } from "@/lib/data/listingType";
@@ -149,10 +150,11 @@ export function ProfileView({
   onEditProfile,
 }: ProfileViewProps) {
   const router = useRouter();
-  const { user: currentUser, isAuthenticated } = useAuth();
+  const { user: currentUser, isAuthenticated, signOut } = useAuth();
   const { getUser, listings, requests, sendRequest, getListing } = useData();
   const [detailListing, setDetailListing] = useState<Listing | null>(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
   const [pendingRequestType, setPendingRequestType] =
     useState<RequestType | null>(null);
@@ -562,6 +564,34 @@ export function ProfileView({
           />
         )}
       </section>
+
+      {isOwnProfile ? (
+        <div className="flex flex-wrap justify-center gap-3 border-t-[2px] border-[var(--ink)]/10 pt-8">
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            className="cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-6 py-2 text-sm font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+          >
+            Settings
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              void signOut().then(() => router.push("/"));
+            }}
+            className="cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-6 py-2 text-sm font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+          >
+            Sign out
+          </button>
+        </div>
+      ) : null}
+
+      {isOwnProfile ? (
+        <SettingsModal
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+        />
+      ) : null}
 
       <BadgeCaseModal
         open={badgeCaseOpen}

@@ -226,4 +226,29 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_userId_and_badgeId", ["userId", "badgeId"]),
+  /**
+   * Comments on campus-feed items. `targetKey` is the feed item's stable key
+   * (e.g. "review:<id>", "listing:<id>", "attended:<college-slug>:<date>") so a
+   * thread survives the feed being re-assembled on the fly and can attach to a
+   * bundled item that has no single source row.
+   */
+  feedComments: defineTable({
+    targetKey: v.string(),
+    userId: v.id("users"),
+    text: v.string(),
+  }).index("by_targetKey", ["targetKey"]),
+  /** Likes on campus-feed items, keyed by the same stable `targetKey`. */
+  feedLikes: defineTable({
+    targetKey: v.string(),
+    userId: v.id("users"),
+  })
+    .index("by_targetKey", ["targetKey"])
+    .index("by_targetKey_and_userId", ["targetKey", "userId"]),
+  /** Per-user saved feed items, keyed by the same stable `targetKey`. */
+  feedBookmarks: defineTable({
+    targetKey: v.string(),
+    userId: v.id("users"),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_targetKey_and_userId", ["targetKey", "userId"]),
 });

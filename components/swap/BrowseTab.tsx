@@ -474,7 +474,7 @@ export function BrowseTab({
                     listing={l}
                     owner={owner}
                     memberUsers={members}
-                    align="center"
+                    card
                     onPress={() => setDetailListing(l)}
                     onRequest={() => handleRequestClick(l)}
                     disabled={!isAuthenticated}

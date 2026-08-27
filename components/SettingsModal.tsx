@@ -11,7 +11,7 @@ type Props = {
   onClose: () => void;
 };
 
-export function NavSettingsModal({ open, onClose }: Props) {
+export function SettingsModal({ open, onClose }: Props) {
   const { user, updateProfile, hasPassword, setPassword } = useAuth();
   const fontPickerRef = useRef<HTMLDivElement | null>(null);
   const [fontPickerOpen, setFontPickerOpen] = useState(false);
@@ -118,18 +118,18 @@ export function NavSettingsModal({ open, onClose }: Props) {
       title="Settings"
       bodyScrollable={false}
     >
-      <div id="nav-settings-panel" className="min-w-0 w-full space-y-6">
+      <div id="settings-panel" className="min-w-0 w-full space-y-6">
         <div>
           <label className="flex flex-col gap-2">
             <span
-              id="nav-settings-theme-label"
+              id="settings-theme-label"
               className="text-sm text-[var(--ink-muted)]"
             >
               Theme
             </span>
             <UiFontDropdown
               ref={fontPickerRef}
-              aria-labelledby="nav-settings-theme-label"
+              aria-labelledby="settings-theme-label"
               value={user.uiFont}
               onChange={(id) => {
                 void onFontChange(id);
@@ -149,7 +149,7 @@ export function NavSettingsModal({ open, onClose }: Props) {
         <div className="min-w-0 border-t border-[var(--ink-soft)] pt-5">
           <div className="flex items-center justify-between gap-4">
             <span
-              id="nav-settings-notifications-label"
+              id="settings-notifications-label"
               className="text-sm text-[var(--ink-muted)]"
             >
               Notifications
@@ -158,7 +158,7 @@ export function NavSettingsModal({ open, onClose }: Props) {
               type="button"
               role="switch"
               aria-checked={notificationsOn}
-              aria-labelledby="nav-settings-notifications-label"
+              aria-labelledby="settings-notifications-label"
               disabled={notificationsBusy}
               onClick={() => {
                 void onNotificationsToggle();

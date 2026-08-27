@@ -5,11 +5,11 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { UnreadBadge } from "@/components/chat/UnreadBadge";
+import { Avatar } from "@/components/ui/Avatar";
 import { Drawer } from "@/components/ui/Drawer";
 import { api } from "@/convex/_generated/api";
 import { BROWSE_ROUTE } from "@/lib/ui/routes";
 import { useAuth } from "./auth/useAuth";
-import { NavSettingsModal } from "./NavSettingsModal";
 
 function useNavTheme() {
   const [inverted, setInverted] = useState(false);
@@ -90,12 +90,16 @@ function useNavTheme() {
 }
 
 const TABS = [
+  { id: "feed", label: "Feed" },
   { id: "browse", label: "Browse" },
-  { id: "rankings", label: "Rankings" },
+  { id: "colleges", label: "Colleges" },
   { id: "requests", label: "Activity" },
   { id: "chats", label: "Chats" },
-  { id: "mine", label: "Me" },
 ] as const;
+
+/** Labels for tabs that live behind other entry points (e.g. the avatar) and
+ *  so aren't in the visible tab bar, but still need a mobile header title. */
+const OFF_BAR_LABELS: Record<string, string> = { mine: "Me" };
 
 export function Nav() {
   const pathname = usePathname();
@@ -120,7 +124,6 @@ function NavShell() {
 
 function NavInner() {
   const { status, isAuthenticated, user, signOut } = useAuth();
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [landingScrolled, setLandingScrolled] = useState(false);
   const router = useRouter();
@@ -136,8 +139,8 @@ function NavInner() {
   const activeTab = isRequestsDetail
     ? "requests"
     : isCollegeDetail
-      ? "rankings"
-      : searchParams.get("tab") ?? "browse";
+      ? "colleges"
+      : searchParams.get("tab") ?? "feed";
   // Mirrors HomeClient's landing-page condition: logged-out visitors on "/"
   // with no ?tab= and no ?listing= (email deep links bypass landing) see the
   // marketing page, not BrowseTab, so Browse shouldn't be marked active
@@ -152,7 +155,9 @@ function NavInner() {
 
   const onTabbedPage = (pathname === "/" && !isLandingPage) || isRequestsDetail;
   const activeTabLabel =
-    TABS.find((t) => t.id === activeTab)?.label ?? "Browse";
+    TABS.find((t) => t.id === activeTab)?.label ??
+    OFF_BAR_LABELS[activeTab] ??
+    "Browse";
   const totalUnread =
     useQuery(
       api.chat.getTotalUnreadCount,
@@ -388,13 +393,9 @@ function NavInner() {
   }
 
   function hrefFor(tab: string): string {
+    if (tab === "feed") return "/";
     if (tab === "browse") return BROWSE_ROUTE;
     return `/?tab=${tab}`;
-  }
-
-  function openSettings() {
-    setDrawerOpen(false);
-    setSettingsOpen(true);
   }
 
   return (
@@ -445,7 +446,7 @@ function NavInner() {
                 href={hrefFor(t.id)}
                 isActive={
                   (onTabbedPage && activeTab === t.id) ||
-                  (isCollegeDetail && t.id === "rankings")
+                  (isCollegeDetail && t.id === "colleges")
                 }
                 totalUnread={totalUnread}
               />
@@ -456,45 +457,26 @@ function NavInner() {
         <div className="flex min-w-0 items-center justify-end gap-2 text-sm whitespace-nowrap sm:gap-3">
           {status !== "ready" ? null : isAuthenticated && user ? (
             <>
-              <span className="hidden sm:inline whitespace-nowrap text-[var(--nav-ink-muted)]">
-                {user.name.split(" ")[0]}
-                <span className="text-[var(--nav-ink-muted)]"> · {user.college}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  void signOut().then(() => router.push("/"));
-                }}
-                className="hidden whitespace-nowrap rounded-full border-[2px] border-[var(--nav-ink)] px-3 py-0.5 font-medium text-[var(--nav-ink)] hover:bg-[var(--nav-ink)] hover:text-[var(--nav-bg)] transition-colors sm:inline-block"
+              <Link
+                href="/?tab=mine"
+                aria-label="Your profile"
+                aria-current={activeTab === "mine" ? "page" : undefined}
+                className="group hidden min-w-0 items-center gap-2.5 rounded-full transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)] sm:inline-flex"
               >
-                Sign out
-              </button>
-              <button
-                type="button"
-                aria-label="Settings"
-                aria-expanded={settingsOpen}
-                aria-controls="nav-settings-panel"
-                onClick={() => setSettingsOpen(true)}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--nav-ink)] text-[var(--nav-ink)] transition-colors hover:bg-[var(--nav-ink)] hover:text-[var(--nav-bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)]"
-              >
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4"
+                <span className="min-w-0 truncate whitespace-nowrap text-[var(--nav-ink-muted)] group-hover:text-[var(--nav-ink)]">
+                  {user.name.split(" ")[0]}
+                  <span className="text-[var(--nav-ink-muted)]"> · {user.college}</span>
+                </span>
+                <span
+                  className={`shrink-0 rounded-full transition-shadow ${
+                    activeTab === "mine"
+                      ? "ring-2 ring-[var(--nav-ink)] ring-offset-2 ring-offset-[var(--nav-bg)]"
+                      : ""
+                  }`}
                 >
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-                </svg>
-              </button>
-              <NavSettingsModal
-                open={settingsOpen}
-                onClose={() => setSettingsOpen(false)}
-              />
+                  <Avatar name={user.name} source={user.avatar} size="sm" />
+                </span>
+              </Link>
             </>
           ) : (
             <Link
@@ -521,7 +503,7 @@ function NavInner() {
                   href={hrefFor(t.id)}
                   isActive={
                     (onTabbedPage && activeTab === t.id) ||
-                    (isCollegeDetail && t.id === "rankings")
+                    (isCollegeDetail && t.id === "colleges")
                   }
                   totalUnread={totalUnread}
                   onNavigate={() => setDrawerOpen(false)}
@@ -533,17 +515,22 @@ function NavInner() {
 
           {status === "ready" && isAuthenticated && user ? (
             <div className="flex flex-col gap-4 border-t-[2px] border-[var(--ink)]/15 pt-6">
-              <p className="text-sm text-[var(--ink-muted)]">
-                {user.name}
-                <span className="text-[var(--ink-soft)]"> · {user.college}</span>
-              </p>
-              <button
-                type="button"
-                onClick={openSettings}
-                className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+              <Link
+                href="/?tab=mine"
+                onClick={() => setDrawerOpen(false)}
+                aria-current={activeTab === "mine" ? "page" : undefined}
+                className="-mx-1 flex items-center gap-3 rounded-xl px-1 py-1 transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
               >
-                Settings
-              </button>
+                <Avatar name={user.name} source={user.avatar} size="md" />
+                <span className="min-w-0">
+                  <span className="block truncate text-base font-semibold text-[var(--ink)]">
+                    {user.name}
+                  </span>
+                  <span className="block truncate text-sm text-[var(--ink-muted)]">
+                    {user.college} · View profile
+                  </span>
+                </span>
+              </Link>
               <button
                 type="button"
                 onClick={() => {
@@ -608,14 +595,6 @@ function NavTabLink({
       >
         {tab.label}
       </span>
-      {tab.id === "rankings" ? (
-        <span
-          className="rounded-full border border-[var(--accent)] px-1.5 py-px text-[0.55rem] font-semibold normal-case tracking-normal text-[var(--accent)]"
-          aria-hidden="true"
-        >
-          new
-        </span>
-      ) : null}
       {showUnread ? (
         <UnreadBadge count={totalUnread} className="translate-y-px" />
       ) : null}

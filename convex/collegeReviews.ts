@@ -486,6 +486,45 @@ export const getLeaderboard = query({
   },
 });
 
+const galleryEntryValidator = v.object({
+  college: v.string(),
+  photoCount: v.number(),
+  reviewCount: v.number(),
+});
+
+/**
+ * Per-college summary that powers the Colleges directory: every college in
+ * canonical order with how many review photos and reviews it has. Kept to a
+ * single table scan with no per-image storage lookups since the list only
+ * needs counts, not the images themselves.
+ */
+export const getCollegeGallery = query({
+  args: {},
+  returns: v.array(galleryEntryValidator),
+  handler: async (ctx) => {
+    type Agg = { photoCount: number; reviewCount: number };
+    const byCollege = new Map<string, Agg>();
+
+    const rows = await ctx.db.query("collegeReviews").collect();
+    for (const row of rows) {
+      const college = normalizeCollegeName(row.college);
+      const agg = byCollege.get(college) ?? { photoCount: 0, reviewCount: 0 };
+      agg.reviewCount += 1;
+      agg.photoCount += (row.imageIds ?? []).length;
+      byCollege.set(college, agg);
+    }
+
+    return OXFORD_COLLEGES.map((college) => {
+      const agg = byCollege.get(normalizeCollegeName(college));
+      return {
+        college,
+        photoCount: agg?.photoCount ?? 0,
+        reviewCount: agg?.reviewCount ?? 0,
+      };
+    });
+  },
+});
+
 export const listPublicReviewsForUser = query({
   args: {
     userId: v.id("users"),
