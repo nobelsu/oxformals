@@ -226,7 +226,6 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_userId_and_badgeId", ["userId", "badgeId"]),
-<<<<<<< HEAD
   /**
    * Comments on campus-feed items. `targetKey` is the feed item's stable key
    * (e.g. "review:<id>", "listing:<id>", "attended:<college-slug>:<date>") so a
@@ -252,6 +251,4 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_targetKey_and_userId", ["targetKey", "userId"]),
-=======
->>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
 });

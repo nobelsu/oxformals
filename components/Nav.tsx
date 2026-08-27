@@ -89,84 +89,6 @@ function useNavTheme() {
   return { navRef, inverted, hidden };
 }
 
-function useNavTheme() {
-  const [inverted, setInverted] = useState(false);
-  const [hidden, setHidden] = useState(false);
-  const navRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const nav = navRef.current;
-    if (!nav) return;
-
-    const check = () => {
-      const navRect = nav.getBoundingClientRect();
-      const midY = navRect.top + navRect.height / 2;
-      const midX = navRect.left + navRect.width / 2;
-      nav.style.setProperty("pointer-events", "none", "important");
-      nav.style.visibility = "hidden";
-      const el = document.elementFromPoint(midX, midY);
-      nav.style.removeProperty("pointer-events");
-      nav.style.visibility = "";
-      if (!el) return;
-
-      const inFinale = !!el.closest("[data-nav-hide]");
-      setHidden(inFinale);
-      if (inFinale) return;
-
-      let r = 0, g = 0, b = 0;
-      let found = false;
-
-      if (el instanceof HTMLCanvasElement) {
-        try {
-          const rect = el.getBoundingClientRect();
-          const scaleX = el.width / rect.width;
-          const scaleY = el.height / rect.height;
-          const cx = (midX - rect.left) * scaleX;
-          const cy = (midY - rect.top) * scaleY;
-          const ctx2d = el.getContext("2d");
-          if (ctx2d) {
-            const px = ctx2d.getImageData(Math.round(cx), Math.round(cy), 1, 1).data;
-            if (px[3] > 20) {
-              r = px[0]; g = px[1]; b = px[2];
-              found = true;
-            }
-          }
-        } catch { /* tainted canvas or other error — fall through */ }
-      }
-
-      if (!found) {
-        let target: Element | null = el instanceof HTMLCanvasElement ? el.parentElement : el;
-        while (target) {
-          const bg = getComputedStyle(target).backgroundColor;
-          if (bg && bg !== "transparent" && bg !== "rgba(0, 0, 0, 0)") {
-            const match = bg.match(/\d+/g);
-            if (match) {
-              [r, g, b] = match.map(Number);
-              found = true;
-            }
-            break;
-          }
-          target = target.parentElement;
-        }
-      }
-
-      if (!found) return;
-      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-      setInverted(luminance < 0.5);
-    };
-
-    check();
-    const id = setInterval(check, 80);
-    window.addEventListener("scroll", check, { passive: true });
-    return () => {
-      clearInterval(id);
-      window.removeEventListener("scroll", check);
-    };
-  }, []);
-
-  return { navRef, inverted, hidden };
-}
-
 const TABS = [
   { id: "feed", label: "Feed" },
   { id: "browse", label: "Browse" },
@@ -217,13 +139,8 @@ function NavInner() {
   const activeTab = isRequestsDetail
     ? "requests"
     : isCollegeDetail
-<<<<<<< HEAD
       ? "colleges"
       : searchParams.get("tab") ?? "feed";
-=======
-      ? "rankings"
-      : searchParams.get("tab") ?? "browse";
->>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
   // Mirrors HomeClient's landing-page condition: logged-out visitors on "/"
   // with no ?tab= and no ?listing= (email deep links bypass landing) see the
   // marketing page, not BrowseTab, so Browse shouldn't be marked active
@@ -476,10 +393,7 @@ function NavInner() {
   }
 
   function hrefFor(tab: string): string {
-<<<<<<< HEAD
     if (tab === "feed") return "/";
-=======
->>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
     if (tab === "browse") return BROWSE_ROUTE;
     return `/?tab=${tab}`;
   }
@@ -498,7 +412,6 @@ function NavInner() {
             type="button"
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--nav-ink)] text-[var(--nav-ink)] transition-colors hover:bg-[var(--nav-ink)] hover:text-[var(--nav-bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)] sm:hidden"
             aria-label="Open menu"
-            data-onboarding="menu"
             aria-expanded={drawerOpen}
             aria-controls="nav-drawer-panel"
             onClick={() => setDrawerOpen(true)}
@@ -544,11 +457,9 @@ function NavInner() {
         <div className="flex min-w-0 items-center justify-end gap-2 text-sm whitespace-nowrap sm:gap-3">
           {status !== "ready" ? null : isAuthenticated && user ? (
             <>
-<<<<<<< HEAD
               <Link
                 href="/?tab=mine"
                 aria-label="Your profile"
-                data-onboarding="me"
                 aria-current={activeTab === "mine" ? "page" : undefined}
                 className="group hidden min-w-0 items-center gap-2.5 rounded-full transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)] sm:inline-flex"
               >
@@ -562,34 +473,6 @@ function NavInner() {
                       ? "ring-2 ring-[var(--nav-ink)] ring-offset-2 ring-offset-[var(--nav-bg)]"
                       : ""
                   }`}
-=======
-              <button
-                type="button"
-                onClick={() => {
-                  void signOut().then(() => router.push("/"));
-                }}
-                className="hidden whitespace-nowrap rounded-full border-[2px] border-[var(--nav-ink)] px-3 py-0.5 font-medium text-[var(--nav-ink)] hover:bg-[var(--nav-ink)] hover:text-[var(--nav-bg)] transition-colors sm:inline-block"
-              >
-                Sign out
-              </button>
-              <button
-                type="button"
-                aria-label="Settings"
-                aria-expanded={settingsOpen}
-                aria-controls="nav-settings-panel"
-                onClick={() => setSettingsOpen(true)}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--nav-ink)] text-[var(--nav-ink)] transition-colors hover:bg-[var(--nav-ink)] hover:text-[var(--nav-bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)]"
-              >
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4"
->>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
                 >
                   <Avatar name={user.name} source={user.avatar} size="sm" />
                 </span>
@@ -632,23 +515,11 @@ function NavInner() {
 
           {status === "ready" && isAuthenticated && user ? (
             <div className="flex flex-col gap-4 border-t-[2px] border-[var(--ink)]/15 pt-6">
-<<<<<<< HEAD
               <Link
                 href="/?tab=mine"
                 onClick={() => setDrawerOpen(false)}
-                data-onboarding="me"
                 aria-current={activeTab === "mine" ? "page" : undefined}
                 className="-mx-1 flex items-center gap-3 rounded-xl px-1 py-1 transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
-=======
-              <p className="text-sm text-[var(--ink-muted)]">
-                {user.name}
-                <span className="text-[var(--ink-soft)]"> · {user.college}</span>
-              </p>
-              <button
-                type="button"
-                onClick={openSettings}
-                className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
->>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
               >
                 <Avatar name={user.name} source={user.avatar} size="md" />
                 <span className="min-w-0">
@@ -709,9 +580,6 @@ function NavTabLink({
     <Link
       href={href}
       onClick={onNavigate}
-      data-onboarding={
-        tab.id === "requests" ? "activity" : tab.id === "mine" ? "me" : undefined
-      }
       className={`inline-flex items-center gap-2 font-display uppercase tracking-[0.2em] whitespace-nowrap pb-0.5 transition-opacity ${
         isActive
           ? "text-[var(--nav-ink)]"

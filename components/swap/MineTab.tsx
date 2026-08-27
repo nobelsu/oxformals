@@ -99,7 +99,7 @@ export function MineTab() {
   }
 
   return (
-    <div className="flex flex-col gap-8 pb-28">
+    <div className="flex flex-col gap-10">
       <div className="flex items-center">
         <button
           type="button"

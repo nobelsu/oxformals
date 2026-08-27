@@ -42,17 +42,11 @@ export function WishlistChips({
 
   const filteredColleges = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    const source = query
-      ? OXFORD_COLLEGES.filter((college) =>
-          college.toLowerCase().includes(query),
-        )
-      : [...OXFORD_COLLEGES];
-    const selectedSet = new Set(effectiveSelected);
-    return [
-      ...source.filter((college) => selectedSet.has(college)),
-      ...source.filter((college) => !selectedSet.has(college)),
-    ];
-  }, [searchQuery, effectiveSelected]);
+    if (!query) return OXFORD_COLLEGES;
+    return OXFORD_COLLEGES.filter((college) =>
+      college.toLowerCase().includes(query),
+    );
+  }, [searchQuery]);
 
   const hasUnsavedChanges = useMemo(() => {
     if (effectiveSelected.length !== selected.length) return true;
@@ -88,20 +82,22 @@ export function WishlistChips({
   }
 
   return (
-    <section aria-labelledby="wishlist-heading">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <h2
-          id="wishlist-heading"
-          className="font-display text-[1.75rem] leading-tight text-[var(--ink)]"
-        >
-          Formals I want to go to
-        </h2>
+    <section>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="font-display text-3xl uppercase tracking-wide">
+            Formals I want to try
+          </h3>
+          <p className="mt-1 text-base text-[var(--ink-muted)]">
+            Tap colleges, then save your wishlist.
+          </p>
+        </div>
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search colleges"
-          className="w-full border-0 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_28%,transparent)] bg-transparent px-0 py-1.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:border-[var(--ink)] focus:outline-none sm:w-56"
+          className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none sm:mt-1 sm:w-64"
           aria-label="Search colleges"
         />
       </div>

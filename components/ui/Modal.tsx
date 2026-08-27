@@ -47,7 +47,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden p-3 sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto overscroll-contain p-3 sm:p-4"
       role="dialog"
       aria-modal="true"
     >
@@ -58,10 +58,7 @@ export function Modal({
       <SketchCard
         seed={2}
         className={[
-          "relative w-full min-h-0 min-w-0 max-w-md",
-          bodyScrollable
-            ? "max-h-[calc(100dvh-1.5rem)] overflow-hidden sm:max-h-[calc(100dvh-2rem)]"
-            : "overflow-visible",
+          "relative w-full min-w-0 max-w-md overflow-visible",
           compact ? "p-4" : "p-6",
           panelClassName,
         ]
@@ -82,7 +79,7 @@ export function Modal({
         <div
           className={
             bodyScrollable
-              ? "min-h-0 min-w-0 w-full flex-1 overflow-y-auto overflow-x-hidden px-1.5"
+              ? "min-h-0 min-w-0 w-full flex-1 overflow-y-auto overflow-x-clip px-1.5"
               : "min-h-min min-w-0 w-full shrink-0 overflow-x-clip overflow-y-visible"
           }
         >

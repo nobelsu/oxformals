@@ -2,14 +2,13 @@ import type { AvatarSource } from "@/lib/auth/types";
 
 import type { SVGProps } from "react";
 
-type Size = "sm" | "md" | "lg" | "xl" | "2xl";
+type Size = "sm" | "md" | "lg" | "xl";
 
 const SIZES: Record<Size, string> = {
   sm: "h-8 w-8 text-xs",
   md: "h-11 w-11 text-sm",
   lg: "h-14 w-14 text-base",
   xl: "h-[4.235rem] w-[4.235rem] text-[1.3475rem] leading-none",
-  "2xl": "h-24 w-24 text-2xl",
 };
 
 const PRESET_GLYPH_SIZES: Record<Size, string> = {
@@ -17,7 +16,6 @@ const PRESET_GLYPH_SIZES: Record<Size, string> = {
   md: "text-xl",
   lg: "text-2xl",
   xl: "text-4xl",
-  "2xl": "text-5xl",
 };
 
 export const PRESET_AVATARS: Array<{ id: string; label: string }> = [

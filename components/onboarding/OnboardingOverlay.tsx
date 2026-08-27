@@ -1,243 +1,236 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { SketchCard } from "@/components/ui/SketchCard";
-import { PencilArrow } from "./PencilArrow";
-import { RulesSlide } from "./RulesSlide";
 
-type CoachId = "request" | "activity" | "me";
-
-type CoachStep = {
-  id: CoachId;
-  label: string;
-  selector: string;
-  fallbackSelector?: string;
-  hintWhenFallback: string;
-};
-
-const COACH_STEPS: readonly CoachStep[] = [
-  {
-    id: "request",
-    label: "Ask to join",
-    selector: '[data-onboarding="request"]',
-    hintWhenFallback: "",
-  },
-  {
-    id: "activity",
-    label: "List yours",
-    selector: '[data-onboarding="activity"]',
-    fallbackSelector: '[data-onboarding="menu"]',
-    hintWhenFallback: "in the menu",
-  },
-  {
-    id: "me",
-    label: "Your profile",
-    selector: '[data-onboarding="me"], [aria-label="Your profile"]',
-    fallbackSelector: '[data-onboarding="menu"]',
-    hintWhenFallback: "in the menu",
-  },
+const HOUSE_RULES = [
+  "Be respectful and courteous to everyone you interact with.",
+  "Only use your real Oxford email — no impersonation.",
+  "Honour confirmed swaps. Don't ghost after accepting a request.",
+  "Don't create fake or duplicate listings.",
+  "Reach out to your swap partner promptly after a match is confirmed.",
+  "Report any issues or inappropriate behaviour to the team.",
 ];
 
-type Target = {
-  rect: DOMRect;
-  usedFallback: boolean;
-};
-
-type Hole = {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-};
-
-function isLaidOut(el: Element): boolean {
-  const rect = el.getBoundingClientRect();
-  return rect.width > 2 && rect.height > 2;
-}
-
-function queryLaidOut(selector: string): HTMLElement | null {
-  const nodes = document.querySelectorAll<HTMLElement>(selector);
-  for (const node of nodes) {
-    if (isLaidOut(node)) return node;
-  }
-  return null;
-}
-
-function readTarget(step: CoachStep): Target | null {
-  const primary = queryLaidOut(step.selector);
-  if (primary) {
-    return { rect: primary.getBoundingClientRect(), usedFallback: false };
-  }
-  if (step.fallbackSelector) {
-    const fallback = queryLaidOut(step.fallbackSelector);
-    if (fallback) {
-      return { rect: fallback.getBoundingClientRect(), usedFallback: true };
-    }
-  }
-  return null;
-}
-
-function scrollTargetIntoView(step: CoachStep) {
-  const el =
-    queryLaidOut(step.selector) ??
-    (step.fallbackSelector ? queryLaidOut(step.fallbackSelector) : null);
-  el?.scrollIntoView({
-    block: "center",
-    inline: "nearest",
-    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? "auto"
-      : "smooth",
-  });
-}
-
-function closestEdge(rect: DOMRect, from: { x: number; y: number }): { x: number; y: number } {
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  const pad = 4;
-  if (Math.abs(from.x - cx) > Math.abs(from.y - cy)) {
-    return {
-      x: from.x < cx ? rect.left - pad : rect.right + pad,
-      y: cy,
-    };
-  }
-  return {
-    x: cx,
-    y: from.y < cy ? rect.top - pad : rect.bottom + pad,
-  };
-}
-
-function labelAnchor(rect: DOMRect): { x: number; y: number } {
-  const below = rect.top < 120;
-  if (below) {
-    return {
-      x: Math.min(Math.max(rect.left + rect.width / 2, 96), window.innerWidth - 96),
-      y: Math.min(rect.bottom + 88, window.innerHeight - 140),
-    };
-  }
-  return {
-    x: Math.max(96, rect.left - 8),
-    y: Math.max(72, rect.top - 36),
-  };
-}
-
-function SpotlightDim({ hole }: { hole: Hole }) {
-  const dim = "pointer-events-none absolute bg-[#1a1810]/82";
-  const radius = Math.min(hole.height / 2, 14);
-
+function WelcomeSlide() {
   return (
-    <>
-      <div
-        className={dim}
-        style={{ top: 0, left: 0, right: 0, height: hole.top }}
-      />
-      <div
-        className={dim}
-        style={{
-          top: hole.top,
-          left: 0,
-          width: hole.left,
-          height: hole.height,
-        }}
-      />
-      <div
-        className={dim}
-        style={{
-          top: hole.top,
-          left: hole.left + hole.width,
-          right: 0,
-          height: hole.height,
-        }}
-      />
-      <div
-        className={dim}
-        style={{
-          top: hole.top + hole.height,
-          left: 0,
-          right: 0,
-          bottom: 0,
-        }}
-      />
-      <div
-        className="pointer-events-none absolute border-[2.5px] border-[var(--accent)]"
-        style={{
-          top: hole.top,
-          left: hole.left,
-          width: hole.width,
-          height: hole.height,
-          borderRadius: radius,
-        }}
-      />
-    </>
+    <div className="flex flex-col items-center text-center gap-6">
+      <svg
+        viewBox="0 0 80 80"
+        className="w-20 h-20 text-[var(--accent)]"
+        fill="none"
+        aria-hidden
+      >
+        <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="2.5" strokeDasharray="6 4" />
+        <path
+          d="M30 52 C30 36, 40 24, 40 24 C40 24, 50 36, 50 52"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <path
+          d="M36 52 C36 44, 40 38, 40 38 C40 38, 44 44, 44 52"
+          fill="currentColor"
+          opacity="0.25"
+        />
+        <line x1="40" y1="52" x2="40" y2="60" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <line x1="35" y1="60" x2="45" y2="60" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+      <div>
+        <h2 className="font-display text-4xl sm:text-5xl uppercase tracking-wide">
+          Welcome to Oxformals
+        </h2>
+        <p className="mt-4 text-[var(--ink-muted)] text-base sm:text-lg leading-relaxed max-w-sm mx-auto">
+          The easiest way to experience formals at colleges across Oxford.
+          Let&apos;s show you around.
+        </p>
+      </div>
+    </div>
   );
 }
+
+function BrowseSlide() {
+  return (
+    <div className="flex flex-col items-center text-center gap-6">
+      <svg
+        viewBox="0 0 80 80"
+        className="w-20 h-20 text-[var(--accent)]"
+        fill="none"
+        aria-hidden
+      >
+        <rect x="12" y="18" width="24" height="30" rx="4" stroke="currentColor" strokeWidth="2.5" />
+        <rect x="44" y="18" width="24" height="30" rx="4" stroke="currentColor" strokeWidth="2.5" />
+        <rect x="12" y="18" width="24" height="30" rx="4" fill="currentColor" opacity="0.12" />
+        <line x1="18" y1="28" x2="30" y2="28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <line x1="18" y1="34" x2="28" y2="34" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <line x1="50" y1="28" x2="62" y2="28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <line x1="50" y1="34" x2="60" y2="34" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M28 58 L40 52 L52 58" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <div>
+        <h2 className="font-display text-3xl sm:text-4xl uppercase tracking-wide">
+          Browse &amp; List
+        </h2>
+        <p className="mt-4 text-[var(--ink-muted)] text-base leading-relaxed max-w-sm mx-auto">
+          Browse open formals at other colleges, or list your own formal
+          and invite others to join your group.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function SwapSlide() {
+  return (
+    <div className="flex flex-col items-center text-center gap-6">
+      <svg
+        viewBox="0 0 80 80"
+        className="w-20 h-20 text-[var(--accent)]"
+        fill="none"
+        aria-hidden
+      >
+        <path
+          d="M20 32 L60 32"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M52 24 L60 32 L52 40"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M60 48 L20 48"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M28 40 L20 48 L28 56"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <div>
+        <h2 className="font-display text-3xl sm:text-4xl uppercase tracking-wide">
+          Request &amp; Swap
+        </h2>
+        <p className="mt-4 text-[var(--ink-muted)] text-base leading-relaxed max-w-sm mx-auto">
+          Send a swap request by offering one of your formals in return.
+          Once accepted, you&apos;ll get each other&apos;s contact details
+          to sort the rest.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function RulesSlide({
+  agreed,
+  onToggle,
+}: {
+  agreed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center text-center gap-5">
+      <svg
+        viewBox="0 0 80 80"
+        className="w-16 h-16 text-[var(--accent)]"
+        fill="none"
+        aria-hidden
+      >
+        <rect x="20" y="10" width="40" height="52" rx="4" stroke="currentColor" strokeWidth="2.5" />
+        <rect x="20" y="10" width="40" height="52" rx="4" fill="currentColor" opacity="0.10" />
+        <line x1="28" y1="24" x2="52" y2="24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <line x1="28" y1="32" x2="48" y2="32" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <line x1="28" y1="40" x2="50" y2="40" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <line x1="28" y1="48" x2="44" y2="48" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M34 66 L40 72 L52 60" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <div>
+        <h2 className="font-display text-3xl sm:text-4xl uppercase tracking-wide">
+          House Rules
+        </h2>
+        <p className="mt-2 text-[var(--ink-muted)] text-sm leading-relaxed max-w-sm mx-auto">
+          Please read and agree before continuing.
+        </p>
+      </div>
+      <ul className="text-left w-full max-w-sm space-y-2.5">
+        {HOUSE_RULES.map((rule, i) => (
+          <li key={i} className="flex gap-2.5 text-sm text-[var(--ink)] leading-relaxed">
+            <span className="mt-0.5 shrink-0 text-[var(--accent)]">
+              <svg viewBox="0 0 16 16" className="w-4 h-4" fill="none">
+                <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                <text x="8" y="11.5" textAnchor="middle" fill="currentColor" fontSize="9" fontWeight="bold">
+                  {i + 1}
+                </text>
+              </svg>
+            </span>
+            <span>{rule}</span>
+          </li>
+        ))}
+      </ul>
+      <label className="mt-2 flex items-center gap-3 cursor-pointer select-none group">
+        <span className="relative flex items-center justify-center">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={onToggle}
+            className="peer sr-only"
+          />
+          <span className="flex h-6 w-6 items-center justify-center rounded-md border-[2px] border-[var(--ink)] bg-[var(--paper)] transition-colors peer-checked:bg-[var(--accent)] peer-checked:border-[var(--accent)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--accent)]/50">
+            {agreed && (
+              <svg viewBox="0 0 12 12" className="w-3.5 h-3.5 text-[var(--accent-ink)]">
+                <path
+                  d="M2.5 6 L5 8.5 L9.5 3.5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+              </svg>
+            )}
+          </span>
+        </span>
+        <span className="text-sm text-[var(--ink)]">
+          I agree to the house rules
+        </span>
+      </label>
+    </div>
+  );
+}
+
+const TOTAL_SLIDES = 4;
 
 export function OnboardingOverlay() {
   const { needsRulesAgreement, agreeToRules } = useAuth();
-  const [hasRequestCta, setHasRequestCta] = useState(false);
-  const [stepIndex, setStepIndex] = useState(0);
+  const [slide, setSlide] = useState(0);
   const [rulesAgreed, setRulesAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [target, setTarget] = useState<Target | null>(null);
-
-  const coachSteps = useMemo(
-    () =>
-      hasRequestCta
-        ? COACH_STEPS
-        : COACH_STEPS.filter((step) => step.id !== "request"),
-    [hasRequestCta],
-  );
-  const totalSteps = coachSteps.length + 1;
-  const currentIndex = Math.min(stepIndex, coachSteps.length);
-  const isRules = currentIndex >= coachSteps.length;
-  const coach = isRules ? null : (coachSteps[currentIndex] ?? null);
 
   useEffect(() => {
     if (!needsRulesAgreement) return;
-    function scanCta() {
-      const found = queryLaidOut('[data-onboarding="request"]') !== null;
-      setHasRequestCta((prev) => (stepIndex > 0 ? prev : found));
-    }
-    const observer = new MutationObserver(scanCta);
-    observer.observe(document.body, { childList: true, subtree: true });
-    const timeout = window.setTimeout(scanCta, 0);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
-      observer.disconnect();
-      window.clearTimeout(timeout);
+      document.body.style.overflow = prev;
     };
-  }, [needsRulesAgreement, stepIndex]);
+  }, [needsRulesAgreement]);
 
-  useEffect(() => {
-    if (!needsRulesAgreement || !coach) return;
-    const step = coach;
-    scrollTargetIntoView(step);
-    function measure() {
-      setTarget(readTarget(step));
-    }
-    const delays = [0, 80, 320, 700];
-    const timers = delays.map((ms) => window.setTimeout(measure, ms));
-    const observer = new MutationObserver(measure);
-    observer.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, true);
-    return () => {
-      for (const id of timers) window.clearTimeout(id);
-      observer.disconnect();
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure, true);
-    };
-  }, [needsRulesAgreement, coach]);
-
-  const goTo = useCallback(
-    (next: number) => {
-      setStepIndex(Math.max(0, Math.min(totalSteps - 1, next)));
-    },
-    [totalSteps],
-  );
+  const isLastSlide = slide === TOTAL_SLIDES - 1;
 
   const handleNext = useCallback(async () => {
-    if (!isRules) {
-      goTo(currentIndex + 1);
+    if (!isLastSlide) {
+      setSlide((s) => s + 1);
       return;
     }
     if (!rulesAgreed) return;
@@ -247,187 +240,74 @@ export function OnboardingOverlay() {
     } finally {
       setSubmitting(false);
     }
-  }, [agreeToRules, currentIndex, goTo, isRules, rulesAgreed]);
+  }, [isLastSlide, rulesAgreed, agreeToRules]);
 
   const handleBack = useCallback(() => {
-    goTo(currentIndex - 1);
-  }, [currentIndex, goTo]);
-
-  useEffect(() => {
-    if (!needsRulesAgreement) return;
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        if (!isRules) goTo(currentIndex + 1);
-      } else if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        handleBack();
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [currentIndex, goTo, handleBack, isRules, needsRulesAgreement]);
+    setSlide((s) => Math.max(0, s - 1));
+  }, []);
 
   if (!needsRulesAgreement) return null;
 
-  const pad = 10;
-  const spotlight = target
-    ? {
-        top: Math.max(0, target.rect.top - pad),
-        left: Math.max(0, target.rect.left - pad),
-        width: target.rect.width + pad * 2,
-        height: target.rect.height + pad * 2,
-      }
-    : null;
-  const labelPos = target ? labelAnchor(target.rect) : null;
-  const arrowTo =
-    target && labelPos ? closestEdge(target.rect, labelPos) : null;
-  const hint =
-    coach && target?.usedFallback ? coach.hintWhenFallback : "";
-
-  const stepNames = [
-    ...coachSteps.map((step) => step.label),
-    "House rules",
-  ];
-
   return (
-    <div className="fixed inset-0 z-[60]">
-      <div className="absolute inset-0" aria-hidden />
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[var(--ink)]/40 backdrop-blur-sm" />
+      <SketchCard
+        seed={7}
+        className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto p-6 sm:p-8"
+      >
+        <div className="min-h-[360px] flex flex-col">
+          <div className="flex-1 flex items-center justify-center py-4">
+            {slide === 0 && <WelcomeSlide />}
+            {slide === 1 && <BrowseSlide />}
+            {slide === 2 && <SwapSlide />}
+            {slide === 3 && (
+              <RulesSlide
+                agreed={rulesAgreed}
+                onToggle={() => setRulesAgreed((v) => !v)}
+              />
+            )}
+          </div>
 
-      {isRules ? (
-        <div className="absolute inset-0 bg-[#1a1810]/82 backdrop-blur-sm" />
-      ) : spotlight ? (
-        <SpotlightDim hole={spotlight} />
-      ) : (
-        <div className="absolute inset-0 bg-[#1a1810]/82" />
-      )}
+          <div className="mt-4 flex flex-col gap-4">
+            <div className="flex justify-center gap-2">
+              {Array.from({ length: TOTAL_SLIDES }).map((_, i) => (
+                <span
+                  key={i}
+                  className={`h-2 rounded-full transition-all ${
+                    i === slide
+                      ? "w-6 bg-[var(--accent-wash)]"
+                      : "w-2 bg-[var(--ink-soft)]/40"
+                  }`}
+                />
+              ))}
+            </div>
 
-      {!isRules && labelPos && arrowTo ? (
-        <PencilArrow
-          from={{ x: labelPos.x, y: labelPos.y + 18 }}
-          to={arrowTo}
-          seed={currentIndex + 3}
-        />
-      ) : null}
-
-      {!isRules && labelPos ? (
-        <div
-          className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 text-center"
-          style={{ left: labelPos.x, top: labelPos.y }}
-        >
-          <p className="font-display text-3xl uppercase tracking-wide text-[var(--accent)] drop-shadow-[0_1px_0_var(--bg)]">
-            {coach?.label}
-          </p>
-          {hint ? (
-            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[var(--ink)]">
-              {hint}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {isRules ? (
-        <div className="absolute inset-0 flex items-center justify-center p-4">
-          <SketchCard
-            seed={7}
-            className="relative w-full max-w-md max-h-[90dvh] overflow-y-auto p-5 sm:p-6"
-          >
-            <RulesSlide
-              agreed={rulesAgreed}
-              onToggle={() => setRulesAgreed((v) => !v)}
-            />
-            <TourControls
-              stepIndex={currentIndex}
-              totalSteps={totalSteps}
-              stepNames={stepNames}
-              isRules
-              rulesAgreed={rulesAgreed}
-              submitting={submitting}
-              onBack={handleBack}
-              onNext={() => void handleNext()}
-              onJump={goTo}
-            />
-          </SketchCard>
-        </div>
-      ) : (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-4">
-          <div className="pointer-events-auto w-full max-w-sm rounded-2xl border-[2px] border-[var(--ink)]/20 bg-[var(--paper)]/92 px-4 py-3 backdrop-blur-sm">
-            <TourControls
-              stepIndex={currentIndex}
-              totalSteps={totalSteps}
-              stepNames={stepNames}
-              isRules={false}
-              rulesAgreed={rulesAgreed}
-              submitting={submitting}
-              onBack={handleBack}
-              onNext={() => void handleNext()}
-              onJump={goTo}
-            />
+            <div className="flex gap-3">
+              {slide > 0 && (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="flex-1 rounded-full border-[2px] border-[var(--ink)] px-4 py-2.5 text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] transition-colors text-sm"
+                >
+                  Back
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={isLastSlide && (!rulesAgreed || submitting)}
+                className="flex-1 rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--accent-ink)] px-4 py-2.5 transition-colors text-sm"
+              >
+                {submitting
+                  ? "Saving\u2026"
+                  : isLastSlide
+                    ? "Continue"
+                    : "Next"}
+              </button>
+            </div>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-function TourControls({
-  stepIndex,
-  totalSteps,
-  stepNames,
-  isRules,
-  rulesAgreed,
-  submitting,
-  onBack,
-  onNext,
-  onJump,
-}: {
-  stepIndex: number;
-  totalSteps: number;
-  stepNames: string[];
-  isRules: boolean;
-  rulesAgreed: boolean;
-  submitting: boolean;
-  onBack: () => void;
-  onNext: () => void;
-  onJump: (next: number) => void;
-}) {
-  return (
-    <div className={`flex flex-col gap-3 ${isRules ? "mt-4" : ""}`}>
-      <div className="flex justify-center gap-2" aria-label="Onboarding steps">
-        {Array.from({ length: totalSteps }).map((_, i) => (
-          <button
-            key={stepNames[i] ?? i}
-            type="button"
-            aria-label={stepNames[i]}
-            aria-current={i === stepIndex ? "step" : undefined}
-            onClick={() => onJump(i)}
-            className={`h-2 rounded-full transition-all duration-300 motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
-              i === stepIndex
-                ? "w-6 bg-[var(--accent)]"
-                : "w-2 bg-[var(--ink-soft)]/40 hover:bg-[var(--ink-soft)]/70"
-            }`}
-          />
-        ))}
-      </div>
-      <div className="flex gap-3">
-        {stepIndex > 0 ? (
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex-1 rounded-full border-[2px] border-[var(--ink)] px-4 py-2.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] active:scale-[0.98] motion-reduce:active:scale-100"
-          >
-            Back
-          </button>
-        ) : null}
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={isRules && (!rulesAgreed || submitting)}
-          className="flex-1 rounded-full bg-[var(--accent)] px-4 py-2.5 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98] motion-reduce:active:scale-100"
-        >
-          {submitting ? "Saving\u2026" : isRules ? "Continue" : "Next"}
-        </button>
-      </div>
+      </SketchCard>
     </div>
   );
 }
