@@ -498,6 +498,7 @@ function NavInner() {
             type="button"
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--nav-ink)] text-[var(--nav-ink)] transition-colors hover:bg-[var(--nav-ink)] hover:text-[var(--nav-bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)] sm:hidden"
             aria-label="Open menu"
+            data-onboarding="menu"
             aria-expanded={drawerOpen}
             aria-controls="nav-drawer-panel"
             onClick={() => setDrawerOpen(true)}
@@ -547,6 +548,7 @@ function NavInner() {
               <Link
                 href="/?tab=mine"
                 aria-label="Your profile"
+                data-onboarding="me"
                 aria-current={activeTab === "mine" ? "page" : undefined}
                 className="group hidden min-w-0 items-center gap-2.5 rounded-full transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)] sm:inline-flex"
               >
@@ -634,6 +636,7 @@ function NavInner() {
               <Link
                 href="/?tab=mine"
                 onClick={() => setDrawerOpen(false)}
+                data-onboarding="me"
                 aria-current={activeTab === "mine" ? "page" : undefined}
                 className="-mx-1 flex items-center gap-3 rounded-xl px-1 py-1 transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
 =======
@@ -706,6 +709,9 @@ function NavTabLink({
     <Link
       href={href}
       onClick={onNavigate}
+      data-onboarding={
+        tab.id === "requests" ? "activity" : tab.id === "mine" ? "me" : undefined
+      }
       className={`inline-flex items-center gap-2 font-display uppercase tracking-[0.2em] whitespace-nowrap pb-0.5 transition-opacity ${
         isActive
           ? "text-[var(--nav-ink)]"

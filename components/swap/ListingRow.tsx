@@ -133,6 +133,7 @@ export function ListingRow({
         ) : disabled ? null : onRequest ? (
           <button
             type="button"
+            data-onboarding="request"
             onClick={onRequest}
             className="whitespace-nowrap rounded-full bg-[var(--accent)] px-6 py-2.5 text-[0.95rem] font-semibold text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
           >
@@ -446,6 +447,7 @@ export function ListingRow({
           ) : disabled ? null : onRequest ? (
             <button
               type="button"
+              data-onboarding="request"
               onClick={onRequest}
               className="flex-1 whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-2 text-[0.875rem] text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
             >
@@ -468,6 +470,7 @@ export function ListingRow({
           ) : (
             <button
               type="button"
+              data-onboarding="request"
               onClick={onRequest}
               className="whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-2 text-[0.875rem] text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
             >
