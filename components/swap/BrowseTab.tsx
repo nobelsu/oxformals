@@ -474,7 +474,11 @@ export function BrowseTab({
                     listing={l}
                     owner={owner}
                     memberUsers={members}
+<<<<<<< HEAD
                     card
+=======
+                    align="center"
+>>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
                     onPress={() => setDetailListing(l)}
                     onRequest={() => handleRequestClick(l)}
                     disabled={!isAuthenticated}
