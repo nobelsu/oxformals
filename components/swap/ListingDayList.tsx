@@ -93,11 +93,7 @@ export function ListingDayList({
 
             <div
               className={`relative sm:border-l-2 sm:border-dashed sm:border-[color-mix(in_srgb,var(--ink)_28%,transparent)] sm:pl-6 ${
-<<<<<<< HEAD
                 isCard && !isLastGroup ? "pb-4 sm:pb-6" : ""
-=======
-                isCard && !isLastGroup ? "pb-6 sm:pb-8" : ""
->>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
               }`}
             >
               <span
@@ -106,20 +102,12 @@ export function ListingDayList({
                 <SketchDot seed={seedFrom(group.dateKey)} />
               </span>
 
-<<<<<<< HEAD
               <ul className={isCard ? "flex flex-col gap-3 sm:gap-4" : ""}>
-=======
-              <ul className={isCard ? "flex flex-col gap-6 sm:gap-8" : ""}>
->>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
                 {rows.map(({ listing, content }) =>
                   isCard ? (
                     <li
                       key={listing.id}
-<<<<<<< HEAD
                       className="overflow-hidden rounded-[22px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] shadow-[0_2px_18px_-10px_rgba(0,0,0,0.18)] transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--ink)_22%,transparent)] hover:shadow-[0_18px_40px_-18px_rgba(0,0,0,0.28)]"
-=======
-                      className="flex min-h-[9.5rem] flex-col justify-center rounded-[26px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] px-5 py-4 shadow-[0_2px_18px_-10px_rgba(0,0,0,0.18)] transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--ink)_22%,transparent)] hover:shadow-[0_18px_40px_-18px_rgba(0,0,0,0.28)] sm:min-h-[11rem] sm:px-6 sm:py-5"
->>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges)
                     >
                       {content}
                     </li>

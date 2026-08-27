@@ -11,11 +11,7 @@ type Props = {
   onClose: () => void;
 };
 
-<<<<<<< HEAD:components/SettingsModal.tsx
 export function SettingsModal({ open, onClose }: Props) {
-=======
-export function NavSettingsModal({ open, onClose }: Props) {
->>>>>>> 6b96ce8 (minor change: changed the profile edit page and profile badges):components/NavSettingsModal.tsx
   const { user, updateProfile, hasPassword, setPassword } = useAuth();
   const fontPickerRef = useRef<HTMLDivElement | null>(null);
   const [fontPickerOpen, setFontPickerOpen] = useState(false);
