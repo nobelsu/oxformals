@@ -127,7 +127,7 @@ function buildNewRequestEmailHtml(payload: {
   reviewUrl: string;
 }): string {
   const messageBlock = payload.message
-    ? `<p style="margin:12px 0 0 0;font-size:15px;line-height:1.6;color:#1a140f;font-style:italic;">&ldquo;${escapeHtml(payload.message)}&rdquo;</p>`
+    ? `<p style="margin:12px 0 0 0;font-size:15px;line-height:1.6;color:#1b1a12;font-style:italic;">&ldquo;${escapeHtml(payload.message)}&rdquo;</p>`
     : "";
 
   return `<!doctype html>
@@ -136,50 +136,53 @@ function buildNewRequestEmailHtml(payload: {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>New formal request</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Schoolbell&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet" />
   </head>
-  <body style="margin:0;padding:0;background:#f2ead8;color:#1a140f;font-family:'Schoolbell','Comic Sans MS','Chalkboard SE','Marker Felt',cursive,sans-serif;">
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f2ead8;padding:24px 12px;">
+  <body style="margin:0;padding:0;background:#f2ecdd;color:#1b1a12;font-family:'Space Grotesk',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f2ecdd;padding:24px 12px;">
       <tr>
         <td align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#f6efe0;border:2px solid #1a140f;border-radius:20px;overflow:hidden;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border:2px solid #1b1a12;border-radius:20px;overflow:hidden;">
             <tr>
               <td style="padding:28px 24px 10px 24px;text-align:center;">
-                <div style="font-size:34px;line-height:1.05;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;">Oxformals</div>
-                <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:#5a4d40;">Find your next formal.</p>
+                <div style="font-family:'Schoolbell','Marker Felt','Comic Sans MS','Space Grotesk',ui-sans-serif,sans-serif;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Oxformals</div>
+                <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:#565039;">Find your next formal.</p>
               </td>
             </tr>
             <tr>
               <td style="padding:8px 24px 0 24px;">
-                <p style="margin:0;font-size:16px;line-height:1.6;color:#1a140f;"><strong>${escapeHtml(payload.requesterName)}</strong> sent you a request for your formal.</p>
+                <p style="margin:0;font-size:16px;line-height:1.6;color:#1b1a12;"><strong>${escapeHtml(payload.requesterName)}</strong> sent you a request for your formal.</p>
               </td>
             </tr>
             <tr>
               <td style="padding:14px 24px 0 24px;">
-                <div style="background:#edbfba;border:2px solid #1a140f;border-radius:14px;padding:16px 14px;">
-                  <p style="margin:0;font-size:14px;line-height:1.5;color:#5a4d40;">${escapeHtml(payload.requestTypeLabel)}</p>
-                  <p style="margin:8px 0 0 0;font-size:18px;line-height:1.4;font-weight:800;color:#1a140f;">${escapeHtml(payload.formalLabel)}</p>
+                <div style="background:#f2c4cb;border:2px solid #1b1a12;border-radius:14px;padding:16px 14px;">
+                  <p style="margin:0;font-size:14px;line-height:1.5;color:#565039;">${escapeHtml(payload.requestTypeLabel)}</p>
+                  <p style="margin:8px 0 0 0;font-size:18px;line-height:1.4;font-weight:800;color:#1b1a12;">${escapeHtml(payload.formalLabel)}</p>
                   ${messageBlock}
                 </div>
               </td>
             </tr>
             <tr>
               <td style="padding:20px 24px 0 24px;text-align:center;">
-                <a href="${escapeHtml(payload.reviewUrl)}" style="display:inline-block;background:#1a140f;color:#f6efe0;font-size:15px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:999px;border:2px solid #1a140f;">Review request</a>
+                <a href="${escapeHtml(payload.reviewUrl)}" style="display:inline-block;background:#b8524c;color:#ffffff;font-size:15px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:999px;border:2px solid #b8524c;">Review request</a>
               </td>
             </tr>
             <tr>
               <td style="padding:16px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#9a8c7a;">You can accept or decline this request in Oxformals.</p>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#716b55;">You can accept or decline this request in Oxformals.</p>
               </td>
             </tr>
             <tr>
               <td style="padding:10px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#5a4d40;">For inquiries or issues, contact us at <a href="mailto:team@oxformals.com" style="color:#1a140f;font-weight:700;text-decoration:underline;">team@oxformals.com</a>.</p>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#565039;">For inquiries or issues, contact us at <a href="mailto:team@oxformals.com" style="color:#1b1a12;font-weight:700;text-decoration:underline;">team@oxformals.com</a>.</p>
               </td>
             </tr>
             <tr>
               <td style="padding:18px 24px 28px 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#1a140f;">See you at dinner,<br />The Oxformals Team</p>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#1b1a12;">See you at dinner,<br />The Oxformals Team</p>
               </td>
             </tr>
           </table>
@@ -392,7 +395,7 @@ function buildNewListingAlertEmailHtml(payload: {
   browseUrl: string;
 }): string {
   const messageBlock = payload.message
-    ? `<p style="margin:12px 0 0 0;font-size:15px;line-height:1.6;color:#1a140f;font-style:italic;">&ldquo;${escapeHtml(payload.message)}&rdquo;</p>`
+    ? `<p style="margin:12px 0 0 0;font-size:15px;line-height:1.6;color:#1b1a12;font-style:italic;">&ldquo;${escapeHtml(payload.message)}&rdquo;</p>`
     : "";
 
   return `<!doctype html>
@@ -401,50 +404,53 @@ function buildNewListingAlertEmailHtml(payload: {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>New formal listing</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Schoolbell&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet" />
   </head>
-  <body style="margin:0;padding:0;background:#f2ead8;color:#1a140f;font-family:'Schoolbell','Comic Sans MS','Chalkboard SE','Marker Felt',cursive,sans-serif;">
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f2ead8;padding:24px 12px;">
+  <body style="margin:0;padding:0;background:#f2ecdd;color:#1b1a12;font-family:'Space Grotesk',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f2ecdd;padding:24px 12px;">
       <tr>
         <td align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#f6efe0;border:2px solid #1a140f;border-radius:20px;overflow:hidden;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border:2px solid #1b1a12;border-radius:20px;overflow:hidden;">
             <tr>
               <td style="padding:28px 24px 10px 24px;text-align:center;">
-                <div style="font-size:34px;line-height:1.05;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;">Oxformals</div>
-                <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:#5a4d40;">Find your next formal.</p>
+                <div style="font-family:'Schoolbell','Marker Felt','Comic Sans MS','Space Grotesk',ui-sans-serif,sans-serif;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Oxformals</div>
+                <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:#565039;">Find your next formal.</p>
               </td>
             </tr>
             <tr>
               <td style="padding:8px 24px 0 24px;">
-                <p style="margin:0;font-size:16px;line-height:1.6;color:#1a140f;"><strong>${escapeHtml(payload.posterName)}</strong> posted a new formal at a college on your wishlist.</p>
+                <p style="margin:0;font-size:16px;line-height:1.6;color:#1b1a12;"><strong>${escapeHtml(payload.posterName)}</strong> posted a new formal at a college on your wishlist.</p>
               </td>
             </tr>
             <tr>
               <td style="padding:14px 24px 0 24px;">
-                <div style="background:#edbfba;border:2px solid #1a140f;border-radius:14px;padding:16px 14px;">
-                  <p style="margin:0;font-size:14px;line-height:1.5;color:#5a4d40;">${escapeHtml(payload.listingTypeLabel)}</p>
-                  <p style="margin:8px 0 0 0;font-size:18px;line-height:1.4;font-weight:800;color:#1a140f;">${escapeHtml(payload.formalLabel)}</p>
+                <div style="background:#f2c4cb;border:2px solid #1b1a12;border-radius:14px;padding:16px 14px;">
+                  <p style="margin:0;font-size:14px;line-height:1.5;color:#565039;">${escapeHtml(payload.listingTypeLabel)}</p>
+                  <p style="margin:8px 0 0 0;font-size:18px;line-height:1.4;font-weight:800;color:#1b1a12;">${escapeHtml(payload.formalLabel)}</p>
                   ${messageBlock}
                 </div>
               </td>
             </tr>
             <tr>
               <td style="padding:20px 24px 0 24px;text-align:center;">
-                <a href="${escapeHtml(payload.browseUrl)}" style="display:inline-block;background:#1a140f;color:#f6efe0;font-size:15px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:999px;border:2px solid #1a140f;">View formal</a>
+                <a href="${escapeHtml(payload.browseUrl)}" style="display:inline-block;background:#b8524c;color:#ffffff;font-size:15px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:999px;border:2px solid #b8524c;">View formal</a>
               </td>
             </tr>
             <tr>
               <td style="padding:16px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#9a8c7a;">You received this because ${escapeHtml(payload.formalLabel.split(" · ")[0] ?? "this college")} is on your wishlist. Turn off email notifications in Settings.</p>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#716b55;">You received this because ${escapeHtml(payload.formalLabel.split(" · ")[0] ?? "this college")} is on your wishlist. Turn off email notifications in Settings.</p>
               </td>
             </tr>
             <tr>
               <td style="padding:10px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#5a4d40;">For inquiries or issues, contact us at <a href="mailto:team@oxformals.com" style="color:#1a140f;font-weight:700;text-decoration:underline;">team@oxformals.com</a>.</p>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#565039;">For inquiries or issues, contact us at <a href="mailto:team@oxformals.com" style="color:#1b1a12;font-weight:700;text-decoration:underline;">team@oxformals.com</a>.</p>
               </td>
             </tr>
             <tr>
               <td style="padding:18px 24px 28px 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#1a140f;">See you at dinner,<br />The Oxformals Team</p>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#1b1a12;">See you at dinner,<br />The Oxformals Team</p>
               </td>
             </tr>
           </table>
@@ -710,48 +716,51 @@ function buildReviewReminderEmailHtml(payload: {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Rate your formal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Schoolbell&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet" />
   </head>
-  <body style="margin:0;padding:0;background:#f2ead8;color:#1a140f;font-family:'Schoolbell','Comic Sans MS','Chalkboard SE','Marker Felt',cursive,sans-serif;">
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f2ead8;padding:24px 12px;">
+  <body style="margin:0;padding:0;background:#f2ecdd;color:#1b1a12;font-family:'Space Grotesk',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f2ecdd;padding:24px 12px;">
       <tr>
         <td align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#f6efe0;border:2px solid #1a140f;border-radius:20px;overflow:hidden;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border:2px solid #1b1a12;border-radius:20px;overflow:hidden;">
             <tr>
               <td style="padding:28px 24px 10px 24px;text-align:center;">
-                <div style="font-size:34px;line-height:1.05;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;">Oxformals</div>
-                <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:#5a4d40;">How was dinner?</p>
+                <div style="font-family:'Schoolbell','Marker Felt','Comic Sans MS','Space Grotesk',ui-sans-serif,sans-serif;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Oxformals</div>
+                <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:#565039;">How was dinner?</p>
               </td>
             </tr>
             <tr>
               <td style="padding:8px 24px 0 24px;">
-                <p style="margin:0;font-size:16px;line-height:1.6;color:#1a140f;">Your formal has finished — share how it went so other students can discover great formals.</p>
+                <p style="margin:0;font-size:16px;line-height:1.6;color:#1b1a12;">Your formal has finished — share how it went so other students can discover great formals.</p>
               </td>
             </tr>
             <tr>
               <td style="padding:14px 24px 0 24px;">
-                <div style="background:#edbfba;border:2px solid #1a140f;border-radius:14px;padding:16px 14px;">
-                  <p style="margin:0;font-size:18px;line-height:1.4;font-weight:800;color:#1a140f;">${escapeHtml(payload.formalLabel)}</p>
+                <div style="background:#f2c4cb;border:2px solid #1b1a12;border-radius:14px;padding:16px 14px;">
+                  <p style="margin:0;font-size:18px;line-height:1.4;font-weight:800;color:#1b1a12;">${escapeHtml(payload.formalLabel)}</p>
                 </div>
               </td>
             </tr>
             <tr>
               <td style="padding:20px 24px 0 24px;text-align:center;">
-                <a href="${escapeHtml(payload.reviewUrl)}" style="display:inline-block;background:#1a140f;color:#f6efe0;font-size:15px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:999px;border:2px solid #1a140f;">Rate formal</a>
+                <a href="${escapeHtml(payload.reviewUrl)}" style="display:inline-block;background:#b8524c;color:#ffffff;font-size:15px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:999px;border:2px solid #b8524c;">Rate formal</a>
               </td>
             </tr>
             <tr>
               <td style="padding:16px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#9a8c7a;">Turn off email notifications in Settings if you prefer not to receive these reminders.</p>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#716b55;">Turn off email notifications in Settings if you prefer not to receive these reminders.</p>
               </td>
             </tr>
             <tr>
               <td style="padding:10px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#5a4d40;">For inquiries or issues, contact us at <a href="mailto:team@oxformals.com" style="color:#1a140f;font-weight:700;text-decoration:underline;">team@oxformals.com</a>.</p>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#565039;">For inquiries or issues, contact us at <a href="mailto:team@oxformals.com" style="color:#1b1a12;font-weight:700;text-decoration:underline;">team@oxformals.com</a>.</p>
               </td>
             </tr>
             <tr>
               <td style="padding:18px 24px 28px 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#1a140f;">See you at dinner,<br />The Oxformals Team</p>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#1b1a12;">See you at dinner,<br />The Oxformals Team</p>
               </td>
             </tr>
           </table>

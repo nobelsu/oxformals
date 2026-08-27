@@ -72,14 +72,11 @@ function formatVerifyError(message: string): string {
 
 function PasswordToggle({
   visible,
-  show,
   onToggle,
 }: {
   visible: boolean;
-  show: boolean;
   onToggle: () => void;
 }) {
-  if (!show) return null;
   return (
     <button
       type="button"
@@ -144,6 +141,7 @@ export function LoginForm() {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [passwordDone, setPasswordDone] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [greetingIdx, setGreetingIdx] = useState(0);
   const [name, setName] = useState("");
   const [college, setCollege] = useState("");
@@ -599,11 +597,12 @@ export function LoginForm() {
                   placeholder="Your password"
                   className={`${inputCls} pr-12`}
                 />
-                <PasswordToggle
-                  visible={showPassword}
-                  show={password.length > 0}
-                  onToggle={() => setShowPassword((v) => !v)}
-                />
+                {password.length > 0 && (
+                  <PasswordToggle
+                    visible={showPassword}
+                    onToggle={() => setShowPassword((v) => !v)}
+                  />
+                )}
               </div>
             </label>
 
@@ -641,12 +640,12 @@ export function LoginForm() {
         ) : step === "set-password" ? (
           <form onSubmit={onSetPassword} className="flex flex-col gap-4">
             <p className="text-[var(--ink-muted)] leading-relaxed">
-              Set a password for faster sign-in next time.
+              Set a password for faster sign in.
             </p>
 
             <label className="flex flex-col gap-2">
               <span className="text-sm text-[var(--ink-muted)]">
-                New password
+                Set password
               </span>
               <div className="relative">
                 <input
@@ -658,11 +657,12 @@ export function LoginForm() {
                   placeholder="At least 8 characters"
                   className={`${inputCls} pr-12`}
                 />
-                <PasswordToggle
-                  visible={showPassword}
-                  show={password.length > 0}
-                  onToggle={() => setShowPassword((v) => !v)}
-                />
+                {password.length > 0 && (
+                  <PasswordToggle
+                    visible={showPassword}
+                    onToggle={() => setShowPassword((v) => !v)}
+                  />
+                )}
               </div>
             </label>
 
@@ -670,14 +670,22 @@ export function LoginForm() {
               <span className="text-sm text-[var(--ink-muted)]">
                 Confirm password
               </span>
-              <input
-                type={showPassword ? "text" : "password"}
-                autoComplete="new-password"
-                value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
-                placeholder="Re-enter password"
-                className={inputCls}
-              />
+              <div className="relative">
+                <input
+                  type={showPasswordConfirm ? "text" : "password"}
+                  autoComplete="new-password"
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  placeholder="Re-enter password"
+                  className={`${inputCls} pr-12`}
+                />
+                {passwordConfirm.length > 0 && (
+                  <PasswordToggle
+                    visible={showPasswordConfirm}
+                    onToggle={() => setShowPasswordConfirm((v) => !v)}
+                  />
+                )}
+              </div>
             </label>
 
             {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
