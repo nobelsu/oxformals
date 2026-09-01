@@ -12,8 +12,6 @@ export function MineTab() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const urlEditing = searchParams.get("edit") === "1";
-  const [editing, setEditing] = useState(urlEditing);
   const { wishlist, saveWishlist } = useData();
   const [profileDirty, setProfileDirty] = useState(false);
   const [wishlistDirty, setWishlistDirty] = useState(false);
@@ -28,24 +26,12 @@ export function MineTab() {
   );
 
   useEffect(() => {
-    setEditing(urlEditing);
-  }, [urlEditing]);
-
-  const setEditingMode = useCallback(
-    (next: boolean) => {
-      setEditing(next);
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("tab", "mine");
-      if (next) {
-        params.set("edit", "1");
-      } else {
-        params.delete("edit");
-      }
-      const qs = params.toString();
-      router.replace(qs ? `/?${qs}` : "/", { scroll: false });
-    },
-    [router, searchParams],
-  );
+    if (searchParams.get("edit") !== "1") return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("edit");
+    const qs = params.toString();
+    router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+  }, [router, searchParams]);
 
   const registerProfileSave = useCallback((saveFn: () => Promise<void>) => {
     setProfileSave(() => saveFn);
@@ -75,41 +61,10 @@ export function MineTab() {
     }
   }, [hasUnsavedChanges, saving, profileSave, wishlistSave]);
 
-  const exitEditMode = useCallback(() => {
-    if (hasUnsavedChanges) {
-      const discard = window.confirm(
-        "Discard unsaved changes and return to your profile?",
-      );
-      if (!discard) return;
-      profileCancel?.();
-    }
-    setEditingMode(false);
-  }, [hasUnsavedChanges, profileCancel, setEditingMode]);
-
   if (!user) return null;
-
-  if (!editing) {
-    return (
-      <ProfileView
-        userId={user.id}
-        embedded
-        onEditProfile={() => setEditingMode(true)}
-      />
-    );
-  }
 
   return (
     <div className="flex flex-col gap-8 pb-28">
-      <div className="flex items-center">
-        <button
-          type="button"
-          onClick={exitEditMode}
-          className="cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-        >
-          Back
-        </button>
-      </div>
-
       <ProfileEditor
         onDirtyChange={setProfileDirty}
         registerSave={registerProfileSave}
@@ -122,6 +77,9 @@ export function MineTab() {
         onDirtyChange={setWishlistDirty}
         registerSave={registerWishlistSave}
       />
+
+      <ProfileView userId={user.id} embedded omitCard />
+
       {hasUnsavedChanges || saving || saved ? (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 sm:flex-row sm:items-center">
           <button

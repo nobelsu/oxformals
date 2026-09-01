@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  cardRoleLabel,
   clampSeatsAvailable,
   formatDayLabel,
   formatListingDate,
@@ -150,5 +151,20 @@ describe("existing formatters still behave", () => {
       }),
       "Fri 8 May · 7:15pm · Group of 4 · 2 seats left · £28",
     );
+  });
+});
+
+describe("cardRoleLabel", () => {
+  it("maps Undergrad to UNDERGRADUATE", () => {
+    assert.equal(cardRoleLabel("Undergrad"), "UNDERGRADUATE");
+  });
+
+  it("keeps Masters and DPhil as caps", () => {
+    assert.equal(cardRoleLabel("Masters"), "MASTERS");
+    assert.equal(cardRoleLabel("DPhil"), "DPHIL");
+  });
+
+  it("returns empty for blank", () => {
+    assert.equal(cardRoleLabel("  "), "");
   });
 });

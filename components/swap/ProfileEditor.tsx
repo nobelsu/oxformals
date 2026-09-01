@@ -7,100 +7,34 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
-  type ReactNode,
 } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/components/auth/useAuth";
 import { Avatar, PRESET_AVATARS, PresetAvatarIcon } from "@/components/ui/Avatar";
 import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
+import { ProfileIdCard } from "@/components/swap/ProfileIdCard";
+import { BadgeCaseModal } from "./BadgeCaseModal";
+import { PhotoCropModal } from "./PhotoCropModal";
+import { SketchInstagram, SketchWhatsApp } from "@/components/ui/SketchSocial";
 import type { AvatarSource } from "@/lib/auth/types";
 import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
+import { cardRoleLabel, formatYearLabel } from "@/lib/data/format";
 import { ROLE_OPTIONS } from "@/lib/data/roles";
-
-const TARGET_SIZE = 256;
-const MAX_DATA_URL_BYTES = 250 * 1024;
 
 const COLLEGE_LIST = OXFORD_COLLEGES as readonly string[];
 
 const MAX_INTEREST_LENGTH = 40;
 
-const UNDERLINE_INPUT =
-  "w-full border-0 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_28%,transparent)] bg-transparent px-0 py-1.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:border-[var(--ink)] focus:outline-none";
-
-const SECTION_HEADING =
-  "font-display text-[1.75rem] leading-tight text-[var(--ink)]";
-
 const DROPDOWN_PANEL =
-  "absolute left-0 right-0 top-[calc(100%+0.35rem)] z-20 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-2 shadow-[0_2px_14px_-10px_rgba(0,0,0,0.25)]";
+  "absolute left-0 z-30 min-w-[10rem] rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-2 shadow-[0_8px_28px_-12px_rgba(0,0,0,0.45)]";
 
-function Field({
-  label,
-  htmlFor,
-  className = "",
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  className?: string;
-  children: ReactNode;
-}) {
-  const cls = `flex min-w-0 flex-col gap-1 ${className}`.trim();
-  if (htmlFor) {
-    return (
-      <label htmlFor={htmlFor} className={cls}>
-        {children}
-        <span className="text-xs tracking-wide text-[var(--ink-muted)]">
-          {label}
-        </span>
-      </label>
-    );
-  }
-  return (
-    <div className={cls}>
-      {children}
-      <span className="text-xs tracking-wide text-[var(--ink-muted)]">
-        {label}
-      </span>
-    </div>
-  );
-}
+const GHOST_INPUT =
+  "w-full min-w-0 border-0 border-b border-transparent bg-transparent px-0 py-0 text-inherit placeholder:text-black/30 focus:border-black/35 focus:outline-none";
 
 function normalizeInterest(raw: string): string {
   return raw.trim().replace(/\s+/g, " ").slice(0, MAX_INTEREST_LENGTH);
-}
-
-async function fileToSquareDataUrl(file: File): Promise<string | null> {
-  const objectUrl = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image();
-      el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error("Could not read image"));
-      el.src = objectUrl;
-    });
-
-    const minSide = Math.min(img.naturalWidth, img.naturalHeight);
-    if (!minSide) return null;
-    const sx = Math.max(0, (img.naturalWidth - minSide) / 2);
-    const sy = Math.max(0, (img.naturalHeight - minSide) / 2);
-
-    const canvas = document.createElement("canvas");
-    canvas.width = TARGET_SIZE;
-    canvas.height = TARGET_SIZE;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, TARGET_SIZE, TARGET_SIZE);
-
-    let quality = 0.85;
-    let dataUrl = canvas.toDataURL("image/jpeg", quality);
-    while (dataUrl.length > MAX_DATA_URL_BYTES && quality > 0.4) {
-      quality -= 0.1;
-      dataUrl = canvas.toDataURL("image/jpeg", quality);
-    }
-    if (dataUrl.length > MAX_DATA_URL_BYTES) return null;
-    return dataUrl;
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
 }
 
 type Props = {
@@ -111,6 +45,10 @@ type Props = {
 
 export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: Props) {
   const { user, updateProfile } = useAuth();
+  const earnedBadges = useQuery(
+    api.badges.getUserBadges,
+    user ? { userId: user.id as Id<"users"> } : "skip",
+  );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const rolePickerRef = useRef<HTMLDivElement | null>(null);
   const avatarPickerRef = useRef<HTMLDivElement | null>(null);
@@ -142,6 +80,8 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [badgeCaseOpen, setBadgeCaseOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   const resetDraftsFromUser = useCallback(() => {
     if (!user) return;
@@ -162,6 +102,10 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     setAvatarPickerOpen(false);
     setError(null);
     setInterestInput("");
+    setCropSrc((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
   }, [user]);
 
   useEffect(() => {
@@ -243,25 +187,20 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     JSON.stringify(interestsDraft) !== JSON.stringify(initialInterests) ||
     JSON.stringify(avatarDraft ?? null) !== JSON.stringify(initialAvatar ?? null);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    setError(null);
-    setBusy(true);
-    try {
-      const dataUrl = await fileToSquareDataUrl(file);
-      if (!dataUrl) {
-        setError("That image is too big — try a smaller one.");
-        return;
-      }
-      setAvatarDraft({ kind: "image", dataUrl });
-      setAvatarPickerOpen(false);
-    } catch {
-      setError("Could not read that image.");
-    } finally {
-      setBusy(false);
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image.");
+      return;
     }
+    setError(null);
+    setAvatarPickerOpen(false);
+    setCropSrc((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
   }
 
   function pickPreset(id: string) {
@@ -367,263 +306,239 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     setInterestInput("");
   }
 
+  const rolePrint = cardRoleLabel(roleDraft);
+  const yearSuffix = yearDraft
+    ? formatYearLabel(yearDraft).replace(/^\d+/, "")
+    : " year";
+
   return (
     <div className="flex flex-col">
-      <h1 className={SECTION_HEADING}>Edit my profile</h1>
-      <div className="mt-8 flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-        <div ref={avatarPickerRef} className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              setAvatarPickerOpen((open) => !open);
-              setCollegePickerOpen(false);
-              setRolePickerOpen(false);
-            }}
-            disabled={busy}
-            aria-expanded={avatarPickerOpen}
-            aria-haspopup="dialog"
-            aria-label={busy ? "Loading photo" : "Change profile picture"}
-            className="group relative rounded-full disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Avatar name={user.name} size="2xl" source={avatarDraft} />
-            <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-[var(--ink)]/0 text-[0.65rem] font-medium uppercase tracking-[0.08em] text-[var(--accent-ink)] opacity-0 transition-opacity group-hover:bg-[var(--ink)]/45 group-hover:opacity-100">
-              {busy ? "…" : "Change"}
-            </span>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          {avatarPickerOpen ? (
-            <div
-              role="dialog"
-              aria-label="Choose a profile picture"
-              className="absolute left-0 top-[calc(100%+0.65rem)] z-30 w-44 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-3 shadow-[0_8px_28px_-12px_rgba(0,0,0,0.45)]"
+      <h1 className="sr-only">My profile</h1>
+      {error ? (
+        <p className="mb-3 text-sm text-[var(--danger)]">{error}</p>
+      ) : null}
+
+      <ProfileIdCard
+        className="mx-auto"
+        labelledBy="profile-name"
+        photo={
+          <div ref={avatarPickerRef} className="relative h-full w-full">
+            <button
+              type="button"
+              onClick={() => {
+                setAvatarPickerOpen((open) => !open);
+                setCollegePickerOpen(false);
+                setRolePickerOpen(false);
+              }}
+              disabled={busy}
+              aria-expanded={avatarPickerOpen}
+              aria-haspopup="dialog"
+              aria-label={busy ? "Loading photo" : "Change profile picture"}
+              className="group relative h-full w-full disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <div className="grid grid-cols-4 gap-2">
-                {PRESET_AVATARS.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => pickPreset(p.id)}
-                    aria-pressed={presetActiveId === p.id}
-                    aria-label={`Use ${p.label} avatar`}
-                    className={`flex h-8 w-8 items-center justify-center rounded-full border-[1.5px] text-[var(--ink)] transition-colors ${
-                      presetActiveId === p.id
-                        ? "border-[var(--ink)] bg-[var(--ink)] text-[var(--bg)]"
-                        : "border-[color-mix(in_srgb,var(--ink)_22%,transparent)] hover:border-[var(--ink)]"
-                    }`}
-                  >
-                    <PresetAvatarIcon id={p.id} className="h-4 w-4" />
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3 flex flex-col gap-1.5 border-t border-[color-mix(in_srgb,var(--ink)_12%,transparent)] pt-2.5">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={busy}
-                  className="text-left text-xs text-[var(--ink)] transition-colors hover:text-[var(--accent)] disabled:opacity-60"
-                >
-                  {busy ? "Loading…" : "Upload photo"}
-                </button>
-                <button
-                  type="button"
-                  onClick={clearAvatar}
-                  className="text-left text-xs text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
-                >
-                  Use initials
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="min-w-0 flex-1 space-y-5">
-          <Field label="name" htmlFor="profile-name" className="max-w-[12rem]">
+              <Avatar
+                name={nameDraft || user.name}
+                size="fill"
+                source={avatarDraft}
+                square
+                className="border-0 bg-[#cfcbc2] text-[#3a3a3a]"
+              />
+              <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[#002147]/0 text-[length:2.8cqi] font-medium uppercase tracking-[0.1em] text-white opacity-0 transition-opacity group-hover:bg-[#002147]/50 group-hover:opacity-100">
+                {busy ? "…" : "Change"}
+              </span>
+            </button>
             <input
-              id="profile-name"
-              type="text"
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              placeholder="Your full name"
-              className={UNDERLINE_INPUT}
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
             />
-          </Field>
-
-          {error ? (
-            <p className="text-sm text-[var(--danger)]">{error}</p>
-          ) : null}
-
-          <div className="grid grid-cols-2 gap-x-5 gap-y-5 sm:grid-cols-4">
-            <Field label="college">
-              <OutlineCombobox
-                variant="underline"
-                open={collegePickerOpen}
-                onOpenChange={(next) => {
-                  setCollegePickerOpen(next);
-                  if (next) setRolePickerOpen(false);
-                }}
-                value={collegeDraft}
-                options={collegeComboboxOptions}
-                onChange={(v) => {
-                  setCollegeDraft(v);
+            {avatarPickerOpen ? (
+              <div
+                role="dialog"
+                aria-label="Choose a profile picture"
+                className="absolute left-0 top-full z-50 mt-1 w-[min(11rem,70cqi)] rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-3 shadow-[0_8px_28px_-12px_rgba(0,0,0,0.45)]"
+              >
+                <div className="grid grid-cols-4 gap-2">
+                  {PRESET_AVATARS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => pickPreset(p.id)}
+                      aria-pressed={presetActiveId === p.id}
+                      aria-label={`Use ${p.label} avatar`}
+                      className={`flex h-8 w-8 items-center justify-center rounded-full border-[1.5px] text-[var(--ink)] transition-colors ${
+                        presetActiveId === p.id
+                          ? "border-[var(--ink)] bg-[var(--ink)] text-[var(--bg)]"
+                          : "border-[color-mix(in_srgb,var(--ink)_22%,transparent)] hover:border-[var(--ink)]"
+                      }`}
+                    >
+                      <PresetAvatarIcon id={p.id} className="h-4 w-4" />
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-3 flex flex-col gap-1.5 border-t border-[color-mix(in_srgb,var(--ink)_12%,transparent)] pt-2.5">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={busy}
+                    className="text-left text-xs text-[var(--ink)] transition-colors hover:text-[var(--accent)] disabled:opacity-60"
+                  >
+                    {busy ? "Loading…" : "Upload photo"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearAvatar}
+                    className="text-left text-xs text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
+                  >
+                    Use initials
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        }
+        name={
+          <input
+            id="profile-name"
+            type="text"
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            placeholder="Your full name"
+            aria-label="Name"
+            className={GHOST_INPUT}
+          />
+        }
+        status={
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-[0.35em]">
+            <div ref={rolePickerRef} className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setRolePickerOpen((open) => !open);
                   setCollegePickerOpen(false);
                 }}
-                placeholder="Choose college"
-              />
-            </Field>
-
-            <Field label="year" htmlFor="profile-year">
-              <input
-                id="profile-year"
-                type="text"
-                inputMode="numeric"
-                pattern="\d+"
-                value={yearDraft}
-                onChange={(e) =>
-                  setYearDraft(e.target.value.replace(/\D/g, "").slice(0, 2))
-                }
-                placeholder="2"
-                className={UNDERLINE_INPUT}
-              />
-            </Field>
-
-            <Field label="role">
-              <div ref={rolePickerRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRolePickerOpen((open) => !open);
-                    setCollegePickerOpen(false);
-                  }}
-                  className={`w-full rounded-none border-0 border-b-[1.5px] bg-transparent py-1.5 pr-7 text-left text-base focus:outline-none ${
-                    rolePickerOpen
-                      ? "border-[var(--ink)]"
-                      : "border-[color-mix(in_srgb,var(--ink)_28%,transparent)] focus:border-[var(--ink)]"
-                  } ${roleDraft ? "text-[var(--ink)]" : "text-[var(--ink-soft)]"}`}
-                >
-                  {roleDraft || "Choose role"}
-                </button>
-                <span className="pointer-events-none absolute right-0 top-2.5 text-[var(--ink-muted)]">
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 12 8"
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                  >
-                    <path
-                      d="M1 1.5 6 6.5 11 1.5"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-                {rolePickerOpen ? (
-                  <div className={DROPDOWN_PANEL}>
-                    <div className="flex flex-col gap-1">
-                      {roleSelectOptions.map((option) => {
-                        const selected = option === roleDraft;
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => {
-                              setRoleDraft(option);
-                              setRolePickerOpen(false);
-                            }}
-                            className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                              selected
-                                ? "bg-[var(--ink)] text-[var(--bg)]"
-                                : "text-[var(--ink)] hover:bg-[var(--bg)]"
-                            }`}
-                          >
-                            {option}
-                          </button>
-                        );
-                      })}
-                    </div>
+                aria-label="Role"
+                aria-expanded={rolePickerOpen}
+                className={`border-0 border-b bg-transparent pr-4 font-semibold tracking-wide focus:outline-none ${
+                  rolePickerOpen ? "border-black/35" : "border-transparent"
+                } ${rolePrint ? "text-inherit" : "text-black/30"}`}
+              >
+                {rolePrint || "ROLE"}
+              </button>
+              {rolePickerOpen ? (
+                <div className={`${DROPDOWN_PANEL} top-[calc(100%+0.3rem)]`}>
+                  <div className="flex flex-col gap-1">
+                    {roleSelectOptions.map((option) => {
+                      const selected = option === roleDraft;
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => {
+                            setRoleDraft(option);
+                            setRolePickerOpen(false);
+                          }}
+                          className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                            selected
+                              ? "bg-[var(--ink)] text-[var(--bg)]"
+                              : "text-[var(--ink)] hover:bg-[var(--bg)]"
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })}
                   </div>
-                ) : null}
-              </div>
-            </Field>
-
-            <Field label="subject" htmlFor="profile-subject">
-              <input
-                id="profile-subject"
-                type="text"
-                value={subjectDraft}
-                onChange={(e) => setSubjectDraft(e.target.value)}
-                placeholder="e.g. PPE"
-                className={UNDERLINE_INPUT}
-              />
-            </Field>
+                </div>
+              ) : null}
+            </div>
+            <span className="text-black/55">reading for</span>
+            <input
+              id="profile-subject"
+              type="text"
+              value={subjectDraft}
+              onChange={(e) => setSubjectDraft(e.target.value)}
+              placeholder="subject"
+              aria-label="Subject"
+              className={`${GHOST_INPUT} min-w-[6em] flex-1`}
+            />
           </div>
-        </div>
-      </div>
-
-      <section className="mt-10" aria-labelledby="profile-socials-heading">
-        <h2 id="profile-socials-heading" className={SECTION_HEADING}>
-          Socials
-        </h2>
-        <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-          <Field label="instagram" htmlFor="profile-instagram">
-            <input
-              id="profile-instagram"
-              type="text"
-              value={instagramHandleDraft}
-              onChange={(e) => setInstagramHandleDraft(e.target.value)}
-              placeholder="@yourhandle"
-              className={UNDERLINE_INPUT}
+        }
+        college={
+          <>
+            <span id="profile-college-label" className="sr-only">
+              College
+            </span>
+            <OutlineCombobox
+              variant="ghost"
+              open={collegePickerOpen}
+              onOpenChange={(next) => {
+                setCollegePickerOpen(next);
+                if (next) setRolePickerOpen(false);
+              }}
+              value={collegeDraft}
+              options={collegeComboboxOptions}
+              onChange={(v) => {
+                setCollegeDraft(v);
+                setCollegePickerOpen(false);
+              }}
+              placeholder="College"
+              aria-labelledby="profile-college-label"
             />
-          </Field>
-          <Field label="whatsapp phone #" htmlFor="profile-whatsapp">
-            <input
-              id="profile-whatsapp"
-              type="tel"
-              inputMode="tel"
-              value={whatsappPhoneDraft}
-              onChange={(e) => setWhatsappPhoneDraft(e.target.value)}
-              placeholder="+44 7..."
-              className={UNDERLINE_INPUT}
-            />
-          </Field>
-        </div>
-      </section>
-
-      <section className="mt-10" aria-labelledby="profile-formal-heading">
-        <h2 id="profile-formal-heading" className={SECTION_HEADING}>
-          Formal-stuff
-        </h2>
-        <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-          <Field label="allergens?" htmlFor="profile-allergens">
-            <input
-              id="profile-allergens"
-              type="text"
-              value={dietaryRequirementsDraft}
-              onChange={(e) => setDietaryRequirementsDraft(e.target.value)}
-              placeholder="e.g. Vegetarian, nut allergy"
-              className={UNDERLINE_INPUT}
-            />
-          </Field>
-
-          <Field label="interests">
-            <div className="flex min-h-[2.35rem] flex-wrap items-center gap-1.5 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_28%,transparent)] pb-1.5 focus-within:border-[var(--ink)]">
+          </>
+        }
+        extras={
+          <div className="flex flex-col gap-[0.15em]">
+            <label className="flex min-w-0 items-center gap-[0.4em]">
+              <SketchInstagram className="h-[1.05em] w-[1.05em] text-[#161616]/70" />
+              <input
+                id="profile-instagram"
+                type="text"
+                value={instagramHandleDraft}
+                onChange={(e) => setInstagramHandleDraft(e.target.value)}
+                placeholder="handle"
+                aria-label="Instagram"
+                className={GHOST_INPUT}
+              />
+            </label>
+            <label className="flex min-w-0 items-center gap-[0.4em]">
+              <SketchWhatsApp className="h-[1.05em] w-[1.05em] text-[#161616]/70" />
+              <input
+                id="profile-whatsapp"
+                type="tel"
+                inputMode="tel"
+                value={whatsappPhoneDraft}
+                onChange={(e) => setWhatsappPhoneDraft(e.target.value)}
+                placeholder="+44…"
+                aria-label="WhatsApp phone"
+                className={GHOST_INPUT}
+              />
+            </label>
+            <label className="flex min-w-0 items-baseline gap-[0.35em]">
+              <span className="shrink-0 text-black/55">Dietary requirements</span>
+              <input
+                id="profile-allergens"
+                type="text"
+                value={dietaryRequirementsDraft}
+                onChange={(e) => setDietaryRequirementsDraft(e.target.value)}
+                placeholder="none"
+                aria-label="Dietary requirements"
+                className={GHOST_INPUT}
+              />
+            </label>
+            <div className="flex min-h-[1.2em] flex-wrap items-center gap-[0.25em] border-b border-transparent focus-within:border-black/35">
               {interestsDraft.map((interest, index) => (
                 <span
                   key={`${interest}-${index}`}
-                  className="inline-flex max-w-full items-center gap-1 rounded-full border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] px-2.5 py-0.5 text-sm text-[var(--ink)]"
+                  className="inline-flex max-w-full items-center gap-0.5 rounded-sm bg-black/10 px-[0.35em] py-[0.05em] text-[0.95em]"
                 >
                   <span className="truncate">{interest}</span>
                   <button
                     type="button"
                     onClick={() => removeInterest(index)}
-                    className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                    className="inline-flex h-[1em] w-[1em] items-center justify-center text-black/50 hover:text-black"
                     aria-label={`Remove ${interest}`}
                   >
                     ×
@@ -638,36 +553,69 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
                   setInterestInput(e.target.value.slice(0, MAX_INTEREST_LENGTH))
                 }
                 onKeyDown={onInterestKeyDown}
-                maxLength={MAX_INTEREST_LENGTH}
-                placeholder={
-                  interestsDraft.length === 0 ? "Type an interest…" : ""
-                }
-                aria-label="Add an interest"
-                className="min-w-[6rem] flex-1 border-0 bg-transparent py-0.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => {
+                onBlur={() => {
                   addInterest(interestInput);
                   setInterestInput("");
                 }}
-                disabled={!normalizeInterest(interestInput)}
-                aria-label="Add interest"
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:pointer-events-none disabled:opacity-30"
-              >
-                <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-                  <path d="M10 3a1 1 0 0 1 1 1v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H4a1 1 0 1 1 0-2h5V4a1 1 0 0 1 1-1Z" />
-                </svg>
-              </button>
+                maxLength={MAX_INTEREST_LENGTH}
+                placeholder={
+                  interestsDraft.length === 0 ? "Add an interest" : ""
+                }
+                aria-label="Add an interest"
+                className="min-w-[5em] flex-1 border-0 bg-transparent py-0 text-inherit placeholder:text-black/30 focus:outline-none"
+              />
             </div>
-          </Field>
-        </div>
-      </section>
+          </div>
+        }
+        validUntil={
+          <label className="flex min-w-0 items-baseline tracking-normal">
+            <span className="sr-only">Year of study</span>
+            <input
+              id="profile-year"
+              type="text"
+              inputMode="numeric"
+              pattern="\d+"
+              value={yearDraft}
+              onChange={(e) =>
+                setYearDraft(e.target.value.replace(/\D/g, "").slice(0, 2))
+              }
+              placeholder="2"
+              size={Math.max(yearDraft.length, 1)}
+              className="field-sizing-content w-auto min-w-[0.55em] border-0 border-b border-transparent bg-transparent p-0 font-bold uppercase tracking-normal placeholder:text-black/30 focus:border-black/35 focus:outline-none"
+            />
+            <span className={yearDraft ? "" : "text-black/30"}>{yearSuffix}</span>
+          </label>
+        }
+        earnedBadges={earnedBadges}
+        onOpenBadges={() => setBadgeCaseOpen(true)}
+      />
+
+      <PhotoCropModal
+        src={cropSrc}
+        onClose={() => {
+          setCropSrc((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return null;
+          });
+        }}
+        onConfirm={(dataUrl) => {
+          setAvatarDraft({ kind: "image", dataUrl });
+          setCropSrc((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return null;
+          });
+        }}
+      />
+
+      <BadgeCaseModal
+        open={badgeCaseOpen}
+        onClose={() => setBadgeCaseOpen(false)}
+        earned={earnedBadges}
+      />
 
       {saved ? (
-        <p className="mt-6 text-sm text-[var(--ink-muted)]">Saved</p>
+        <p className="mt-4 text-sm text-[var(--ink-muted)]">Saved</p>
       ) : null}
     </div>
   );
 }
-

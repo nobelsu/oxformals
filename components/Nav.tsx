@@ -467,7 +467,6 @@ function NavInner() {
               >
                 <span className="min-w-0 truncate whitespace-nowrap text-[var(--nav-ink-muted)] group-hover:text-[var(--nav-ink)]">
                   {user.name.split(" ")[0]}
-                  <span className="text-[var(--nav-ink-muted)]"> · {user.college}</span>
                 </span>
                 <span
                   className={`shrink-0 rounded-full transition-shadow ${

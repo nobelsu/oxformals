@@ -183,3 +183,13 @@ export function formatYearLabel(raw: string | number | null | undefined): string
   if (!Number.isFinite(year) || year <= 0) return value;
   return `${year}${ordinalSuffix(year)} year`;
 }
+
+/** Card-printed role: Undergrad → UNDERGRADUATE. */
+export function cardRoleLabel(role: string): string {
+  const trimmed = role.trim();
+  if (!trimmed) return "";
+  if (/^undergrad/i.test(trimmed)) return "UNDERGRADUATE";
+  if (/^masters?$/i.test(trimmed)) return "MASTERS";
+  if (/^dphil/i.test(trimmed)) return "DPHIL";
+  return trimmed.toUpperCase();
+}

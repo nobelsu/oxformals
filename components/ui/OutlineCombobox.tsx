@@ -45,8 +45,8 @@ export type OutlineComboboxProps = {
   /** Controlled open state (use with `onOpenChange`). */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  /** `underline` matches the edit-profile hairline fields. */
-  variant?: "outline" | "underline";
+  /** `underline` matches hairline fields; `ghost` is printed-looking until focus. */
+  variant?: "outline" | "underline" | "ghost";
 };
 
 /**
@@ -111,19 +111,27 @@ export function OutlineCombobox({
 
   const display = selectedLabel || placeholder;
   const underline = variant === "underline";
-  const triggerCls = underline
-    ? `w-full rounded-none border-0 border-b-[1.5px] bg-transparent px-0 py-1.5 pr-7 text-left text-base text-[var(--ink)] focus:outline-none ${
-        open
-          ? "border-[var(--ink)]"
-          : "border-[color-mix(in_srgb,var(--ink)_28%,transparent)] focus:border-[var(--ink)]"
-      }`
-    : "w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 pr-12 text-left text-base text-[var(--ink)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30";
-  const chevronCls = underline
-    ? "pointer-events-none absolute right-0 top-2.5 text-[var(--ink-muted)]"
-    : "pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]";
-  const listCls = underline
-    ? "absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-2 shadow-[0_2px_14px_-10px_rgba(0,0,0,0.25)]"
-    : "absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--bg)] p-2 shadow-sm";
+  const ghost = variant === "ghost";
+  const triggerCls = ghost
+    ? `w-full rounded-none border-0 border-b bg-transparent px-0 py-0 pr-5 text-left text-inherit focus:outline-none ${
+        open ? "border-black/35" : "border-transparent hover:border-black/20"
+      } ${selectedLabel ? "" : "text-black/35"}`
+    : underline
+      ? `w-full rounded-none border-0 border-b-[1.5px] bg-transparent px-0 py-1.5 pr-7 text-left text-base text-[var(--ink)] focus:outline-none ${
+          open
+            ? "border-[var(--ink)]"
+            : "border-[color-mix(in_srgb,var(--ink)_28%,transparent)] focus:border-[var(--ink)]"
+        }`
+      : "w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 pr-12 text-left text-base text-[var(--ink)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30";
+  const chevronCls = ghost
+    ? "pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-black/35"
+    : underline
+      ? "pointer-events-none absolute right-0 top-2.5 text-[var(--ink-muted)]"
+      : "pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]";
+  const listCls =
+    ghost || underline
+      ? "absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-2 shadow-[0_2px_14px_-10px_rgba(0,0,0,0.25)]"
+      : "absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--bg)] p-2 shadow-sm";
 
   return (
     <div
@@ -140,7 +148,7 @@ export function OutlineCombobox({
         onClick={() => setOpen(!open)}
         className={triggerCls}
       >
-        <span className={selectedLabel ? "" : "text-[var(--ink-soft)]"}>
+        <span className={selectedLabel || ghost ? "" : "text-[var(--ink-soft)]"}>
           {display}
         </span>
       </button>
@@ -197,7 +205,7 @@ export function OutlineCombobox({
                       className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
                         selected
                           ? "bg-[var(--ink)] text-[var(--bg)]"
-                          : underline
+                          : underline || ghost
                             ? "text-[var(--ink)] hover:bg-[var(--bg)]"
                             : "text-[var(--ink)] hover:bg-[var(--paper)]"
                       }`}

@@ -11,9 +11,10 @@ import type { ListingWithMenuPdfUrl } from "@/convex/listingHelpers";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Avatar, PRESET_AVATARS, PresetAvatarIcon, initialsFor } from "@/components/ui/Avatar";
+import { ProfileIdCard } from "@/components/swap/ProfileIdCard";
+import { SketchInstagram, SketchWhatsApp } from "@/components/ui/SketchSocial";
 import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
-import { SketchLock } from "@/components/ui/SketchLock";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
 import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
 import { RequestPayModal } from "@/components/swap/RequestPayModal";
@@ -29,8 +30,7 @@ import type { AvatarSource } from "@/lib/auth/types";
 import { listingSupportsSwap } from "@/lib/data/listingType";
 import { findBlockingOutgoingRequestForTarget } from "@/lib/data/requestFilters";
 import type { GroupSize, Listing, RequestType } from "@/lib/data/types";
-import { formatYearLabel } from "@/lib/data/format";
-import { TOTAL_BADGE_COUNT, badgeById } from "@/lib/data/badges";
+import { cardRoleLabel, formatYearLabel } from "@/lib/data/format";
 import type { ProfileActivityItem } from "@/lib/data/groupActivityByDay";
 
 function mapProfileListing(doc: {
@@ -137,8 +137,8 @@ type ProfileViewProps = {
   userId: string;
   /** When true, omit back link and outer page chrome (for Me tab). */
   embedded?: boolean;
-  /** Own profile in Me tab: open in-tab edit instead of navigating away. */
-  onEditProfile?: () => void;
+  /** Me tab already renders the editable card above this view. */
+  omitCard?: boolean;
 };
 
 const STANDALONE_OUTER =
@@ -148,7 +148,7 @@ const EMBEDDED_OUTER = "flex w-full flex-col gap-8";
 export function ProfileView({
   userId,
   embedded = false,
-  onEditProfile,
+  omitCard = false,
 }: ProfileViewProps) {
   const router = useRouter();
   const { user: currentUser, isAuthenticated, signOut } = useAuth();
@@ -257,6 +257,13 @@ export function ProfileView({
   const outerClass = embedded ? EMBEDDED_OUTER : STANDALONE_OUTER;
 
   if (profile === undefined) {
+    if (omitCard) {
+      return (
+        <Outer className={outerClass}>
+          <p className="text-[var(--ink-muted)]">Loading activity…</p>
+        </Outer>
+      );
+    }
     const loadingClass = embedded
       ? "flex min-h-[50vh] w-full items-center justify-center"
       : "mx-auto flex min-h-[50vh] w-full max-w-5xl items-center justify-center px-4 py-8 sm:px-6";
@@ -311,14 +318,8 @@ export function ProfileView({
   const subject = (profileUser.subject ?? "").trim();
   const avatar = profileUser.avatar as AvatarSource | undefined;
 
-  const profileLine = [
-    college,
-    formatYearLabel(year) || year,
-    role,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
+  const rolePrint = cardRoleLabel(role);
+  const yearPrint = formatYearLabel(year) || year;
   const isOwnProfile = currentUser?.id === userId;
   const listingDisabled = isOwnProfile || !isAuthenticated;
 
@@ -334,9 +335,6 @@ export function ProfileView({
     uiFont: profileUser.uiFont ?? DEFAULT_UI_FONT,
     avatar,
   };
-
-  const editProfileClass =
-    "shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]";
 
   const stats = activity?.stats;
   // The query returns raw enriched listing docs; ListingRow needs the
@@ -356,7 +354,6 @@ export function ProfileView({
           }
         : item,
   );
-  const earnedCount = earnedBadges?.length ?? 0;
   const memberUsersFor = (l: Listing) =>
     l.members
       .filter((mid) => mid !== l.ownerUserId)
@@ -376,140 +373,128 @@ export function ProfileView({
         </div>
       ) : null}
 
-      {/* Header — left-aligned compact */}
-      <div className="flex items-center gap-3.5">
-        <div
-          role="button"
-          tabIndex={0}
-          className="shrink-0 cursor-pointer transition-transform hover:scale-105"
-          onClick={() => setAvatarOpen(true)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setAvatarOpen(true);
-            }
-          }}
-          aria-label={`View ${name}'s avatar`}
-        >
-          <Avatar name={name} size="lg" source={avatar} />
-        </div>
-        {avatarOpen && (
-          <AvatarLightbox source={avatar} name={name} onClose={closeAvatar} />
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <h1 className="font-display text-[1.75rem] leading-tight">
-              {name}
-            </h1>
+      {!isOwnProfile ? (
+        <div className="flex items-center justify-end gap-3">
+          {isAuthenticated ? (
+            <MessageUserButton
+              otherUserId={userId as Id<"users">}
+              className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
+            />
+          ) : (
             <button
               type="button"
-              onClick={() => setBadgeCaseOpen(true)}
-              aria-label={`Badges, ${earnedCount} of ${TOTAL_BADGE_COUNT} earned. Open badge case.`}
-              className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1 transition-opacity hover:opacity-80"
+              onClick={() =>
+                router.push(
+                  `/login?next=${encodeURIComponent(`/profile/${userId}`)}`,
+                )
+              }
+              className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
             >
-              {Array.from({ length: 4 }, (_, i) => {
-                const earned = (earnedBadges ?? [])[i];
-                const def = earned ? badgeById(earned.badgeId) : undefined;
-                return (
-                  <span
-                    key={def?.id ?? `empty-${i}`}
-                    title={def?.name ?? "Locked badge"}
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 bg-[var(--bg)] text-sm ${
-                      def
-                        ? "border-[var(--ink)]"
-                        : "border-dashed border-[var(--ink-soft)] opacity-55"
-                    }`}
-                  >
-                    {def ? def.icon : <SketchLock className="h-3.5 w-3.5" />}
-                  </span>
-                );
-              })}
+              Message
             </button>
-          </div>
-          {profileLine ? (
-            <p className="mt-0.5 text-sm text-[var(--ink-soft)]">{profileLine}</p>
-          ) : null}
+          )}
         </div>
-        {isOwnProfile ? (
-          onEditProfile ? (
-            <button type="button" onClick={onEditProfile} className={editProfileClass}>
-              Edit
-            </button>
-          ) : (
-            <Link href="/?tab=mine&edit=1" className={editProfileClass}>
-              Edit
-            </Link>
-          )
-        ) : isAuthenticated ? (
-          <MessageUserButton
-            otherUserId={userId as Id<"users">}
-            className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
-          />
-        ) : (
+      ) : null}
+
+      {!omitCard && avatarOpen ? (
+        <AvatarLightbox source={avatar} name={name} onClose={closeAvatar} />
+      ) : null}
+
+      {omitCard ? null : (
+      <ProfileIdCard
+        className="mx-auto"
+        labelledBy="profile-card-name"
+        photo={
           <button
             type="button"
-            onClick={() =>
-              router.push(
-                `/login?next=${encodeURIComponent(`/profile/${userId}`)}`,
-              )
-            }
-            className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+            className="h-full w-full cursor-pointer"
+            onClick={() => setAvatarOpen(true)}
+            aria-label={`View ${name}'s photo`}
           >
-            Message
+            <Avatar
+              name={name}
+              size="fill"
+              source={avatar}
+              square
+              className="border-0 bg-[#cfcbc2] text-[#3a3a3a]"
+            />
           </button>
-        )}
-      </div>
-
-      {(instagramHandle || whatsappPhone) && (
-        <div className="flex flex-wrap gap-2">
-          {instagramHandle && (
-            <a
-              href={`https://instagram.com/${instagramHandle}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-8 max-w-full min-w-0 items-center gap-1.5 rounded-full border-[1.5px] border-[color-mix(in_srgb,var(--ink)_35%,transparent)] px-3 text-[0.85rem] text-[var(--ink-soft)] transition-colors hover:border-[var(--ink)] hover:text-[var(--ink)]"
-            >
-              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="2" width="20" height="20" rx="5" />
-                <circle cx="12" cy="12" r="5" />
-                <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
-              </svg>
-              <span className="truncate">@{instagramHandle}</span>
-            </a>
-          )}
-          {whatsappPhone && (
-            <a
-              href={`https://wa.me/${whatsappPhone.replace(/[^\d+]/g, "")}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-8 max-w-full min-w-0 items-center gap-1.5 rounded-full border-[1.5px] border-[color-mix(in_srgb,var(--ink)_35%,transparent)] px-3 text-[0.85rem] text-[var(--ink-soft)] transition-colors hover:border-[var(--ink)] hover:text-[var(--ink)]"
-            >
-              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="currentColor">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-              </svg>
-              <span className="truncate">{whatsappPhone}</span>
-            </a>
-          )}
-        </div>
-      )}
-
-      {(dietaryRequirements || subject) && (
-        <div className="-mt-4 space-y-0.5 text-sm text-[var(--ink-muted)]">
-          {dietaryRequirements ? (
-            <p>
-              <span className="font-medium text-[var(--ink)]">
-                Allergens / Dietary requirements:
-              </span>{" "}
-              {dietaryRequirements}
-            </p>
-          ) : null}
-          {subject ? (
-            <p>
-              <span className="font-medium text-[var(--ink)]">Subject:</span>{" "}
+        }
+        name={
+          <h1 id="profile-card-name" className="m-0 truncate">
+            {name}
+          </h1>
+        }
+        status={
+          rolePrint || subject ? (
+            <p className="m-0">
+              {rolePrint ? (
+                <span className="font-semibold tracking-wide">{rolePrint}</span>
+              ) : null}
+              {rolePrint && subject ? " reading for " : null}
               {subject}
             </p>
-          ) : null}
-        </div>
+          ) : (
+            <p className="m-0 text-black/35">—</p>
+          )
+        }
+        college={
+          college ? (
+            <p className="m-0 truncate">{college}</p>
+          ) : (
+            <p className="m-0 text-black/35">College</p>
+          )
+        }
+        extras={
+          instagramHandle ||
+          whatsappPhone ||
+          dietaryRequirements ||
+          interests.length > 0 ? (
+            <div className="flex flex-col gap-[0.12em]">
+              {instagramHandle ? (
+                <a
+                  href={`https://instagram.com/${instagramHandle}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex min-w-0 items-center gap-[0.4em] text-inherit underline-offset-2 hover:underline"
+                >
+                  <SketchInstagram className="h-[1.05em] w-[1.05em]" />
+                  <span className="truncate">@{instagramHandle}</span>
+                </a>
+              ) : null}
+              {whatsappPhone ? (
+                <a
+                  href={`https://wa.me/${whatsappPhone.replace(/[^\d+]/g, "")}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex min-w-0 items-center gap-[0.4em] text-inherit underline-offset-2 hover:underline"
+                >
+                  <SketchWhatsApp className="h-[1.05em] w-[1.05em]" />
+                  <span className="truncate">{whatsappPhone}</span>
+                </a>
+              ) : null}
+              {dietaryRequirements ? (
+                <p className="m-0 truncate">
+                  <span className="text-[#161616]/55">Dietary requirements </span>
+                  {dietaryRequirements}
+                </p>
+              ) : null}
+              {interests.length > 0 ? (
+                <p className="m-0 truncate">{interests.join(" · ")}</p>
+              ) : null}
+            </div>
+          ) : undefined
+        }
+        validUntil={
+          yearPrint ? (
+            <span className="uppercase">{yearPrint}</span>
+          ) : (
+            <span className="text-black/35">—</span>
+          )
+        }
+        earnedBadges={earnedBadges}
+        onOpenBadges={() => setBadgeCaseOpen(true)}
+      />
       )}
 
       {/* Stat strip */}
@@ -599,11 +584,13 @@ export function ProfileView({
         />
       ) : null}
 
+      {!omitCard ? (
       <BadgeCaseModal
         open={badgeCaseOpen}
         onClose={() => setBadgeCaseOpen(false)}
         earned={earnedBadges}
       />
+      ) : null}
 
       <ListingDetailModal
         open={!!detailListing}

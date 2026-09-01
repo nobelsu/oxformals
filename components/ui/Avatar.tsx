@@ -2,7 +2,7 @@ import type { AvatarSource } from "@/lib/auth/types";
 
 import type { SVGProps } from "react";
 
-type Size = "sm" | "md" | "lg" | "xl" | "2xl";
+type Size = "sm" | "md" | "lg" | "xl" | "2xl" | "fill";
 
 const SIZES: Record<Size, string> = {
   sm: "h-8 w-8 text-xs",
@@ -10,6 +10,7 @@ const SIZES: Record<Size, string> = {
   lg: "h-14 w-14 text-base",
   xl: "h-[4.235rem] w-[4.235rem] text-[1.3475rem] leading-none",
   "2xl": "h-24 w-24 text-2xl",
+  fill: "flex h-full w-full text-[length:8cqi]",
 };
 
 const PRESET_GLYPH_SIZES: Record<Size, string> = {
@@ -18,6 +19,7 @@ const PRESET_GLYPH_SIZES: Record<Size, string> = {
   lg: "text-2xl",
   xl: "text-4xl",
   "2xl": "text-5xl",
+  fill: "text-[length:12cqi]",
 };
 
 export const PRESET_AVATARS: Array<{ id: string; label: string }> = [
@@ -127,12 +129,16 @@ export function Avatar({
   name,
   size = "md",
   source,
+  className = "",
+  square = false,
 }: {
   name: string;
   size?: Size;
   source?: AvatarSource;
+  className?: string;
+  square?: boolean;
 }) {
-  const containerCls = `relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--ink)_18%,var(--bg))] text-[var(--ink-muted)] border-[2px] border-[var(--ink)] ${SIZES[size]}`;
+  const containerCls = `relative ${size === "fill" ? "flex" : "inline-flex"} shrink-0 items-center justify-center overflow-hidden ${square ? "rounded-none" : "rounded-full"} bg-[color-mix(in_srgb,var(--ink)_18%,var(--bg))] text-[var(--ink-muted)] border-[2px] border-[var(--ink)] ${SIZES[size]} ${className}`.trim();
 
   if (source?.kind === "image") {
     return (
@@ -141,7 +147,8 @@ export function Avatar({
         <img
           src={source.dataUrl}
           alt=""
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover object-center"
+          decoding="async"
         />
       </div>
     );
