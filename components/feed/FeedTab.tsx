@@ -6,23 +6,57 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
 import { useAuth } from "@/components/auth/useAuth";
+import { useData } from "@/components/data/useData";
 import { useListingsHubData } from "@/components/swap/listings-hub/useListingsHubData";
 import { mapListing, mapUser } from "@/lib/data/mapConvex";
 import { BROWSE_ROUTE } from "@/lib/ui/routes";
+import { useNowMs } from "@/lib/hooks/useNowMs";
+import type { Id } from "@/convex/_generated/dataModel";
 import type { FeedItem } from "@/lib/data/feed";
 import type { Listing } from "@/lib/data/types";
 import type { User } from "@/lib/auth/types";
 import { FeedRow } from "./FeedRow";
 import { FeedHeader } from "./FeedHeader";
-import { NeedsAttention } from "./NeedsAttention";
+import { FeedSidebar, whenLabel, type NextFormal } from "./FeedSidebar";
 
 export function FeedTab() {
   const raw = useQuery(api.feed.getCampusFeed, {});
   const { user } = useAuth();
+  const { listings, getUser } = useData();
   const hub = useListingsHubData();
-  const [open, setOpen] = useState<{ listing: Listing; owner: User } | null>(
-    null,
-  );
+  const nowMs = useNowMs();
+  const reviewCount =
+    useQuery(
+      api.collegeReviews.listPublicReviewsForUser,
+      user ? { userId: user.id as Id<"users"> } : "skip",
+    )?.length ?? 0;
+  const [open, setOpen] = useState<{
+    listing: Listing;
+    owner: User | null;
+  } | null>(null);
+
+  const nextFormal: NextFormal | null = useMemo(() => {
+    if (!user) return null;
+    const soonest = listings
+      .filter(
+        (l) =>
+          l.members.includes(user.id) && Date.parse(l.dateTime) > nowMs,
+      )
+      .sort((a, b) => Date.parse(a.dateTime) - Date.parse(b.dateTime))[0];
+    if (!soonest) return null;
+    const owner = getUser(soonest.ownerUserId) ?? null;
+    return {
+      listing: soonest,
+      hosting: soonest.ownerUserId === user.id,
+      whenLabel: whenLabel(soonest.dateTime, nowMs),
+      onView: () => setOpen({ listing: soonest, owner }),
+    };
+  }, [user, listings, nowMs, getUser]);
+
+  const attentionCount =
+    hub.listingsNeedingRequests.length +
+    hub.listingsNeedingReview.length +
+    hub.listingsNeedingAttendance.length;
 
   const items: FeedItem[] | undefined = useMemo(() => {
     if (!raw) return undefined;
@@ -95,40 +129,36 @@ export function FeedTab() {
       </ul>
     );
 
-  const withRail = hub.hasNeedsAttention;
+  const sidebar = user ? (
+    <FeedSidebar hub={hub} nextFormal={nextFormal} reviewCount={reviewCount} />
+  ) : null;
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
-      {user ? (
-        <FeedHeader
-          firstName={user.name.split(" ")[0] || user.name}
-          requestCount={hub.totalPendingIncoming}
-          rateCount={hub.formalsToReviewCount}
-        />
-      ) : null}
+    <div className="mx-auto w-full max-w-[1000px]">
+      <div className="lg:grid lg:grid-cols-[minmax(0,600px)_320px] lg:items-start lg:justify-center lg:gap-10">
+        <main className="mx-auto flex w-full max-w-[600px] flex-col gap-4 lg:mx-0 lg:max-w-none">
+          {user ? (
+            <FeedHeader
+              firstName={user.name.split(" ")[0] || user.name}
+              nextFormalCollege={nextFormal?.listing.college}
+              nextFormalWhen={nextFormal?.whenLabel}
+              attentionCount={attentionCount}
+            />
+          ) : null}
 
-      {/* Mobile: attention band above the stream */}
-      {withRail ? (
-        <div className="lg:hidden">
-          <NeedsAttention hub={hub} />
-        </div>
-      ) : null}
+          {/* Mobile: personal sidebar sits above the stream */}
+          <div className="lg:hidden">{sidebar}</div>
 
-      <div
-        className={
-          withRail
-            ? "lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-10"
-            : ""
-        }
-      >
-        <div className={withRail ? "w-full max-w-xl" : "mx-auto w-full max-w-xl"}>
-          {stream}
-        </div>
-        {withRail ? (
-          <aside className="hidden lg:sticky lg:top-4 lg:block">
-            <NeedsAttention hub={hub} />
-          </aside>
-        ) : null}
+          <div>
+            <div className="mb-1 flex items-center gap-3 text-[0.66rem] uppercase tracking-[0.11em] text-[var(--ink-soft)]">
+              From around Oxford
+              <span className="h-[1.5px] flex-1 bg-[color-mix(in_srgb,var(--ink)_12%,transparent)]" />
+            </div>
+            {stream}
+          </div>
+        </main>
+
+        <aside className="hidden lg:sticky lg:top-4 lg:block">{sidebar}</aside>
       </div>
 
       <ListingDetailModal

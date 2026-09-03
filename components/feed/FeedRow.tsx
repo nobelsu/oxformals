@@ -245,7 +245,7 @@ export function FeedRow({ item, onOpenListing }: Props) {
                       alt=""
                       loading="lazy"
                       className={`w-full object-cover transition-transform duration-200 hover:scale-[1.03] ${
-                        item.imageUrls.length === 1 ? "max-h-96" : "aspect-square"
+                        item.imageUrls.length === 1 ? "max-h-80" : "h-48 sm:h-56"
                       }`}
                     />
                     {extra ? (
@@ -271,11 +271,6 @@ export function FeedRow({ item, onOpenListing }: Props) {
 
       {/* Reactions — space it clear of the card body above */}
       <div className="mt-4">
-        {likeCount > 0 ? (
-          <p className="mb-1.5 text-[0.85rem] font-medium text-[var(--ink-muted)]">
-            {likeCount} {likeCount === 1 ? "like" : "likes"}
-          </p>
-        ) : null}
         <div className="flex items-center justify-between">
         <div className="flex items-center gap-5">
           <button
@@ -283,13 +278,16 @@ export function FeedRow({ item, onOpenListing }: Props) {
             onClick={onLike}
             aria-pressed={liked}
             aria-label={liked ? "Unlike" : "Like"}
-            className={`transition-colors ${
+            className={`inline-flex items-center gap-1.5 transition-colors ${
               liked
                 ? "text-[var(--accent)]"
                 : "text-[var(--ink)] hover:text-[var(--accent)]"
             }`}
           >
             <HeartIcon filled={liked} />
+            {likeCount > 0 ? (
+              <span className="text-[0.85rem]">{likeCount}</span>
+            ) : null}
           </button>
           <button
             type="button"
