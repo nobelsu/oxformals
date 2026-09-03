@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
@@ -47,6 +48,17 @@ export function RequestsTab() {
 
   return (
     <>
+      <div className="mb-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
+        >
+          <span aria-hidden>‹</span> Back to feed
+        </Link>
+        <h1 className="mt-2 font-display text-3xl uppercase tracking-wide sm:text-4xl">
+          Your formals
+        </h1>
+      </div>
       <div className="flex flex-col gap-6 md:flex-row md:gap-8">
         <ListingsHubNav
           section={section}

@@ -93,13 +93,15 @@ const TABS = [
   { id: "feed", label: "Feed" },
   { id: "browse", label: "Browse" },
   { id: "colleges", label: "Colleges" },
-  { id: "requests", label: "Activity" },
   { id: "chats", label: "Chats" },
 ] as const;
 
-/** Labels for tabs that live behind other entry points (e.g. the avatar) and
- *  so aren't in the visible tab bar, but still need a mobile header title. */
-const OFF_BAR_LABELS: Record<string, string> = { mine: "Me" };
+/** Labels for surfaces reached from elsewhere (the avatar, or the feed's
+ *  chips) rather than the visible tab bar, but still needing a mobile title. */
+const OFF_BAR_LABELS: Record<string, string> = {
+  mine: "Me",
+  requests: "Your formals",
+};
 
 export function Nav() {
   const pathname = usePathname();
@@ -583,7 +585,6 @@ function NavTabLink({
     <Link
       href={href}
       onClick={onNavigate}
-      data-onboarding={tab.id === "requests" ? "activity" : undefined}
       className={`inline-flex items-center gap-2 font-display uppercase tracking-[0.2em] whitespace-nowrap pb-0.5 transition-opacity ${
         isActive
           ? "text-[var(--nav-ink)]"
