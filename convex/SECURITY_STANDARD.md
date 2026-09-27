@@ -20,7 +20,7 @@ The list below classifies every exported function in `convex/*.ts` (excluding `c
 - `completeOnboarding` (`mutation`): `PublicAuthed`
 - `agreeToRules` (`mutation`): `PublicAuthed`
 - `patchProfile` (`mutation`): `PublicAuthed`
-- `getPublicProfile` (`query`): `PublicOpen`
+- `getPublicProfile` (`query`): `PublicOpen` — contact details (`instagramHandle`, `whatsappPhone`) and `dietaryRequirements` (PII) are revealed only to the profile owner or a matched counterparty; anonymous/other callers get the redacted profile.
 - `toggleWishlistCollege` (`mutation`): `PublicAuthed`
 - `saveWishlistColleges` (`mutation`): `PublicAuthed`
 - `backfillEmailNotifications` (`internalMutation`): `InternalOnly`

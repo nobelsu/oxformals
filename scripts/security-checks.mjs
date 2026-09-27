@@ -80,6 +80,27 @@ async function assertGetPublicByIdsRedaction(users) {
   }
 }
 
+async function assertGetPublicProfileRedaction(users) {
+  if (users.length === 0) return;
+  const first = users[0];
+  if (!first?._id) return;
+
+  const result = await client.query("users:getPublicProfile", {
+    userId: first._id,
+  });
+  if (result === null) return;
+  assert(
+    result.user && typeof result.user === "object",
+    "users:getPublicProfile did not return a user object.",
+  );
+  for (const key of Object.keys(result.user)) {
+    assert(
+      !sensitiveUserKeys.has(key),
+      `users:getPublicProfile leaked sensitive field "${key}" to an anonymous caller.`,
+    );
+  }
+}
+
 async function assertAnonymousMutationDenied() {
   let blocked = false;
   try {
@@ -154,6 +175,7 @@ async function assertNonMemberChatAccessDenied() {
 async function main() {
   const users = await assertListPublicRedaction();
   await assertGetPublicByIdsRedaction(users);
+  await assertGetPublicProfileRedaction(users);
   await assertAnonymousMutationDenied();
   await assertAnonymousChatAccessDenied();
   await assertNonMemberChatAccessDenied();

@@ -341,10 +341,12 @@ export const getPublicProfile = query({
           ? {
               instagramHandle: user.instagramHandle,
               whatsappPhone: user.whatsappPhone,
+              // Dietary requirements are PII: only reveal to the profile owner or
+              // a matched counterparty (same gate as contact details).
+              dietaryRequirements: user.dietaryRequirements ?? "",
             }
           : {}),
         subject: user.subject ?? "",
-        dietaryRequirements: user.dietaryRequirements ?? "",
         uiFont: user.uiFont ?? DEFAULT_UI_FONT,
         avatar: user.avatar,
       },
