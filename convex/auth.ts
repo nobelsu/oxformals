@@ -2,8 +2,6 @@ import { convexAuth } from "@convex-dev/auth/server";
 import { Password } from "@convex-dev/auth/providers/Password";
 import { AdminEmail } from "./AdminEmail";
 import { ResendOTP } from "./ResendOTP";
-import { TestEmail } from "./TestEmail";
-import { isTestAuthConfigured } from "./testAuth";
 import type { DataModel } from "./_generated/dataModel";
 
 export const MIN_PASSWORD_LENGTH = 8;
@@ -34,9 +32,6 @@ const PasswordProvider = Password<DataModel>({
 });
 
 const providers = [ResendOTP, AdminEmail, PasswordProvider];
-if (process.env.NODE_ENV !== "production" && isTestAuthConfigured()) {
-  providers.push(TestEmail);
-}
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers,
