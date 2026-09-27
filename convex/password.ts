@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { createAccount, getAuthUserId } from "@convex-dev/auth/server";
-import { action, query } from "./_generated/server";
-import { api } from "./_generated/api";
+import { action, internalAction, internalQuery, query } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import { requireUserId } from "./guards";
 import { MIN_PASSWORD_LENGTH } from "./auth";
@@ -66,5 +66,61 @@ export const setPassword = action({
     });
 
     return null;
+  },
+});
+
+/**
+ * Operator-only: attach a password to an existing account by email, e.g. the
+ * App Store review account, which has no inbox to receive an OTP. Internal, so
+ * it is not part of the client API — run it from the CLI or dashboard:
+ *   npx convex run password:setPasswordForEmail '{"email":"…","password":"…"}'
+ */
+export const setPasswordForEmail = internalAction({
+  args: { email: v.string(), password: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { email, password }) => {
+    const normalized = email.trim().toLowerCase();
+    if (!password || password.length < MIN_PASSWORD_LENGTH) {
+      throw new Error(
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+      );
+    }
+    const state = await ctx.runQuery(internal.password.passwordStateForEmail, {
+      email: normalized,
+    });
+    if (!state.userExists) {
+      throw new Error(`No user with email ${normalized}.`);
+    }
+    if (state.hasPassword) {
+      throw new Error("Password already set");
+    }
+
+    await createAccount<DataModel>(ctx, {
+      provider: "password",
+      account: { id: normalized, secret: password },
+      profile: { email: normalized },
+      shouldLinkViaEmail: true,
+      shouldLinkViaPhone: false,
+    });
+
+    return null;
+  },
+});
+
+export const passwordStateForEmail = internalQuery({
+  args: { email: v.string() },
+  returns: v.object({ userExists: v.boolean(), hasPassword: v.boolean() }),
+  handler: async (ctx, { email }) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", email))
+      .first();
+    const account = await ctx.db
+      .query("authAccounts")
+      .withIndex("providerAndAccountId", (q) =>
+        q.eq("provider", "password").eq("providerAccountId", email),
+      )
+      .unique();
+    return { userExists: user !== null, hasPassword: account !== null };
   },
 });
