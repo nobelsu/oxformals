@@ -3,11 +3,13 @@
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useId, useRef, useState } from "react";
 import { UnreadBadge } from "@/components/chat/UnreadBadge";
+import { SettingsModal } from "@/components/SettingsModal";
 import { Avatar } from "@/components/ui/Avatar";
 import { Drawer } from "@/components/ui/Drawer";
 import { api } from "@/convex/_generated/api";
+import type { AvatarSource } from "@/lib/auth/types";
 import { BROWSE_ROUTE } from "@/lib/ui/routes";
 import { useAuth } from "./auth/useAuth";
 
@@ -127,6 +129,7 @@ function NavShell() {
 function NavInner() {
   const { status, isAuthenticated, user, signOut } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [landingScrolled, setLandingScrolled] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -459,29 +462,16 @@ function NavInner() {
 
         <div className="flex min-w-0 items-center justify-end gap-2 text-sm whitespace-nowrap sm:gap-3">
           {status !== "ready" ? null : isAuthenticated && user ? (
-            <>
-              <Link
-                href="/?tab=mine"
-                aria-label="Your profile"
-                data-onboarding="me"
-                aria-current={activeTab === "mine" ? "page" : undefined}
-                className="group hidden min-w-0 items-center gap-2.5 rounded-full transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)] sm:inline-flex"
-              >
-                <span className="min-w-0 truncate whitespace-nowrap text-[var(--nav-ink-muted)] group-hover:text-[var(--nav-ink)]">
-                  {user.name.split(" ")[0]}
-                  <span className="text-[var(--nav-ink-muted)]"> · {user.college}</span>
-                </span>
-                <span
-                  className={`shrink-0 rounded-full transition-shadow ${
-                    activeTab === "mine"
-                      ? "ring-2 ring-[var(--nav-ink)] ring-offset-2 ring-offset-[var(--nav-bg)]"
-                      : ""
-                  }`}
-                >
-                  <Avatar name={user.name} source={user.avatar} size="sm" />
-                </span>
-              </Link>
-            </>
+            <AccountMenu
+              name={user.name}
+              college={user.college}
+              avatar={user.avatar}
+              onProfile={activeTab === "mine"}
+              onOpenSettings={() => setSettingsOpen(true)}
+              onSignOut={() => {
+                void signOut().then(() => router.push("/"));
+              }}
+            />
           ) : (
             <Link
               href="/login"
@@ -540,6 +530,16 @@ function NavInner() {
                 type="button"
                 onClick={() => {
                   setDrawerOpen(false);
+                  setSettingsOpen(true);
+                }}
+                className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+              >
+                Settings
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDrawerOpen(false);
                   void signOut().then(() => router.push("/"));
                 }}
                 className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
@@ -558,7 +558,138 @@ function NavInner() {
           ) : null}
         </div>
       </Drawer>
+
+      {isAuthenticated && user ? (
+        <SettingsModal
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+        />
+      ) : null}
     </nav>
+  );
+}
+
+/** Desktop account entry point: the avatar opens a Profile / Settings /
+ *  Sign out menu (mobile reaches the same actions through the drawer). */
+function AccountMenu({
+  name,
+  college,
+  avatar,
+  onProfile,
+  onOpenSettings,
+  onSignOut,
+}: {
+  name: string;
+  college: string;
+  avatar?: AvatarSource;
+  onProfile: boolean;
+  onOpenSettings: () => void;
+  onSignOut: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Close on navigation (e.g. choosing Profile).
+  const [lastLocation, setLastLocation] = useState({ pathname, searchParams });
+  if (
+    lastLocation.pathname !== pathname ||
+    lastLocation.searchParams !== searchParams
+  ) {
+    setLastLocation({ pathname, searchParams });
+    if (open) setOpen(false);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const itemClass =
+    "block w-full rounded-xl px-3 py-2 text-left text-sm text-[var(--ink)] transition-colors hover:bg-[var(--paper)] focus:outline-none focus-visible:bg-[var(--paper)]";
+
+  return (
+    <div ref={rootRef} className="relative hidden min-w-0 sm:block">
+      <button
+        type="button"
+        aria-label="Account menu"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        data-onboarding="me"
+        onClick={() => setOpen((o) => !o)}
+        className="group inline-flex min-w-0 cursor-pointer items-center gap-2.5 rounded-full transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)]"
+      >
+        <span className="min-w-0 truncate whitespace-nowrap text-[var(--nav-ink-muted)] group-hover:text-[var(--nav-ink)]">
+          {name.split(" ")[0]}
+          <span className="text-[var(--nav-ink-muted)]"> · {college}</span>
+        </span>
+        <span
+          className={`shrink-0 rounded-full transition-shadow ${
+            onProfile || open
+              ? "ring-2 ring-[var(--nav-ink)] ring-offset-2 ring-offset-[var(--nav-bg)]"
+              : ""
+          }`}
+        >
+          <Avatar name={name} source={avatar} size="sm" />
+        </span>
+      </button>
+
+      {open ? (
+        <div
+          id={menuId}
+          role="menu"
+          aria-label="Account"
+          className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-48 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--bg)] p-2 shadow-sm"
+        >
+          <Link
+            href="/?tab=mine"
+            role="menuitem"
+            aria-current={onProfile ? "page" : undefined}
+            onClick={() => setOpen(false)}
+            className={itemClass}
+          >
+            Profile
+          </Link>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onOpenSettings();
+            }}
+            className={itemClass}
+          >
+            Settings
+          </button>
+          <div aria-hidden className="mx-2 my-1 border-t border-[var(--ink)]/15" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onSignOut();
+            }}
+            className={itemClass}
+          >
+            Sign out
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
