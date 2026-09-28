@@ -34,14 +34,22 @@ function Field({
   label,
   htmlFor,
   className = "",
+  error,
   children,
 }: {
   label: string;
   htmlFor?: string;
   className?: string;
+  /** Shown under the label, so the field name reads first. */
+  error?: string | null;
   children: ReactNode;
 }) {
   const cls = `flex min-w-0 flex-col gap-1 ${className}`.trim();
+  const errorLine = error ? (
+    <span className="text-sm text-[var(--danger)]" role="alert">
+      {error}
+    </span>
+  ) : null;
   if (htmlFor) {
     return (
       <label htmlFor={htmlFor} className={cls}>
@@ -49,6 +57,7 @@ function Field({
         <span className="text-xs tracking-wide text-[var(--ink-muted)]">
           {label}
         </span>
+        {errorLine}
       </label>
     );
   }
@@ -58,6 +67,7 @@ function Field({
       <span className="text-xs tracking-wide text-[var(--ink-muted)]">
         {label}
       </span>
+      {errorLine}
     </div>
   );
 }
@@ -596,7 +606,12 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
             />
           </Field>
 
-          <Field label="bio" htmlFor="profile-bio" className="sm:col-span-2">
+          <Field
+            label="bio"
+            htmlFor="profile-bio"
+            className="sm:col-span-2"
+            error={bioError}
+          >
             <BioTextarea
               id="profile-bio"
               value={bioDraft}
@@ -606,11 +621,6 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
               }}
               className={UNDERLINE_INPUT}
             />
-            {bioError ? (
-              <p className="mt-1 text-sm text-[var(--danger)]" role="alert">
-                {bioError}
-              </p>
-            ) : null}
           </Field>
         </div>
       </section>
