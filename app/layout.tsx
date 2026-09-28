@@ -7,6 +7,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { DataProvider } from "@/components/data/DataProvider";
 import { Nav } from "@/components/Nav";
 import { OnboardingOverlay } from "@/components/onboarding/OnboardingOverlay";
+import { BadgeCelebration } from "@/components/badges/BadgeCelebration";
 
 const schoolbell = Schoolbell({
   variable: "--font-schoolbell",
@@ -68,6 +69,7 @@ export default function RootLayout({
                 <Nav />
                 <div className="flex-1 flex flex-col">{children}</div>
                 <OnboardingOverlay />
+                <BadgeCelebration />
               </DataProvider>
             </AuthProvider>
           </ConvexClientProvider>

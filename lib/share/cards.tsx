@@ -1,5 +1,6 @@
 /* Share-card layouts for next/og (Satori): flexbox and inline styles only. */
 import type { ReactNode } from "react";
+import { stampLabel } from "@/lib/data/badges";
 import { excerpt, formatShareDate } from "./format";
 
 export const CARD_SIZE = { width: 1080, height: 1920 } as const;
@@ -255,6 +256,75 @@ export function ReviewCard(props: {
       ) : null}
       <div style={{ display: "flex", fontSize: 40, color: C.muted, marginTop: 36 }}>
         — {props.authorFirstName ?? "Anonymous"}
+      </div>
+    </Frame>
+  );
+}
+
+export function CollegeStampCard(props: {
+  firstName: string;
+  college: string;
+  collegesVisited: number;
+  totalColleges: number;
+}) {
+  const label = stampLabel(props.college);
+  return (
+    <Frame footer="Collect them on oxformals.com">
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 48 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 420,
+            height: 420,
+            borderRadius: 999,
+            border: `12px solid ${C.accent}`,
+            transform: "rotate(-7deg)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 360,
+              height: 360,
+              borderRadius: 999,
+              border: `4px solid ${C.accent}`,
+              color: C.accent,
+              fontFamily: DISPLAY,
+              fontSize: label.length > 3 ? 110 : 140,
+            }}
+          >
+            {label}
+          </div>
+        </div>
+      </div>
+      <div style={{ display: "flex", fontSize: 44, color: C.muted }}>
+        {props.firstName} stamped
+      </div>
+      <div
+        style={{
+          display: "flex",
+          fontFamily: DISPLAY,
+          fontSize: props.college.length > 14 ? 100 : 124,
+          lineHeight: 1,
+          marginTop: 12,
+        }}
+      >
+        {props.college}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          fontSize: 52,
+          fontWeight: 700,
+          color: C.accent,
+          marginTop: 28,
+        }}
+      >
+        {props.collegesVisited} of {props.totalColleges} colleges
       </div>
     </Frame>
   );

@@ -1,4 +1,4 @@
-export type ShareKind = "listing" | "review";
+export type ShareKind = "listing" | "review" | "badge";
 
 /**
  * Fetch a story card and hand it to the phone's share sheet (pick Instagram →
