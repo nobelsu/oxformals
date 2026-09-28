@@ -3,6 +3,7 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
+import { COLLEGE_BADGES, stampLabel } from "../lib/data/badges";
 
 const modules = import.meta.glob("./**/*.*s");
 
@@ -71,4 +72,9 @@ describe("badge share card", () => {
       await t.query(api.share.getBadgeShareCard, { userId: me, badgeId: "college-keble" }),
     ).toBeNull();
   });
+});
+
+test("every college has its own stamp label", () => {
+  const labels = COLLEGE_BADGES.map((b) => stampLabel(b.college));
+  expect(new Set(labels).size).toBe(labels.length);
 });

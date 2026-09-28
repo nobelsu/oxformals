@@ -1,6 +1,17 @@
 import { OXFORD_COLLEGES } from "./colleges";
 
 export type BadgeFamily = "milestone" | "college";
+
+/** Keys into the hand-drawn icon set in components/badges/BadgeArt.tsx. */
+export type BadgeIconId =
+  | "glass"
+  | "cap"
+  | "candle"
+  | "crown"
+  | "star"
+  | "pen"
+  | "trophy"
+  | "college";
 export type BadgeMetric = "formals" | "reviews";
 
 export type MilestoneBadgeDefinition = {
@@ -9,7 +20,7 @@ export type MilestoneBadgeDefinition = {
   metric: BadgeMetric;
   threshold: number;
   name: string;
-  icon: string;
+  icon: BadgeIconId;
   description: string;
 };
 
@@ -18,13 +29,13 @@ export type CollegeBadgeDefinition = {
   family: "college";
   college: string;
   name: string;
-  icon: string;
+  icon: BadgeIconId;
   description: string;
 };
 
 export type BadgeDefinition = MilestoneBadgeDefinition | CollegeBadgeDefinition;
 
-const COLLEGE_BADGE_ICON = "🏛️";
+const COLLEGE_BADGE_ICON: BadgeIconId = "college";
 
 function collegeSlug(college: string): string {
   return college.toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -37,7 +48,7 @@ export const MILESTONE_BADGES: MilestoneBadgeDefinition[] = [
     metric: "formals",
     threshold: 1,
     name: "First Formal",
-    icon: "🎉",
+    icon: "glass",
     description: "Attended your first formal.",
   },
   {
@@ -46,7 +57,7 @@ export const MILESTONE_BADGES: MilestoneBadgeDefinition[] = [
     metric: "formals",
     threshold: 5,
     name: "Regular",
-    icon: "🎓",
+    icon: "cap",
     description: "Attended 5 formals.",
   },
   {
@@ -55,7 +66,7 @@ export const MILESTONE_BADGES: MilestoneBadgeDefinition[] = [
     metric: "formals",
     threshold: 10,
     name: "Formal Fixture",
-    icon: "🔥",
+    icon: "candle",
     description: "Attended 10 formals.",
   },
   {
@@ -64,7 +75,7 @@ export const MILESTONE_BADGES: MilestoneBadgeDefinition[] = [
     metric: "formals",
     threshold: 25,
     name: "Formal Royalty",
-    icon: "👑",
+    icon: "crown",
     description: "Attended 25 formals.",
   },
   {
@@ -73,7 +84,7 @@ export const MILESTONE_BADGES: MilestoneBadgeDefinition[] = [
     metric: "reviews",
     threshold: 1,
     name: "First Review",
-    icon: "⭐",
+    icon: "star",
     description: "Posted your first public review.",
   },
   {
@@ -82,7 +93,7 @@ export const MILESTONE_BADGES: MilestoneBadgeDefinition[] = [
     metric: "reviews",
     threshold: 5,
     name: "Critic",
-    icon: "📝",
+    icon: "pen",
     description: "Posted 5 public reviews.",
   },
   {
@@ -91,7 +102,7 @@ export const MILESTONE_BADGES: MilestoneBadgeDefinition[] = [
     metric: "reviews",
     threshold: 10,
     name: "Connoisseur",
-    icon: "🏆",
+    icon: "trophy",
     description: "Posted 10 public reviews.",
   },
 ];
@@ -116,4 +127,37 @@ export const TOTAL_BADGE_COUNT = BADGE_DEFINITIONS.length;
 
 export function badgeById(id: string): BadgeDefinition | undefined {
   return BADGE_DEFINITIONS.find((b) => b.id === id);
+}
+
+/** Short labels Oxford students actually use; the rest use three letters. */
+const STAMP_LABELS: Record<string, string> = {
+  "All Souls": "ASC",
+  Brasenose: "BNC",
+  "Campion Hall": "CAM",
+  "Christ Church": "CHCH",
+  "Corpus Christi": "CCC",
+  "Green Templeton": "GTC",
+  "Harris Manchester": "HMC",
+  "Lady Margaret Hall": "LMH",
+  Linacre: "LINA",
+  Lincoln: "LINC",
+  "New College": "NEW",
+  "Queen's": "QUE",
+  "Regent's Park": "RPC",
+  "St Anne's": "SAN",
+  "St Antony's": "SAT",
+  "St Catherine's": "CATZ",
+  "St Cross": "SCR",
+  "St Edmund Hall": "SEH",
+  "St Hilda's": "SHI",
+  "St Hugh's": "SHU",
+  "St John's": "SJC",
+  "St Peter's": "SPC",
+  University: "UNIV",
+  "Wycliffe Hall": "WYC",
+};
+
+/** Label printed inside a college's passport stamp. */
+export function stampLabel(college: string): string {
+  return STAMP_LABELS[college] ?? college.slice(0, 3).toUpperCase();
 }

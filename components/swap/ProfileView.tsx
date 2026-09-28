@@ -14,7 +14,6 @@ import { useData } from "@/components/data/useData";
 import { Avatar, PRESET_AVATARS, PresetAvatarIcon, initialsFor } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
-import { SketchLock } from "@/components/ui/SketchLock";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
 import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
 import { RequestPayModal } from "@/components/swap/RequestPayModal";
@@ -24,6 +23,7 @@ import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { ProfileActivityStream } from "./ProfileActivityStream";
 import { BadgeCaseModal } from "./BadgeCaseModal";
+import { BadgeArt } from "@/components/badges/BadgeArt";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
 import { listingSupportsSwap } from "@/lib/data/listingType";
@@ -183,6 +183,10 @@ export function ProfileView({
   const earnedBadges = useQuery(api.badges.getUserBadges, {
     userId: userId as Id<"users">,
   });
+  const badgeProgress = useQuery(
+    api.badges.getBadgeProgress,
+    badgeCaseOpen ? { userId: userId as Id<"users"> } : "skip",
+  );
 
   const myActiveListings = useMemo(
     () =>
@@ -357,6 +361,12 @@ export function ProfileView({
         : item,
   );
   const earnedCount = earnedBadges?.length ?? 0;
+  // Most recent first; up to three sit next to the name.
+  const recentBadges = [...(earnedBadges ?? [])]
+    .sort((x, y) => y.earnedAt - x.earnedAt)
+    .map((b) => badgeById(b.badgeId))
+    .filter((def): def is NonNullable<typeof def> => def !== undefined)
+    .slice(0, 3);
   const memberUsersFor = (l: Listing) =>
     l.members
       .filter((mid) => mid !== l.ownerUserId)
@@ -401,30 +411,25 @@ export function ProfileView({
             <h1 className="font-display text-[1.75rem] leading-tight">
               {name}
             </h1>
-            <button
-              type="button"
-              onClick={() => setBadgeCaseOpen(true)}
-              aria-label={`Badges, ${earnedCount} of ${TOTAL_BADGE_COUNT} earned. Open badge case.`}
-              className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1 transition-opacity hover:opacity-80"
-            >
-              {Array.from({ length: 4 }, (_, i) => {
-                const earned = (earnedBadges ?? [])[i];
-                const def = earned ? badgeById(earned.badgeId) : undefined;
-                return (
-                  <span
-                    key={def?.id ?? `empty-${i}`}
-                    title={def?.name ?? "Locked badge"}
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 bg-[var(--bg)] text-sm ${
-                      def
-                        ? "border-[var(--ink)]"
-                        : "border-dashed border-[var(--ink-soft)] opacity-55"
-                    }`}
-                  >
-                    {def ? def.icon : <SketchLock className="h-3.5 w-3.5" />}
+            {recentBadges.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setBadgeCaseOpen(true)}
+                aria-label={`Badges, ${earnedCount} of ${TOTAL_BADGE_COUNT} earned. Open badge case.`}
+                className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full py-0.5 pr-1 transition-opacity hover:opacity-80"
+              >
+                {recentBadges.map((def) => (
+                  <span key={def.id} title={def.name} className="flex">
+                    <BadgeArt def={def} earned size={30} />
                   </span>
-                );
-              })}
-            </button>
+                ))}
+                {earnedCount > recentBadges.length ? (
+                  <span className="ml-0.5 text-sm text-[var(--ink-muted)]">
+                    +{earnedCount - recentBadges.length}
+                  </span>
+                ) : null}
+              </button>
+            ) : null}
           </div>
           {profileLine ? (
             <p className="mt-0.5 text-sm text-[var(--ink-soft)]">{profileLine}</p>
@@ -582,6 +587,7 @@ export function ProfileView({
         open={badgeCaseOpen}
         onClose={() => setBadgeCaseOpen(false)}
         earned={earnedBadges}
+        progress={badgeProgress}
       />
 
       <ListingDetailModal
