@@ -18,7 +18,26 @@ type Props = {
   onChange: (next: string) => void;
   className?: string;
   disabled?: boolean;
+  /** Hide the built-in counter when the caller places <BioCounter> itself. */
+  hideCounter?: boolean;
 };
+
+/** "n / 150", red once over the limit. */
+export function BioCounter({ value }: { value: string }) {
+  const length = value.trim().length;
+  return (
+    <span
+      className={`text-xs ${
+        length > MAX_BIO_LENGTH
+          ? "text-[var(--danger)]"
+          : "text-[var(--ink-soft)]"
+      }`}
+      aria-live="polite"
+    >
+      {length} / {MAX_BIO_LENGTH}
+    </span>
+  );
+}
 
 /** Free-form bio input with a live "n / 150" counter. */
 export function BioTextarea({
@@ -27,8 +46,8 @@ export function BioTextarea({
   onChange,
   className = "",
   disabled,
+  hideCounter,
 }: Props) {
-  const length = value.trim().length;
   return (
     <div className="flex flex-col gap-1">
       <textarea
@@ -40,16 +59,11 @@ export function BioTextarea({
         placeholder="A line or two about you: what you study, what you're into, why you love formals."
         className={`resize-none ${className}`}
       />
-      <span
-        className={`self-end text-xs ${
-          length > MAX_BIO_LENGTH
-            ? "text-[var(--danger)]"
-            : "text-[var(--ink-soft)]"
-        }`}
-        aria-live="polite"
-      >
-        {length} / {MAX_BIO_LENGTH}
-      </span>
+      {hideCounter ? null : (
+        <span className="self-end">
+          <BioCounter value={value} />
+        </span>
+      )}
     </div>
   );
 }

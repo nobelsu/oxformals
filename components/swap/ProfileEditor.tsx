@@ -10,7 +10,11 @@ import {
 } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { Avatar, PRESET_AVATARS, PresetAvatarIcon } from "@/components/ui/Avatar";
-import { BIO_ERRORS, BioTextarea } from "@/components/ui/BioTextarea";
+import {
+  BIO_ERRORS,
+  BioCounter,
+  BioTextarea,
+} from "@/components/ui/BioTextarea";
 import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
 import type { AvatarSource } from "@/lib/auth/types";
 import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
@@ -35,16 +39,27 @@ function Field({
   htmlFor,
   className = "",
   error,
+  aside,
   children,
 }: {
   label: string;
   htmlFor?: string;
   className?: string;
+  /** Shown at the right end of the label row (e.g. a character counter). */
+  aside?: ReactNode;
   /** Shown under the label, so the field name reads first. */
   error?: string | null;
   children: ReactNode;
 }) {
   const cls = `flex min-w-0 flex-col gap-1 ${className}`.trim();
+  const labelRow = (
+    <span className="flex items-baseline justify-between gap-3">
+      <span className="text-xs tracking-wide text-[var(--ink-muted)]">
+        {label}
+      </span>
+      {aside}
+    </span>
+  );
   const errorLine = error ? (
     <span className="text-sm text-[var(--danger)]" role="alert">
       {error}
@@ -54,9 +69,7 @@ function Field({
     return (
       <label htmlFor={htmlFor} className={cls}>
         {children}
-        <span className="text-xs tracking-wide text-[var(--ink-muted)]">
-          {label}
-        </span>
+        {labelRow}
         {errorLine}
       </label>
     );
@@ -64,9 +77,7 @@ function Field({
   return (
     <div className={cls}>
       {children}
-      <span className="text-xs tracking-wide text-[var(--ink-muted)]">
-        {label}
-      </span>
+      {labelRow}
       {errorLine}
     </div>
   );
@@ -611,8 +622,10 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
             htmlFor="profile-bio"
             className="sm:col-span-2"
             error={bioError}
+            aside={<BioCounter value={bioDraft} />}
           >
             <BioTextarea
+              hideCounter
               id="profile-bio"
               value={bioDraft}
               onChange={(next) => {
