@@ -9,9 +9,11 @@ import type { UiFontId } from "@/convex/uiFont";
 type Props = {
   open: boolean;
   onClose: () => void;
+  /** Opens the delete-account confirmation (Settings closes first). */
+  onDeleteAccount?: () => void;
 };
 
-export function SettingsModal({ open, onClose }: Props) {
+export function SettingsModal({ open, onClose, onDeleteAccount }: Props) {
   const { user, updateProfile, hasPassword, setPassword } = useAuth();
   const fontPickerRef = useRef<HTMLDivElement | null>(null);
   const [fontPickerOpen, setFontPickerOpen] = useState(false);
@@ -248,6 +250,20 @@ export function SettingsModal({ open, onClose }: Props) {
             {passwordError ? (
               <p className="mt-2 text-sm text-[var(--danger)]">{passwordError}</p>
             ) : null}
+          </div>
+        ) : null}
+        {user && onDeleteAccount ? (
+          <div className="border-t-[2px] border-[var(--ink)]/10 pt-5">
+            <button
+              type="button"
+              onClick={() => {
+                handleClose();
+                onDeleteAccount();
+              }}
+              className="cursor-pointer text-sm font-medium text-[var(--danger)] underline-offset-4 hover:underline"
+            >
+              Delete account
+            </button>
           </div>
         ) : null}
       </div>

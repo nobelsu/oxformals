@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState } from "react";
 import { UnreadBadge } from "@/components/chat/UnreadBadge";
+import { DeleteAccountModal } from "@/components/DeleteAccountModal";
 import { SettingsModal } from "@/components/SettingsModal";
 import { Avatar } from "@/components/ui/Avatar";
 import { Drawer } from "@/components/ui/Drawer";
@@ -130,6 +131,7 @@ function NavInner() {
   const { status, isAuthenticated, user, signOut } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [landingScrolled, setLandingScrolled] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -560,10 +562,17 @@ function NavInner() {
       </Drawer>
 
       {isAuthenticated && user ? (
-        <SettingsModal
-          open={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-        />
+        <>
+          <SettingsModal
+            open={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            onDeleteAccount={() => setDeleteAccountOpen(true)}
+          />
+          <DeleteAccountModal
+            open={deleteAccountOpen}
+            onClose={() => setDeleteAccountOpen(false)}
+          />
+        </>
       ) : null}
     </nav>
   );
