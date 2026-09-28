@@ -3,6 +3,42 @@ import type { MutationCtx } from "./_generated/server";
 import { syncListingAttendanceGuests } from "./collegeStats";
 import { listingIsPast } from "./listingHelpers";
 
+/**
+ * Take a guest's seat back on a listing: drop them from `members`, free the
+ * seat, and reopen a full upcoming listing. Returns false when they weren't a
+ * guest there (or the listing is gone). No request bookkeeping — callers
+ * decide what happened to the request that seated them.
+ */
+export async function detachMember(
+  ctx: MutationCtx,
+  listingId: Id<"listings">,
+  userId: Id<"users">,
+): Promise<boolean> {
+  const listing = await ctx.db.get(listingId);
+  if (!listing) return false;
+  if (listing.ownerUserId === userId) return false;
+  if (!listing.members.includes(userId)) return false;
+
+  const newMembers = listing.members.filter((m) => m !== userId);
+  const nowMs = Date.now();
+  const newSeats = listing.seatsAvailable + 1;
+  const reopened =
+    listing.status === "closed" &&
+    newSeats > 0 &&
+    !listingIsPast(listing.dateTime, nowMs);
+  await ctx.db.patch(listingId, {
+    members: newMembers,
+    seatsAvailable: newSeats,
+    ...(reopened ? { status: "active" as const } : {}),
+  });
+
+  const updated = await ctx.db.get(listingId);
+  if (updated) {
+    await syncListingAttendanceGuests(ctx, updated, nowMs);
+  }
+  return true;
+}
+
 /** Remove a guest from a listing group and decline their accepted request. */
 export async function removeUserFromListingGroup(
   ctx: MutationCtx,
@@ -19,23 +55,7 @@ export async function removeUserFromListingGroup(
     throw new Error("You are not a member of this group.");
   }
 
-  const newMembers = listing.members.filter((m) => m !== userId);
-  const newSeats = listing.seatsAvailable + 1;
-  const nowMs = Date.now();
-  const reopened =
-    listing.status === "closed" &&
-    newSeats > 0 &&
-    !listingIsPast(listing.dateTime, nowMs);
-  await ctx.db.patch(listingId, {
-    members: newMembers,
-    seatsAvailable: newSeats,
-    ...(reopened ? { status: "active" as const } : {}),
-  });
-
-  const updated = await ctx.db.get(listingId);
-  if (updated) {
-    await syncListingAttendanceGuests(ctx, updated, nowMs);
-  }
+  await detachMember(ctx, listingId, userId);
 
   const acceptedRequests = await ctx.db
     .query("requests")

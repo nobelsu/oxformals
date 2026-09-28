@@ -44,6 +44,7 @@ import type * as profileActivity from "../profileActivity.js";
 import type * as pushNotifications from "../pushNotifications.js";
 import type * as share from "../share.js";
 import type * as storage from "../storage.js";
+import type * as swapLinks from "../swapLinks.js";
 import type * as uiFont from "../uiFont.js";
 import type * as uploadOwnership from "../uploadOwnership.js";
 import type * as userVerification from "../userVerification.js";
@@ -92,6 +93,7 @@ declare const fullApi: ApiFromModules<{
   pushNotifications: typeof pushNotifications;
   share: typeof share;
   storage: typeof storage;
+  swapLinks: typeof swapLinks;
   uiFont: typeof uiFont;
   uploadOwnership: typeof uploadOwnership;
   userVerification: typeof userVerification;

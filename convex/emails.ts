@@ -1022,3 +1022,124 @@ export const sendBioReportEmail = internalAction({
     return null;
   },
 });
+
+// ── Formal changes (undone swaps, cancellations) ────────────────────────────
+
+const formalNoticeValidator = v.object({
+  userId: v.id("users"),
+  subject: v.string(),
+  body: v.string(),
+  cta: v.union(v.literal("formals"), v.literal("browse")),
+});
+
+export const getNoticeEmails = internalQuery({
+  args: { userIds: v.array(v.id("users")) },
+  returns: v.array(
+    v.object({ userId: v.id("users"), email: v.union(v.string(), v.null()) }),
+  ),
+  handler: async (ctx, { userIds }) => {
+    const out = [];
+    for (const userId of userIds) {
+      const user = await ctx.db.get(userId);
+      out.push({
+        userId,
+        email: user && !user.deletedAt && user.email ? user.email : null,
+      });
+    }
+    return out;
+  },
+});
+
+function formalNoticeCta(cta: "formals" | "browse") {
+  return cta === "browse"
+    ? { href: `${siteUrl()}/?tab=browse`, label: "Find another formal" }
+    : { href: `${siteUrl()}/?tab=requests&section=listings`, label: "See your formals" };
+}
+
+/** Transactional: sent whatever the user's notification setting. */
+export const sendFormalNotices = internalAction({
+  args: { notices: v.array(formalNoticeValidator) },
+  returns: v.null(),
+  handler: async (ctx, { notices }) => {
+    const apiKey = process.env.AUTH_RESEND_KEY;
+    if (!apiKey) {
+      console.error("sendFormalNotices: AUTH_RESEND_KEY is not set");
+      return null;
+    }
+    const emails: Array<{ userId: Id<"users">; email: string | null }> =
+      await ctx.runQuery(internal.emails.getNoticeEmails, {
+        userIds: notices.map((n) => n.userId),
+      });
+    const byId = new Map(emails.map((e) => [e.userId, e.email]));
+    const resend = new ResendAPI(apiKey);
+    for (const notice of notices) {
+      const to = byId.get(notice.userId);
+      if (!to) continue;
+      const cta = formalNoticeCta(notice.cta);
+      const { error } = await resend.emails.send({
+        from: "Oxformals <team@oxformals.com>",
+        to: [to],
+        subject: notice.subject,
+        html: buildSimpleNoticeHtml({
+          title: "A change to your formal",
+          body: notice.body,
+          cta,
+        }),
+        text: `${notice.body}\n\n${cta.label}: ${cta.href}\n\nFor inquiries or issues, contact us at team@oxformals.com.\n\nSee you at dinner,\nThe Oxformals Team`,
+      });
+      if (error) console.error("sendFormalNotices: Resend error", error);
+    }
+    return null;
+  },
+});
+
+export const getSwapBreakNames = internalQuery({
+  args: { brokenByUserId: v.id("users"), wrongedUserId: v.id("users") },
+  returns: v.object({ brokenBy: v.string(), wronged: v.string() }),
+  handler: async (ctx, args) => {
+    const a = await ctx.db.get(args.brokenByUserId);
+    const b = await ctx.db.get(args.wrongedUserId);
+    return {
+      brokenBy: `${a?.name ?? "Unknown"} <${a?.email ?? "?"}>`,
+      wronged: `${b?.name ?? "Unknown"} <${b?.email ?? "?"}>`,
+    };
+  },
+});
+
+export const sendSwapBreakReport = internalAction({
+  args: {
+    requestId: v.id("requests"),
+    brokenByUserId: v.id("users"),
+    wrongedUserId: v.id("users"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const apiKey = process.env.AUTH_RESEND_KEY;
+    if (!apiKey) {
+      console.error("sendSwapBreakReport: AUTH_RESEND_KEY is not set");
+      return null;
+    }
+    const names: { brokenBy: string; wronged: string } = await ctx.runQuery(
+      internal.emails.getSwapBreakNames,
+      {
+        brokenByUserId: args.brokenByUserId,
+        wrongedUserId: args.wrongedUserId,
+      },
+    );
+    const body = `${names.brokenBy} broke a swap with ${names.wronged} after already going to ${names.wronged.split(" <")[0]}'s formal (request ${args.requestId}). Their seat couldn't be taken back.`;
+    const profileUrl = `${siteUrl()}/profile/${args.brokenByUserId}`;
+    const { error } = await new ResendAPI(apiKey).emails.send({
+      from: "Oxformals <team@oxformals.com>",
+      to: ["team@oxformals.com"],
+      subject: "A swap was broken",
+      html: buildSimpleNoticeHtml({
+        title: "Swap broken",
+        body,
+        cta: { href: profileUrl, label: "View profile" },
+      }),
+      text: `${body}\n\nProfile: ${profileUrl}`,
+    });
+    if (error) console.error("sendSwapBreakReport: Resend error", error);
+    return null;
+  },
+});

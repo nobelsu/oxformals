@@ -267,4 +267,15 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_targetKey_and_userId", ["targetKey", "userId"]),
+  /**
+   * A swap broken after the wronged side's formal had already happened, so the
+   * breaker's seat couldn't be taken back. Emailed to the team when recorded.
+   */
+  swapBreaks: defineTable({
+    requestId: v.id("requests"),
+    brokenByUserId: v.id("users"),
+    wrongedUserId: v.id("users"),
+    listingId: v.id("listings"),
+    createdAt: v.number(),
+  }).index("by_brokenByUserId", ["brokenByUserId"]),
 });

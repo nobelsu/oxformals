@@ -10,7 +10,14 @@ import {
   scheduleFormalCompletion,
   syncListingAttendanceGuests,
 } from "./collegeStats";
-import { removeUserFromListingGroup } from "./listingMembership";
+import { detachMember, removeUserFromListingGroup } from "./listingMembership";
+import {
+  sendFormalNotices,
+  swapSeatingMember,
+  undoSwap,
+  undoSwapsForCancelledListing,
+  type FormalNotice,
+} from "./swapLinks";
 import { normalizeCollegeName } from "../lib/data/colleges";
 import {
   declinePendingRequestsForListing,
@@ -619,7 +626,26 @@ export const leaveGroup = mutation({
   args: { listingId: v.id("listings") },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    return await removeUserFromListingGroup(ctx, args.listingId, userId);
+    const link = await swapSeatingMember(ctx, args.listingId, userId);
+    const result = await removeUserFromListingGroup(ctx, args.listingId, userId);
+    // Leaving only gives up your own half of a swap; the other person keeps
+    // their seat at your formal.
+    if (link) {
+      await ctx.db.patch(link._id, { status: "declined" });
+      const listing = await ctx.db.get(args.listingId);
+      const me = await ctx.db.get(userId);
+      if (listing) {
+        await sendFormalNotices(ctx, [
+          {
+            userId: listing.ownerUserId,
+            subject: "Your swap partner left",
+            body: `${me?.name?.split(" ")[0] ?? "Your swap partner"} left your ${listing.college} formal and gave up their half of your swap. Your seat at their formal is still yours.`,
+            cta: "formals",
+          },
+        ]);
+      }
+    }
+    return result;
   },
 });
 
@@ -639,23 +665,8 @@ export const removeMember = mutation({
       throw new Error("User is not a member of this group.");
     }
 
-    const newMembers = listing.members.filter((m) => m !== args.memberId);
-    const newSeats = listing.seatsAvailable + 1;
-    const nowMs = Date.now();
-    const reopened =
-      listing.status === "closed" &&
-      newSeats > 0 &&
-      !listingIsPast(listing.dateTime, nowMs);
-    await ctx.db.patch(args.listingId, {
-      members: newMembers,
-      seatsAvailable: newSeats,
-      ...(reopened ? { status: "active" as const } : {}),
-    });
-
-    const updated = await ctx.db.get(args.listingId);
-    if (updated) {
-      await syncListingAttendanceGuests(ctx, updated, Date.now());
-    }
+    const link = await swapSeatingMember(ctx, args.listingId, args.memberId);
+    await detachMember(ctx, args.listingId, args.memberId);
 
     const acceptedRequests = await ctx.db
       .query("requests")
@@ -668,6 +679,22 @@ export const removeMember = mutation({
         await ctx.db.patch(req._id, { status: "declined" });
       }
     }
+
+    const notices: FormalNotice[] = [];
+    if (link) {
+      // Removing your swap partner undoes your half too.
+      await undoSwap(ctx, link, args.listingId, notices);
+    }
+    if (!listingIsPast(listing.dateTime, Date.now())) {
+      const host = await ctx.db.get(userId);
+      notices.push({
+        userId: args.memberId,
+        subject: "You were removed from a formal",
+        body: `${host?.name?.split(" ")[0] ?? "The host"} removed you from their ${listing.college} formal.${link ? " Your swap with them is off, so they've lost their seat at your formal too." : ""}`,
+        cta: "browse",
+      });
+    }
+    await sendFormalNotices(ctx, notices);
 
     return args.listingId;
   },
@@ -716,7 +743,15 @@ export const updateListing = mutation({
       if (Number.isNaN(timestamp)) {
         throw new Error("Invalid listing date.");
       }
-      patch.dateTime = new Date(timestamp).toISOString();
+      const nextDateTime = new Date(timestamp).toISOString();
+      if (nextDateTime !== listing.dateTime) {
+        if (listing.members.length > 1) {
+          throw new Error(
+            "You can't change the date once people have joined. Cancel the formal instead.",
+          );
+        }
+        patch.dateTime = nextDateTime;
+      }
     }
 
     if (args.groupSize !== undefined) {
@@ -930,6 +965,25 @@ export const deleteListing = mutation({
     }
 
     await declinePendingRequestsForListing(ctx, args.listingId);
+
+    // An upcoming formal with guests is cancelled: they're told, and any
+    // swaps tied to it are undone (the host loses the seats they got back).
+    if (!listingIsPast(listing.dateTime, Date.now()) && listing.members.length > 1) {
+      const notices: FormalNotice[] = [];
+      const host = await ctx.db.get(userId);
+      const hostName = host?.name?.split(" ")[0] ?? "The host";
+      await undoSwapsForCancelledListing(ctx, listing, notices);
+      for (const guestId of listing.members) {
+        if (guestId === userId) continue;
+        notices.push({
+          userId: guestId,
+          subject: "Your formal has been cancelled",
+          body: `${hostName} cancelled their ${listing.college} formal, so your seat there is gone.`,
+          cta: "browse",
+        });
+      }
+      await sendFormalNotices(ctx, notices);
+    }
 
     await deleteMenuPdfIfPresent(ctx, listing.menuPdfId);
     await ctx.db.delete(args.listingId);

@@ -55,6 +55,8 @@ type Props = {
   initialValues?: ListingFormValues;
   /** Minimum allowed group size (e.g. current member count). Sizes below this are disabled. */
   minGroupSize?: number;
+  /** The date can't move once people have joined (they'd lose their plans). */
+  dateLocked?: boolean;
   onSubmit: (input: NewListingInput) => void;
 };
 
@@ -76,6 +78,7 @@ export function ListFormalForm({
   embedded = false,
   initialValues,
   minGroupSize = 1,
+  dateLocked = false,
   onSubmit,
 }: Props) {
   const editMode = !!initialValues;
@@ -246,8 +249,14 @@ export function ListFormalForm({
             type="datetime-local"
             value={dateTime}
             onChange={(e) => setDateTime(e.target.value)}
-            className={fieldCls}
+            disabled={dateLocked}
+            className={`${fieldCls} disabled:cursor-not-allowed disabled:opacity-60`}
           />
+          {dateLocked ? (
+            <span className="text-xs text-[var(--ink-soft)]">
+              Locked once people have joined. Cancel the formal to change it.
+            </span>
+          ) : null}
         </label>
 
         <label className="flex min-w-0 flex-col gap-2">

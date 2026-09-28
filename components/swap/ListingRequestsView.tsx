@@ -377,8 +377,19 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                         <button
                           type="button"
                           onClick={() => {
+                            const swapPartner = requests.some(
+                              (r) =>
+                                r.status === "accepted" &&
+                                resolveRequestType(r) === "swap" &&
+                                ((r.targetListingId === listing.id &&
+                                  r.fromUserId === m.id) ||
+                                  (r.offeringListingId === listing.id &&
+                                    r.toUserId === m.id)),
+                            );
                             setConfirmDialog({
-                              message: `Remove ${m.name} from the group?`,
+                              message: swapPartner
+                                ? `Remove ${m.name}? This undoes your swap, so you'll lose your seat at their formal too.`
+                                : `Remove ${m.name} from the group?`,
                               variant: "destructive",
                               confirmLabel: "Remove",
                               onConfirm: () => {
@@ -666,6 +677,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
               price: listing.price,
             }}
             minGroupSize={listing.members.length}
+            dateLocked={listing.members.length > 1}
             onSubmit={(input) => {
               if (listingIsPast(listing.dateTime, nowMs)) {
                 setEditModalOpen(false);
@@ -677,7 +689,9 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                 return;
               }
               updateListing(listing.id, {
-                dateTime: input.dateTime,
+                ...(listing.members.length > 1
+                  ? {}
+                  : { dateTime: input.dateTime }),
                 groupSize: input.groupSize,
                 message: input.message,
                 menu: input.menu,
@@ -698,12 +712,14 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
       <ConfirmDialog
         open={deleteDialogOpen}
         message={
-          listing?.status === "active"
-            ? "Delete this listing? All pending requests will be declined."
-            : "Delete this past listing?"
+          isPast
+            ? "Delete this past listing?"
+            : listing.members.length > 1
+              ? `Cancel this formal? Your ${listing.members.length - 1 === 1 ? "guest" : `${listing.members.length - 1} guests`} will be removed and emailed. Any swap tied to it is undone too, so you'll lose the seat you got in return.`
+              : "Delete this listing? All pending requests will be declined."
         }
         variant="destructive"
-        confirmLabel="Delete"
+        confirmLabel={!isPast && listing.members.length > 1 ? "Cancel formal" : "Delete"}
         onConfirm={() => {
           if (listing) {
             deleteListing(listing.id);
