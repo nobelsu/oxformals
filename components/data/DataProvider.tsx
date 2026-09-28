@@ -43,6 +43,8 @@ export type DataContextValue = {
     targetOwnerUserId?: string;
     /** Unnamed "+N" guests. */
     guests?: number;
+    guestMethods?: RequestType[];
+    friends?: { userId: string; paysOwn: boolean; method: RequestType }[];
   }) => Promise<SwapRequest | null>;
   /** @deprecated Use sendRequest */
   requestSwap: (args: {
@@ -241,6 +243,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       message: string;
       targetOwnerUserId?: string;
       guests?: number;
+      guestMethods?: RequestType[];
+      friends?: { userId: string; paysOwn: boolean; method: RequestType }[];
     }): Promise<SwapRequest | null> => {
       if (!user) return null;
       const targetFromCache = listings.find((l) => l.id === args.targetListingId);
@@ -257,6 +261,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
             : {}),
           message: args.message,
           ...(args.guests ? { guests: args.guests } : {}),
+          ...(args.guestMethods ? { guestMethods: args.guestMethods } : {}),
+          ...(args.friends
+            ? {
+                friends: args.friends.map((f) => ({
+                  ...f,
+                  userId: f.userId as Id<"users">,
+                })),
+              }
+            : {}),
         });
       } catch (err) {
         const message =

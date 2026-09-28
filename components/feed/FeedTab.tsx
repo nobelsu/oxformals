@@ -17,6 +17,7 @@ import type { Listing } from "@/lib/data/types";
 import type { User } from "@/lib/auth/types";
 import { FeedRow } from "./FeedRow";
 import { FeedHeader } from "./FeedHeader";
+import { PartyInvites } from "./PartyInvites";
 import { FeedSidebar, whenLabel, type NextFormal } from "./FeedSidebar";
 
 export function FeedTab() {
@@ -145,6 +146,7 @@ export function FeedTab() {
               attentionCount={attentionCount}
             />
           ) : null}
+          {user ? <PartyInvites /> : null}
 
           {/* Mobile: personal sidebar sits above the stream */}
           <div className="lg:hidden">{sidebar}</div>

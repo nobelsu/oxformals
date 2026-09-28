@@ -8,7 +8,13 @@ import { formatListingDate, formatPrice, formatRelativeTime } from "@/lib/data/f
 import { ListingTag } from "@/components/swap/ListingTag";
 import type { Listing, SwapRequest } from "@/lib/data/types";
 import { resolveRequestType } from "@/lib/data/requestFilters";
-import { partySuffix, requestSeatCount } from "@/lib/data/party";
+import {
+  partySuffix,
+  paymentSummary,
+  requestSeatCount,
+  unconfirmedPayers,
+} from "@/lib/data/party";
+import { useData } from "@/components/data/useData";
 import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { RequestMessage } from "@/components/swap/RequestMessage";
 import { RequestTypeTag } from "@/components/swap/RequestTypeTag";
@@ -31,8 +37,12 @@ export function IncomingRequestRow({
   onAccept,
   onDecline,
 }: Props) {
+  const { getUser } = useData();
+  const nameOf = (id: string) => getUser(id)?.name;
   const requestType = resolveRequestType(request);
   const isPending = request.status === "pending";
+  const seatCount = requestSeatCount(request);
+  const waitingOn = isPending ? unconfirmedPayers(request) : [];
   const statusLabel =
     request.status === "pending"
       ? "Pending"
@@ -56,7 +66,7 @@ export function IncomingRequestRow({
                 {fromUser.name}
               </Link>
               {request.party?.length ? (
-                <span className="text-[var(--ink-muted)]"> {partySuffix(request)}</span>
+                <span className="text-[var(--ink-muted)]"> {partySuffix(request, nameOf)}</span>
               ) : null}
             </span>
             <div className="flex shrink-0 flex-wrap items-center gap-1.5">
@@ -64,9 +74,16 @@ export function IncomingRequestRow({
               <ListingTag className="whitespace-nowrap">{statusLabel}</ListingTag>
             </div>
           </div>
-          {requestSeatCount(request) > 1 ? (
+          {seatCount > 1 ? (
             <div className="text-sm font-bold leading-snug text-[var(--ink)]">
-              {requestSeatCount(request)} seats
+              {seatCount} seats · {paymentSummary(request, targetListing?.price)}
+            </div>
+          ) : null}
+          {waitingOn.length > 0 ? (
+            <div className="text-xs leading-snug text-[var(--accent)]">
+              Waiting for{" "}
+              {waitingOn.map((id) => nameOf(id)?.split(" ")[0] ?? "a friend").join(" and ")}{" "}
+              to confirm they&apos;re coming
             </div>
           ) : null}
           {requestType === "credit" ? (

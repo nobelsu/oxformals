@@ -17,12 +17,14 @@ import {
   refundListingCredits,
   refundSeatHolderCredits,
 } from "./credits";
+import { areFriends } from "./follows";
 import {
   countByMethod,
   guestsBroughtBy,
   MAX_GUESTS,
   occupiedSeats,
   requestSeats,
+  seatMethodValidator,
   withGuestSeats,
   type Seat,
 } from "./seats";
@@ -349,8 +351,23 @@ export const createRequest = mutation({
     targetListingId: v.id("listings"),
     offeringListingId: v.optional(v.id("listings")),
     message: v.string(),
-    /** Unnamed "+N" guests, paid the same way as the requester's seat. */
+    /** Unnamed "+N" guests, paid by the requester. */
     guests: v.optional(v.number()),
+    /** How each guest seat is paid; defaults to `requestType` for all. */
+    guestMethods: v.optional(v.array(seatMethodValidator)),
+    /**
+     * Named friends (mutual follows). A friend can pay for their own seat
+     * (credit or cash) or the requester can cover it.
+     */
+    friends: v.optional(
+      v.array(
+        v.object({
+          userId: v.id("users"),
+          paysOwn: v.boolean(),
+          method: seatMethodValidator,
+        }),
+      ),
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
@@ -368,13 +385,50 @@ export const createRequest = mutation({
     }
 
     const guests = args.guests ?? 0;
-    if (!Number.isInteger(guests) || guests < 0 || guests > MAX_GUESTS) {
-      throw new Error(`You can bring up to ${MAX_GUESTS} guests.`);
+    const friends = args.friends ?? [];
+    if (
+      !Number.isInteger(guests) ||
+      guests < 0 ||
+      guests + friends.length > MAX_GUESTS
+    ) {
+      throw new Error(`You can bring up to ${MAX_GUESTS} people.`);
     }
-    const party: NonNullable<Doc<"requests">["party"]> = Array.from(
-      { length: guests },
-      () => ({ kind: "guest" as const, payerId: userId, method: args.requestType }),
-    );
+    if (args.guestMethods && args.guestMethods.length !== guests) {
+      throw new Error("Each guest needs a way to pay.");
+    }
+    const seen = new Set<string>();
+    for (const f of friends) {
+      if (f.userId === userId) throw new Error("You're already in your own request.");
+      if (f.userId === target.ownerUserId) {
+        throw new Error("The host is already going.");
+      }
+      if (seen.has(f.userId)) throw new Error("You've named someone twice.");
+      seen.add(f.userId);
+      if (!(await areFriends(ctx, userId, f.userId))) {
+        throw new Error("You can only name people you follow who follow you back.");
+      }
+      if (target.members.includes(f.userId)) {
+        const friend = await ctx.db.get(f.userId);
+        throw new Error(`${friend?.name?.split(" ")[0] ?? "They"}'re already going.`);
+      }
+      if (f.paysOwn && f.method === "swap") {
+        throw new Error("Friends paying for themselves can use a credit or cash.");
+      }
+    }
+    const party: NonNullable<Doc<"requests">["party"]> = [
+      ...friends.map((f) => ({
+        kind: "friend" as const,
+        userId: f.userId,
+        payerId: f.paysOwn ? f.userId : userId,
+        method: f.method,
+        response: "pending" as const,
+      })),
+      ...Array.from({ length: guests }, (_, i) => ({
+        kind: "guest" as const,
+        payerId: userId,
+        method: args.guestMethods?.[i] ?? args.requestType,
+      })),
+    ];
     const draft = {
       fromUserId: userId,
       requestType: args.requestType,
@@ -472,6 +526,24 @@ export const createRequest = mutation({
       requestId,
     });
 
+    if (friends.length > 0) {
+      const me = await ctx.db.get(userId);
+      const myName = me?.name?.split(" ")[0] ?? "A friend";
+      const notices: FormalNotice[] = [];
+      for (const f of friends) {
+        await ctx.db.insert("partyInvites", { requestId, userId: f.userId });
+        notices.push({
+          userId: f.userId,
+          subject: `${myName} wants to bring you to ${target.college}`,
+          body: f.paysOwn
+            ? `${myName} asked for seats at ${target.college} for the two of you (and maybe more). Your seat is yours to pay for${f.method === "credit" ? " with a credit" : ""}, so tap "I'm in" to confirm, or "Not me" if you can't make it.`
+            : `${myName} asked for seats at ${target.college} for the two of you (and maybe more), and is covering your seat. If you can't make it, tap "Not me".`,
+          cta: "invites",
+        });
+      }
+      await sendFormalNotices(ctx, notices);
+    }
+
     // Two hosts who each asked for the other's formal: accept both at once.
     // Only for one-for-one swaps; group swaps always need the host to accept.
     if (args.requestType === "swap" && party.length === 0 && args.offeringListingId) {
@@ -525,6 +597,12 @@ export const withdrawRequest = mutation({
     if (req.fromUserId !== userId) throw new Error("Not allowed");
     if (req.status !== "pending") throw new Error("Request is no longer pending");
 
+    for (const invite of await ctx.db
+      .query("partyInvites")
+      .withIndex("by_requestId", (q) => q.eq("requestId", req._id))
+      .take(10)) {
+      await ctx.db.delete(invite._id);
+    }
     await ctx.db.delete(req._id);
     return req._id;
   },
@@ -613,6 +691,17 @@ async function assertCanAcceptRequest(
   for (const seat of seats) {
     if (seat.userId && target.members.includes(seat.userId)) {
       throw new Error("Someone in this request is already in your group.");
+    }
+  }
+  // A friend paying for their own seat has to say "I'm in" first — that's
+  // what authorises taking their credit.
+  for (const p of req.party ?? []) {
+    if (p.kind !== "friend" || p.response === "out" || !p.userId) continue;
+    if (p.payerId === p.userId && p.response !== "in") {
+      const friend = await ctx.db.get(p.userId);
+      throw new Error(
+        `Waiting for ${friend?.name?.split(" ")[0] ?? "a friend"} to confirm they're coming.`,
+      );
     }
   }
 

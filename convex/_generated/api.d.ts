@@ -41,6 +41,7 @@ import type * as listingMembership from "../listingMembership.js";
 import type * as listings from "../listings.js";
 import type * as migrations from "../migrations.js";
 import type * as moderation from "../moderation.js";
+import type * as partyInvites from "../partyInvites.js";
 import type * as password from "../password.js";
 import type * as profileActivity from "../profileActivity.js";
 import type * as pushNotifications from "../pushNotifications.js";
@@ -93,6 +94,7 @@ declare const fullApi: ApiFromModules<{
   listings: typeof listings;
   migrations: typeof migrations;
   moderation: typeof moderation;
+  partyInvites: typeof partyInvites;
   password: typeof password;
   profileActivity: typeof profileActivity;
   pushNotifications: typeof pushNotifications;

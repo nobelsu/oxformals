@@ -3,24 +3,7 @@ import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
 import { groupSizeValidator } from "./groupSize";
 import { uiFontValidator } from "./uiFont";
-
-export const seatMethodValidator = v.union(
-  v.literal("swap"),
-  v.literal("pay"),
-  v.literal("credit"),
-);
-
-export const partySeatValidator = v.object({
-  kind: v.union(v.literal("guest"), v.literal("friend")),
-  /** The named friend; absent for an unnamed guest. */
-  userId: v.optional(v.id("users")),
-  payerId: v.id("users"),
-  method: seatMethodValidator,
-  /** A named friend's answer: "in" (confirmed) or "out" ("Not me"). */
-  response: v.optional(
-    v.union(v.literal("pending"), v.literal("in"), v.literal("out")),
-  ),
-});
+import { partySeatValidator } from "./seats";
 
 const avatar = v.optional(
   v.union(
@@ -316,6 +299,16 @@ export default defineSchema({
     listingId: v.id("listings"),
     createdAt: v.number(),
   }).index("by_brokenByUserId", ["brokenByUserId"]),
+  /**
+   * Lookup for "requests I've been named in". The answer itself lives on the
+   * request's `party` entry; this row just lets a friend find the request.
+   */
+  partyInvites: defineTable({
+    requestId: v.id("requests"),
+    userId: v.id("users"),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_requestId", ["requestId"]),
   /**
    * Who follows whom. Following a private account starts "pending" until
    * they approve. Two active follows either way make two people friends.

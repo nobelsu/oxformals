@@ -1035,7 +1035,7 @@ const formalNoticeValidator = v.object({
   userId: v.id("users"),
   subject: v.string(),
   body: v.string(),
-  cta: v.union(v.literal("formals"), v.literal("browse")),
+  cta: v.union(v.literal("formals"), v.literal("browse"), v.literal("invites")),
 });
 
 export const getNoticeEmails = internalQuery({
@@ -1056,7 +1056,8 @@ export const getNoticeEmails = internalQuery({
   },
 });
 
-function formalNoticeCta(cta: "formals" | "browse") {
+function formalNoticeCta(cta: "formals" | "browse" | "invites") {
+  if (cta === "invites") return { href: `${siteUrl()}/`, label: "Answer on Oxformals" };
   return cta === "browse"
     ? { href: `${siteUrl()}/?tab=browse`, label: "Find another formal" }
     : { href: `${siteUrl()}/?tab=requests&section=listings`, label: "See your formals" };

@@ -6,6 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
+import { Avatar } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Modal";
 import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
 import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
@@ -13,6 +14,7 @@ import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { formatListingDate, formatPrice } from "@/lib/data/format";
 import { listingSupportsSwap } from "@/lib/data/listingType";
 import { findBlockingOutgoingRequestForTarget } from "@/lib/data/requestFilters";
+import type { AvatarSource } from "@/lib/auth/types";
 import type { Listing, RequestType } from "@/lib/data/types";
 
 type Props = {
@@ -126,6 +128,18 @@ export function JoinRequestFlow({ target, onClose, onNavigateToRequests }: Props
   );
 }
 
+type Payer = "you" | "them";
+type PlanSeat = {
+  key: string;
+  kind: "you" | "friend" | "guest";
+  label: string;
+  userId?: string;
+  payer: Payer;
+  method: RequestType;
+};
+
+type FriendOption = { _id: string; name?: string; avatar?: AvatarSource };
+
 function JoinRequestModal({
   target,
   myListings,
@@ -145,26 +159,70 @@ function JoinRequestModal({
 }) {
   const { sendRequest } = useData();
   const credits = useQuery(api.credits.getMyCredits, {});
+  const friendsList = useQuery(api.follows.listMyFriends, {});
   const balance = credits?.balance ?? 0;
 
+  const [friendIds, setFriendIds] = useState<string[]>([]);
   const [guests, setGuests] = useState(0);
-  const seats = 1 + guests;
-  const maxGuests = Math.max(0, Math.min(5, target.seatsAvailable - 1));
+  const maxExtra = Math.max(0, Math.min(5, target.seatsAvailable - 1));
+  const extra = friendIds.length + guests;
+  const seats = 1 + extra;
 
   const allowsSwap = listingSupportsSwap(target.listingType);
   const allowsPay = target.listingType === "pay" || target.listingType === "both";
-  // A group swap is seats for seats: your formal needs that many free seats.
-  const swapListings = myListings.filter((l) => l.seatsAvailable >= seats);
-  const canSwap = allowsSwap && swapListings.length > 0;
-  const canCredit = balance >= seats;
 
-  const defaultMethod: RequestType = canSwap
+  // The method for your seat and every seat you cover (unless edited per seat).
+  const [picked, setPicked] = useState<RequestType | null>(null);
+  const [customPlan, setCustomPlan] = useState<PlanSeat[] | null>(null);
+  const [editingPlan, setEditingPlan] = useState(false);
+
+  const friendName = (id: string) =>
+    (friendsList ?? []).find((f) => f._id === id)?.name?.split(" ")[0] ?? "Friend";
+
+  // Default plan: you cover yourself and your guests; each named friend pays
+  // their own seat with a credit.
+  const coveredSeats = 1 + guests;
+  const swapListingsFor = (n: number) => myListings.filter((l) => l.seatsAvailable >= n);
+  const canSwapBase = allowsSwap && swapListingsFor(coveredSeats).length > 0;
+  const canCreditBase = balance >= coveredSeats;
+  const defaultMethod: RequestType = canSwapBase
     ? "swap"
-    : canCredit || !allowsPay
+    : canCreditBase || !allowsPay
       ? "credit"
       : "pay";
-  const [picked, setPicked] = useState<RequestType | null>(null);
-  const method = picked ?? defaultMethod;
+  const baseMethod = picked ?? defaultMethod;
+
+  const defaultPlan: PlanSeat[] = [
+    { key: "you", kind: "you", label: "You", payer: "you", method: baseMethod },
+    ...friendIds.map((id) => ({
+      key: `friend:${id}`,
+      kind: "friend" as const,
+      label: friendName(id),
+      userId: id,
+      payer: "them" as const,
+      method: "credit" as const,
+    })),
+    ...Array.from({ length: guests }, (_, i) => ({
+      key: `guest:${i}`,
+      kind: "guest" as const,
+      label: `Guest ${i + 1}`,
+      payer: "you" as const,
+      method: baseMethod,
+    })),
+  ];
+  const plan = customPlan ?? defaultPlan;
+
+  // Changing who's coming resets any per-seat edits.
+  const changePeople = (fn: () => void) => {
+    fn();
+    setCustomPlan(null);
+    setEditingPlan(false);
+  };
+
+  const yourCredits = plan.filter((p) => p.payer === "you" && p.method === "credit").length;
+  const swapSeats = plan.filter((p) => p.method === "swap").length;
+  const cashSeats = plan.filter((p) => p.method === "pay").length;
+  const swapListings = swapListingsFor(Math.max(1, swapSeats));
 
   const [offeringId, setOfferingId] = useState("");
   const [offeringPickerOpen, setOfferingPickerOpen] = useState(false);
@@ -177,27 +235,55 @@ function JoinRequestModal({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const ready =
-    method === "swap" ? canSwap && !!effectiveOfferingId : method === "credit" ? canCredit : allowsPay;
+  const problem =
+    swapSeats > 0 && !allowsSwap
+      ? "This listing doesn't take swaps."
+      : swapSeats > 0 && swapListings.length === 0
+        ? myListings.length === 0
+          ? "Swapping needs an upcoming swap listing of your own."
+          : `Swapping ${swapSeats} seat${swapSeats === 1 ? "" : "s"} needs that many free seats at your formal.`
+        : cashSeats > 0 && !allowsPay
+          ? "This listing doesn't take cash."
+          : yourCredits > balance
+            ? `That needs ${yourCredits} of your credits and you have ${balance}.`
+            : null;
+  const ready = credits !== undefined && problem === null;
 
   async function handleSubmit() {
     if (!ready || submitting) return;
     setError(null);
     setSubmitting(true);
+    const you = plan[0];
     try {
       const result = await sendRequest({
-        requestType: method,
+        requestType: you.method,
         targetListingId: target.id,
-        ...(method === "swap" ? { offeringListingId: effectiveOfferingId } : {}),
+        ...(swapSeats > 0 ? { offeringListingId: effectiveOfferingId } : {}),
         message,
         targetOwnerUserId: target.ownerUserId,
-        ...(guests > 0 ? { guests } : {}),
+        ...(guests > 0
+          ? {
+              guests,
+              guestMethods: plan.filter((p) => p.kind === "guest").map((p) => p.method),
+            }
+          : {}),
+        ...(friendIds.length > 0
+          ? {
+              friends: plan
+                .filter((p) => p.kind === "friend")
+                .map((p) => ({
+                  userId: p.userId!,
+                  paysOwn: p.payer === "them",
+                  method: p.method,
+                })),
+            }
+          : {}),
       });
       if (!result) throw new Error("Could not send request.");
       onSent(
-        method,
+        you.method,
         result.status === "accepted" ? "accepted" : "pending",
-        method === "swap" ? effectiveOfferingId : undefined,
+        swapSeats > 0 ? effectiveOfferingId : undefined,
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send request.");
@@ -205,6 +291,17 @@ function JoinRequestModal({
       setSubmitting(false);
     }
   }
+
+  const summary = [
+    `${seats} seat${seats === 1 ? "" : "s"}`,
+    swapSeats > 0 ? `${swapSeats} swap seat${swapSeats === 1 ? "" : "s"}` : null,
+    plan.some((p) => p.method === "credit")
+      ? `${plan.filter((p) => p.method === "credit").length} credit${plan.filter((p) => p.method === "credit").length === 1 ? "" : "s"}`
+      : null,
+    cashSeats > 0 && target.price !== undefined ? formatPrice(target.price * cashSeats) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const seatsLine = `${formatListingDate(target.dateTime)} · ${target.seatsAvailable} ${
     target.seatsAvailable === 1 ? "seat" : "seats"
@@ -214,100 +311,182 @@ function JoinRequestModal({
     <Modal open onClose={onClose} title={`Request a seat at ${target.college}`}>
       <p className="-mt-1 mb-4 text-sm text-[var(--ink-muted)]">{seatsLine}</p>
 
-      {maxGuests > 0 ? (
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border-2 border-[color-mix(in_srgb,var(--ink)_22%,transparent)] bg-[var(--paper)] px-4 py-3">
-          <span className="min-w-0">
-            <span className="block text-sm font-bold">Bringing friends?</span>
-            <span className="block text-xs text-[var(--ink-muted)]">
-              {guests === 0
-                ? "Just you"
-                : `You + ${guests} guest${guests === 1 ? "" : "s"} · ${seats} seats`}
+      {maxExtra > 0 ? (
+        <section className="mb-4 rounded-2xl border-2 border-[color-mix(in_srgb,var(--ink)_22%,transparent)] bg-[var(--paper)] px-4 py-3">
+          <p className="text-sm font-bold">Who&apos;s coming?</p>
+          <p className="text-xs text-[var(--ink-muted)]">
+            {extra === 0
+              ? "Just you"
+              : `You + ${extra} · ${seats} seats${extra >= maxExtra ? " (that's all there is)" : ""}`}
+          </p>
+
+          {friendsList && friendsList.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {(friendsList as FriendOption[]).map((f) => {
+                const on = friendIds.includes(f._id);
+                const disabled = !on && extra >= maxExtra;
+                return (
+                  <button
+                    key={f._id}
+                    type="button"
+                    aria-pressed={on}
+                    disabled={disabled}
+                    onClick={() =>
+                      changePeople(() =>
+                        setFriendIds((ids) =>
+                          on ? ids.filter((x) => x !== f._id) : [...ids, f._id],
+                        ),
+                      )
+                    }
+                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border-[1.5px] py-1 pl-1 pr-3 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                      on
+                        ? "border-[var(--ink)] bg-[var(--accent-wash)] text-[var(--accent-wash-ink)]"
+                        : "border-[color-mix(in_srgb,var(--ink)_30%,transparent)] text-[var(--ink)] hover:border-[var(--ink)]"
+                    }`}
+                  >
+                    <Avatar name={f.name ?? "Friend"} size="sm" source={f.avatar} />
+                    {f.name?.split(" ")[0] ?? "Friend"}
+                  </button>
+                );
+              })}
+            </div>
+          ) : friendsList ? (
+            <p className="mt-2 text-xs text-[var(--ink-muted)]">
+              Friends who follow you back show up here, so you can name them.
+            </p>
+          ) : null}
+
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <span className="text-xs text-[var(--ink-muted)]">
+              Others not on Oxformals
             </span>
-          </span>
-          <span className="flex items-center gap-2">
-            <StepButton
-              label="One fewer guest"
-              disabled={guests === 0}
-              onClick={() => setGuests((g) => Math.max(0, g - 1))}
-            >
-              −
-            </StepButton>
-            <span className="w-5 text-center font-bold tabular-nums">{guests}</span>
-            <StepButton
-              label="One more guest"
-              disabled={guests >= maxGuests}
-              onClick={() => setGuests((g) => Math.min(maxGuests, g + 1))}
-            >
-              +
-            </StepButton>
-          </span>
+            <span className="flex items-center gap-2">
+              <StepButton
+                label="One fewer guest"
+                disabled={guests === 0}
+                onClick={() => changePeople(() => setGuests((g) => Math.max(0, g - 1)))}
+              >
+                −
+              </StepButton>
+              <span className="w-5 text-center font-bold tabular-nums">{guests}</span>
+              <StepButton
+                label="One more guest"
+                disabled={extra >= maxExtra}
+                onClick={() => changePeople(() => setGuests((g) => g + 1))}
+              >
+                +
+              </StepButton>
+            </span>
+          </div>
+        </section>
+      ) : null}
+
+      {!editingPlan ? (
+        <fieldset className="mb-4 flex flex-col gap-2">
+          <legend className="mb-2 text-sm text-[var(--ink-muted)]">
+            {coveredSeats > 1 || friendIds.length > 0
+              ? `How do you want to pay for ${coveredSeats === 1 ? "your seat" : `your ${coveredSeats} seats`}?`
+              : "How do you want to pay?"}
+          </legend>
+          {allowsSwap ? (
+            <MethodOption
+              selected={baseMethod === "swap"}
+              disabled={!canSwapBase}
+              onSelect={() => setPicked("swap")}
+              title="Swap"
+              detail={
+                canSwapBase
+                  ? coveredSeats === 1
+                    ? "Trade them a seat at your formal"
+                    : `Trade them ${coveredSeats} seats at your formal`
+                  : myListings.length > 0
+                    ? `Your formal needs ${coveredSeats} free seats to swap`
+                    : "You need an upcoming swap listing of your own"
+              }
+              action={
+                canSwapBase || myListings.length > 0 ? null : (
+                  <button
+                    type="button"
+                    onClick={onListFormal}
+                    className="shrink-0 cursor-pointer text-xs font-bold text-[var(--accent)] underline-offset-2 hover:underline"
+                  >
+                    List your formal
+                  </button>
+                )
+              }
+            />
+          ) : null}
+          <MethodOption
+            selected={baseMethod === "credit"}
+            disabled={!canCreditBase}
+            onSelect={() => setPicked("credit")}
+            title="Credit"
+            detail={
+              credits === undefined
+                ? "Checking your credits…"
+                : canCreditBase
+                  ? `Spend ${coveredSeats} credit${coveredSeats === 1 ? "" : "s"} · you have ${balance}`
+                  : balance === 0
+                    ? "No credits yet. Host a guest to earn one"
+                    : `Needs ${coveredSeats} credits · you have ${balance}`
+            }
+          />
+          {allowsPay ? (
+            <MethodOption
+              selected={baseMethod === "pay"}
+              onSelect={() => setPicked("pay")}
+              title={
+                target.price !== undefined
+                  ? `Pay ${formatPrice(target.price * coveredSeats)}`
+                  : "Pay"
+              }
+              detail={
+                coveredSeats > 1 && target.price !== undefined
+                  ? `${formatPrice(target.price)} × ${coveredSeats}, arranged with the host after they accept`
+                  : "Arranged with the host after they accept"
+              }
+            />
+          ) : null}
+          {friendIds.length > 0 ? (
+            <p className="text-xs text-[var(--ink-muted)]">
+              {friendIds.length === 1
+                ? `${friendName(friendIds[0])} pays for their own seat with a credit, and confirms before the host can say yes.`
+                : "Your friends each pay for their own seat with a credit, and confirm before the host can say yes."}
+            </p>
+          ) : null}
+        </fieldset>
+      ) : (
+        <SeatPlanTable
+          plan={plan}
+          allowsSwap={allowsSwap}
+          allowsPay={allowsPay}
+          price={target.price}
+          onChange={(next) => setCustomPlan(next)}
+        />
+      )}
+
+      {seats > 1 ? (
+        <div className="-mt-1 mb-4 flex items-center justify-between gap-3 text-xs">
+          <span className="font-bold">{summary}</span>
+          <button
+            type="button"
+            onClick={() => {
+              if (editingPlan) {
+                setEditingPlan(false);
+                setCustomPlan(null);
+              } else {
+                setCustomPlan(plan);
+                setEditingPlan(true);
+              }
+            }}
+            className="cursor-pointer font-bold text-[var(--accent)] underline-offset-2 hover:underline"
+          >
+            {editingPlan ? "Reset payment" : "Edit payment"}
+          </button>
         </div>
       ) : null}
 
-      <fieldset className="mb-4 flex flex-col gap-2">
-        <legend className="mb-2 text-sm text-[var(--ink-muted)]">How do you want to pay?</legend>
-        {allowsSwap ? (
-          <MethodOption
-            selected={method === "swap"}
-            disabled={!canSwap}
-            onSelect={() => setPicked("swap")}
-            title="Swap"
-            detail={
-              canSwap
-                ? seats === 1
-                  ? "Trade them a seat at your formal"
-                  : `Trade them ${seats} seats at your formal`
-                : myListings.length > 0
-                  ? `Your formal needs ${seats} free seats to swap`
-                  : "You need an upcoming swap listing of your own"
-            }
-            action={
-              canSwap || myListings.length > 0 ? null : (
-                <button
-                  type="button"
-                  onClick={onListFormal}
-                  className="shrink-0 cursor-pointer text-xs font-bold text-[var(--accent)] underline-offset-2 hover:underline"
-                >
-                  List your formal
-                </button>
-              )
-            }
-          />
-        ) : null}
-        <MethodOption
-          selected={method === "credit"}
-          disabled={!canCredit}
-          onSelect={() => setPicked("credit")}
-          title="Credit"
-          detail={
-            credits === undefined
-              ? "Checking your credits…"
-              : canCredit
-                ? `Spend ${seats} credit${seats === 1 ? "" : "s"} · you have ${balance}`
-                : balance === 0
-                  ? "No credits yet. Host a guest to earn one"
-                  : `Needs ${seats} credits · you have ${balance}`
-          }
-        />
-        {allowsPay ? (
-          <MethodOption
-            selected={method === "pay"}
-            onSelect={() => setPicked("pay")}
-            title={
-              target.price !== undefined
-                ? `Pay ${formatPrice(target.price * seats)}`
-                : "Pay"
-            }
-            detail={
-              seats > 1 && target.price !== undefined
-                ? `${formatPrice(target.price)} × ${seats}, arranged with the host after they accept`
-                : "Arranged with the host after they accept"
-            }
-          />
-        ) : null}
-      </fieldset>
-
-      {method === "swap" && canSwap ? (
+      {swapSeats > 0 && swapListings.length > 0 ? (
         <label className="mb-4 flex flex-col gap-2">
           <span className="text-sm text-[var(--ink-muted)]">Your formal to offer</span>
           <OutlineCombobox
@@ -339,6 +518,9 @@ function JoinRequestModal({
         />
       </label>
 
+      {problem && editingPlan ? (
+        <p className="mb-4 text-sm text-[var(--danger)]">{problem}</p>
+      ) : null}
       {error ? <p className="mb-4 text-sm text-[var(--danger)]">{error}</p> : null}
 
       <div className="flex justify-end gap-2">
@@ -360,6 +542,67 @@ function JoinRequestModal({
         </button>
       </div>
     </Modal>
+  );
+}
+
+/** Per-seat payment: who pays for each seat, and how. */
+function SeatPlanTable({
+  plan,
+  allowsSwap,
+  allowsPay,
+  price,
+  onChange,
+}: {
+  plan: PlanSeat[];
+  allowsSwap: boolean;
+  allowsPay: boolean;
+  price?: number;
+  onChange: (next: PlanSeat[]) => void;
+}) {
+  const cash = price !== undefined ? formatPrice(price) : "cash";
+  const optionsFor = (seat: PlanSeat) => {
+    const opts: { value: string; label: string }[] = [];
+    const friend = seat.kind === "friend";
+    if (allowsSwap) {
+      opts.push({ value: "you:swap", label: friend ? "You cover: swap a seat" : "Swap a seat" });
+    }
+    opts.push({ value: "you:credit", label: friend ? "You cover: 1 credit" : "1 of your credits" });
+    if (allowsPay) opts.push({ value: "you:pay", label: friend ? `You cover: ${cash}` : cash });
+    if (seat.kind === "friend") {
+      opts.push({ value: "them:credit", label: "They pay: 1 credit" });
+      if (allowsPay) opts.push({ value: "them:pay", label: `They pay: ${cash}` });
+    }
+    return opts;
+  };
+  return (
+    <div className="mb-4 flex flex-col gap-2">
+      <p className="text-sm text-[var(--ink-muted)]">Who pays for each seat?</p>
+      {plan.map((seat, i) => (
+        <div
+          key={seat.key}
+          className="flex items-center justify-between gap-3 rounded-2xl border-2 border-[color-mix(in_srgb,var(--ink)_22%,transparent)] bg-[var(--paper)] px-4 py-2"
+        >
+          <span className="min-w-0 truncate text-sm font-bold">{seat.label}</span>
+          <select
+            aria-label={seat.kind === "you" ? "How your seat is paid" : `How ${seat.label}'s seat is paid`}
+            value={`${seat.payer}:${seat.method}`}
+            onChange={(e) => {
+              const [payer, method] = e.target.value.split(":") as [Payer, RequestType];
+              const next = [...plan];
+              next[i] = { ...seat, payer, method };
+              onChange(next);
+            }}
+            className="max-w-[60%] cursor-pointer rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--bg)] px-3 py-1 text-sm text-[var(--ink)] focus:outline-none"
+          >
+            {optionsFor(seat).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ))}
+    </div>
   );
 }
 

@@ -1,3 +1,4 @@
+import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 
 /**
@@ -5,6 +6,24 @@ import type { Doc, Id } from "./_generated/dataModel";
  * host plus named guests) and by unnamed "+N" guests, which are recorded
  * against the member who brought them.
  */
+
+export const seatMethodValidator = v.union(
+  v.literal("swap"),
+  v.literal("pay"),
+  v.literal("credit"),
+);
+
+export const partySeatValidator = v.object({
+  kind: v.union(v.literal("guest"), v.literal("friend")),
+  /** The named friend; absent for an unnamed guest. */
+  userId: v.optional(v.id("users")),
+  payerId: v.id("users"),
+  method: seatMethodValidator,
+  /** A named friend's answer: "in" (confirmed) or "out" ("Not me"). */
+  response: v.optional(
+    v.union(v.literal("pending"), v.literal("in"), v.literal("out")),
+  ),
+});
 
 export type SeatMethod = "swap" | "pay" | "credit";
 export type GuestSeats = NonNullable<Doc<"listings">["guestSeats"]>;

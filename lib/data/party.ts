@@ -26,3 +26,36 @@ export function partySuffix(
       : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
   return `+ ${joined}`;
 }
+
+/** "1 swap seat · 2 credits · £25" across every seat still in the request. */
+export function paymentSummary(
+  request: Pick<SwapRequest, "party" | "requestType">,
+  price?: number,
+): string {
+  const methods = [
+    request.requestType,
+    ...(request.party ?? []).filter((p) => p.response !== "out").map((p) => p.method),
+  ];
+  const n = (m: string) => methods.filter((x) => x === m).length;
+  return [
+    n("swap") ? `${n("swap")} swap seat${n("swap") === 1 ? "" : "s"}` : null,
+    n("credit") ? `${n("credit")} credit${n("credit") === 1 ? "" : "s"}` : null,
+    n("pay") ? (price !== undefined ? `£${price * n("pay")}` : `${n("pay")} paid`) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** Named friends paying their own way who haven't said "I'm in" yet. */
+export function unconfirmedPayers(request: Pick<SwapRequest, "party">): string[] {
+  return (request.party ?? [])
+    .filter(
+      (p) =>
+        p.kind === "friend" &&
+        p.userId &&
+        p.payerId === p.userId &&
+        p.response !== "in" &&
+        p.response !== "out",
+    )
+    .map((p) => p.userId!);
+}

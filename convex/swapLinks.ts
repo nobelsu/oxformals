@@ -16,8 +16,8 @@ export type FormalNotice = {
   userId: Id<"users">;
   subject: string;
   body: string;
-  /** Where the email's button goes: the formal, or browse when it's gone. */
-  cta: "formals" | "browse";
+  /** Where the email's button goes: your formals, browse, or the feed (invites). */
+  cta: "formals" | "browse" | "invites";
 };
 
 function isSwap(req: Doc<"requests">): boolean {
