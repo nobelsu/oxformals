@@ -147,10 +147,16 @@ function JoinRequestModal({
   const credits = useQuery(api.credits.getMyCredits, {});
   const balance = credits?.balance ?? 0;
 
+  const [guests, setGuests] = useState(0);
+  const seats = 1 + guests;
+  const maxGuests = Math.max(0, Math.min(5, target.seatsAvailable - 1));
+
   const allowsSwap = listingSupportsSwap(target.listingType);
   const allowsPay = target.listingType === "pay" || target.listingType === "both";
-  const canSwap = allowsSwap && myListings.length > 0;
-  const canCredit = balance >= 1;
+  // A group swap is seats for seats: your formal needs that many free seats.
+  const swapListings = myListings.filter((l) => l.seatsAvailable >= seats);
+  const canSwap = allowsSwap && swapListings.length > 0;
+  const canCredit = balance >= seats;
 
   const defaultMethod: RequestType = canSwap
     ? "swap"
@@ -163,9 +169,9 @@ function JoinRequestModal({
   const [offeringId, setOfferingId] = useState("");
   const [offeringPickerOpen, setOfferingPickerOpen] = useState(false);
   const effectiveOfferingId =
-    offeringId && myListings.some((l) => l.id === offeringId)
+    offeringId && swapListings.some((l) => l.id === offeringId)
       ? offeringId
-      : (myListings[0]?.id ?? "");
+      : (swapListings[0]?.id ?? "");
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -185,6 +191,7 @@ function JoinRequestModal({
         ...(method === "swap" ? { offeringListingId: effectiveOfferingId } : {}),
         message,
         targetOwnerUserId: target.ownerUserId,
+        ...(guests > 0 ? { guests } : {}),
       });
       if (!result) throw new Error("Could not send request.");
       onSent(
@@ -207,6 +214,36 @@ function JoinRequestModal({
     <Modal open onClose={onClose} title={`Request a seat at ${target.college}`}>
       <p className="-mt-1 mb-4 text-sm text-[var(--ink-muted)]">{seatsLine}</p>
 
+      {maxGuests > 0 ? (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border-2 border-[color-mix(in_srgb,var(--ink)_22%,transparent)] bg-[var(--paper)] px-4 py-3">
+          <span className="min-w-0">
+            <span className="block text-sm font-bold">Bringing friends?</span>
+            <span className="block text-xs text-[var(--ink-muted)]">
+              {guests === 0
+                ? "Just you"
+                : `You + ${guests} guest${guests === 1 ? "" : "s"} · ${seats} seats`}
+            </span>
+          </span>
+          <span className="flex items-center gap-2">
+            <StepButton
+              label="One fewer guest"
+              disabled={guests === 0}
+              onClick={() => setGuests((g) => Math.max(0, g - 1))}
+            >
+              −
+            </StepButton>
+            <span className="w-5 text-center font-bold tabular-nums">{guests}</span>
+            <StepButton
+              label="One more guest"
+              disabled={guests >= maxGuests}
+              onClick={() => setGuests((g) => Math.min(maxGuests, g + 1))}
+            >
+              +
+            </StepButton>
+          </span>
+        </div>
+      ) : null}
+
       <fieldset className="mb-4 flex flex-col gap-2">
         <legend className="mb-2 text-sm text-[var(--ink-muted)]">How do you want to pay?</legend>
         {allowsSwap ? (
@@ -217,11 +254,15 @@ function JoinRequestModal({
             title="Swap"
             detail={
               canSwap
-                ? "Trade them a seat at your formal"
-                : "You need an upcoming swap listing of your own"
+                ? seats === 1
+                  ? "Trade them a seat at your formal"
+                  : `Trade them ${seats} seats at your formal`
+                : myListings.length > 0
+                  ? `Your formal needs ${seats} free seats to swap`
+                  : "You need an upcoming swap listing of your own"
             }
             action={
-              canSwap ? null : (
+              canSwap || myListings.length > 0 ? null : (
                 <button
                   type="button"
                   onClick={onListFormal}
@@ -242,16 +283,26 @@ function JoinRequestModal({
             credits === undefined
               ? "Checking your credits…"
               : canCredit
-                ? `Spend 1 credit · you have ${balance}`
-                : "No credits yet. Host a guest to earn one"
+                ? `Spend ${seats} credit${seats === 1 ? "" : "s"} · you have ${balance}`
+                : balance === 0
+                  ? "No credits yet. Host a guest to earn one"
+                  : `Needs ${seats} credits · you have ${balance}`
           }
         />
         {allowsPay ? (
           <MethodOption
             selected={method === "pay"}
             onSelect={() => setPicked("pay")}
-            title={target.price !== undefined ? `Pay ${formatPrice(target.price)}` : "Pay"}
-            detail="Arranged with the host after they accept"
+            title={
+              target.price !== undefined
+                ? `Pay ${formatPrice(target.price * seats)}`
+                : "Pay"
+            }
+            detail={
+              seats > 1 && target.price !== undefined
+                ? `${formatPrice(target.price)} × ${seats}, arranged with the host after they accept`
+                : "Arranged with the host after they accept"
+            }
           />
         ) : null}
       </fieldset>
@@ -263,7 +314,7 @@ function JoinRequestModal({
             open={offeringPickerOpen}
             onOpenChange={setOfferingPickerOpen}
             value={effectiveOfferingId}
-            options={myListings.map((l) => ({
+            options={swapListings.map((l) => ({
               value: l.id,
               label: `${l.college} — ${formatListingDate(l.dateTime)}`,
             }))}
@@ -309,6 +360,30 @@ function JoinRequestModal({
         </button>
       </div>
     </Modal>
+  );
+}
+
+function StepButton({
+  label,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-[var(--ink)] text-lg leading-none text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[var(--ink)]"
+    >
+      {children}
+    </button>
   );
 }
 

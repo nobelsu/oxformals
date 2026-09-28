@@ -4,6 +4,24 @@ import { authTables } from "@convex-dev/auth/server";
 import { groupSizeValidator } from "./groupSize";
 import { uiFontValidator } from "./uiFont";
 
+export const seatMethodValidator = v.union(
+  v.literal("swap"),
+  v.literal("pay"),
+  v.literal("credit"),
+);
+
+export const partySeatValidator = v.object({
+  kind: v.union(v.literal("guest"), v.literal("friend")),
+  /** The named friend; absent for an unnamed guest. */
+  userId: v.optional(v.id("users")),
+  payerId: v.id("users"),
+  method: seatMethodValidator,
+  /** A named friend's answer: "in" (confirmed) or "out" ("Not me"). */
+  response: v.optional(
+    v.union(v.literal("pending"), v.literal("in"), v.literal("out")),
+  ),
+});
+
 const avatar = v.optional(
   v.union(
     v.object({ kind: v.literal("preset"), id: v.string() }),
@@ -86,6 +104,13 @@ export default defineSchema({
     price: v.optional(v.number()),
     attendanceAppliedAt: v.optional(v.number()),
     attendanceGuestCount: v.optional(v.number()),
+    /**
+     * Unnamed "+N" guests, keyed by the member who brought them. Each takes a
+     * seat: seatsAvailable = groupSize − members − Σ count.
+     */
+    guestSeats: v.optional(
+      v.array(v.object({ userId: v.id("users"), count: v.number() })),
+    ),
   })
     .index("by_ownerUserId", ["ownerUserId"])
     .index("by_status", ["status"])
@@ -105,6 +130,12 @@ export default defineSchema({
       v.literal("accepted"),
       v.literal("declined"),
     ),
+    /**
+     * Extra seats beyond the requester's own (whose seat is paid by
+     * `requestType`). Unnamed guests are paid by the requester; a named friend
+     * can pay for themselves. Bounded by the listing's group size (≤ 5).
+     */
+    party: v.optional(v.array(partySeatValidator)),
   })
     .index("by_toUserId", ["toUserId"])
     .index("by_fromUserId", ["fromUserId"])

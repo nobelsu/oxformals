@@ -43,6 +43,7 @@ import type * as moderation from "../moderation.js";
 import type * as password from "../password.js";
 import type * as profileActivity from "../profileActivity.js";
 import type * as pushNotifications from "../pushNotifications.js";
+import type * as seats from "../seats.js";
 import type * as share from "../share.js";
 import type * as storage from "../storage.js";
 import type * as swapLinks from "../swapLinks.js";
@@ -93,6 +94,7 @@ declare const fullApi: ApiFromModules<{
   password: typeof password;
   profileActivity: typeof profileActivity;
   pushNotifications: typeof pushNotifications;
+  seats: typeof seats;
   share: typeof share;
   storage: typeof storage;
   swapLinks: typeof swapLinks;

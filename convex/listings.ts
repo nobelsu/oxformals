@@ -11,7 +11,21 @@ import {
   syncListingAttendanceGuests,
 } from "./collegeStats";
 import { detachMember, removeUserFromListingGroup } from "./listingMembership";
-import { creditBalance, holdSeatCredits, refundListingCredits } from "./credits";
+import {
+  creditBalance,
+  holdSeatCredits,
+  refundListingCredits,
+  refundSeatHolderCredits,
+} from "./credits";
+import {
+  countByMethod,
+  guestsBroughtBy,
+  MAX_GUESTS,
+  occupiedSeats,
+  requestSeats,
+  withGuestSeats,
+  type Seat,
+} from "./seats";
 import {
   sendFormalNotices,
   swapSeatingMember,
@@ -79,6 +93,10 @@ const enrichedListingValidator = v.object({
   price: v.optional(v.number()),
   attendanceAppliedAt: v.optional(v.number()),
   attendanceGuestCount: v.optional(v.number()),
+  formalType: v.optional(formalTypeValidator),
+  guestSeats: v.optional(
+    v.array(v.object({ userId: v.id("users"), count: v.number() })),
+  ),
   menuPdfUrl: v.union(v.string(), v.null()),
   menuFileContentType: v.union(v.string(), v.null()),
 });
@@ -331,6 +349,8 @@ export const createRequest = mutation({
     targetListingId: v.id("listings"),
     offeringListingId: v.optional(v.id("listings")),
     message: v.string(),
+    /** Unnamed "+N" guests, paid the same way as the requester's seat. */
+    guests: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
@@ -346,8 +366,33 @@ export const createRequest = mutation({
     if (target.ownerUserId === userId) {
       throw new Error("You cannot request your own listing.");
     }
-    if (!listingAllowsRequestType(targetType, args.requestType)) {
-      throw new Error("This listing does not accept that type of request.");
+
+    const guests = args.guests ?? 0;
+    if (!Number.isInteger(guests) || guests < 0 || guests > MAX_GUESTS) {
+      throw new Error(`You can bring up to ${MAX_GUESTS} guests.`);
+    }
+    const party: NonNullable<Doc<"requests">["party"]> = Array.from(
+      { length: guests },
+      () => ({ kind: "guest" as const, payerId: userId, method: args.requestType }),
+    );
+    const draft = {
+      fromUserId: userId,
+      requestType: args.requestType,
+      party,
+    } as Doc<"requests">;
+    const seats = requestSeats(draft);
+
+    if (seats.length > target.seatsAvailable) {
+      throw new Error(
+        target.seatsAvailable === 1
+          ? "There's only 1 seat left."
+          : `There are only ${target.seatsAvailable} seats left.`,
+      );
+    }
+    for (const seat of seats) {
+      if (!listingAllowsRequestType(targetType, seat.method)) {
+        throw new Error("This listing does not accept that type of request.");
+      }
     }
 
     const mine = await ctx.db
@@ -368,126 +413,89 @@ export const createRequest = mutation({
       );
     }
 
-    if (args.requestType === "credit") {
-      if (args.offeringListingId !== undefined) {
-        throw new Error("Credit requests cannot include an offering listing.");
-      }
+    const myCreditSeats = seats.filter(
+      (s) => s.method === "credit" && s.payerId === userId,
+    ).length;
+    if (myCreditSeats > 0) {
       const balance = await creditBalance(ctx, userId);
-      if (balance < 1) {
+      if (balance < myCreditSeats) {
         throw new Error(
-          "You don't have any credits. Host a guest at your college's formal to earn one.",
+          balance === 0
+            ? "You don't have any credits. Host a guest at your college's formal to earn one."
+            : `That needs ${myCreditSeats} credits and you have ${balance}.`,
         );
       }
-      const requestId = await ctx.db.insert("requests", {
-        fromUserId: userId,
-        toUserId: target.ownerUserId,
-        targetListingId: args.targetListingId,
-        requestType: "credit",
-        message: args.message.trim(),
-        status: "pending",
-      });
-      await ctx.scheduler.runAfter(0, internal.emails.sendNewRequestEmail, {
-        requestId,
-      });
-      return { requestId, autoAccepted: false as const };
     }
 
-    if (args.requestType === "pay") {
-      if (args.offeringListingId !== undefined) {
-        throw new Error("Pay requests cannot include an offering listing.");
+    const swapSeats = countByMethod(seats, "swap");
+    if (swapSeats > 0) {
+      if (!args.offeringListingId) {
+        throw new Error("Swap requests must include an offering listing.");
       }
-
-      const existingPay = mine.find(
-        (item) =>
-          item.targetListingId === args.targetListingId &&
-          resolveRequestType(item) === "pay" &&
-          item.status === "pending",
-      );
-      if (existingPay) {
-        throw new Error("You already sent this request.");
+      if (args.targetListingId === args.offeringListingId) {
+        throw new Error("You must offer a different listing.");
       }
-
-      const requestId = await ctx.db.insert("requests", {
-        fromUserId: userId,
-        toUserId: target.ownerUserId,
-        targetListingId: args.targetListingId,
-        requestType: "pay",
-        message: args.message.trim(),
-        status: "pending",
-      });
-
-      await ctx.scheduler.runAfter(0, internal.emails.sendNewRequestEmail, {
-        requestId,
-      });
-
-      return { requestId, autoAccepted: false as const };
-    }
-
-    if (!args.offeringListingId) {
-      throw new Error("Swap requests must include an offering listing.");
-    }
-    if (args.targetListingId === args.offeringListingId) {
-      throw new Error("You must offer a different listing.");
-    }
-
-    const offering = await getListingOrThrow(ctx, args.offeringListingId);
-    if (offering.status !== "active") {
-      throw new Error("Your offering listing must be active.");
-    }
-    if (listingIsPast(offering.dateTime, Date.now())) {
-      throw new Error("Your offering formal has passed.");
-    }
-    if (offering.ownerUserId !== userId) {
-      throw new Error("You can only offer your own listing.");
-    }
-    if (!listingSupportsSwap(resolveListingType(offering))) {
-      throw new Error("Pay listings cannot be used in a swap.");
-    }
-
-    const existingSwap = mine.find(
-      (item) =>
-        item.targetListingId === args.targetListingId &&
-        item.offeringListingId === args.offeringListingId &&
-        resolveRequestType(item) === "swap" &&
-        item.status === "pending",
-    );
-    if (existingSwap) {
-      throw new Error("You already sent this request.");
+      const offering = await getListingOrThrow(ctx, args.offeringListingId);
+      if (offering.status !== "active") {
+        throw new Error("Your offering listing must be active.");
+      }
+      if (listingIsPast(offering.dateTime, Date.now())) {
+        throw new Error("Your offering formal has passed.");
+      }
+      if (offering.ownerUserId !== userId) {
+        throw new Error("You can only offer your own listing.");
+      }
+      if (!listingSupportsSwap(resolveListingType(offering))) {
+        throw new Error("Pay listings cannot be used in a swap.");
+      }
+      if (offering.seatsAvailable < swapSeats) {
+        throw new Error(
+          `Swapping ${swapSeats} seats needs ${swapSeats} free seats at your formal, and it has ${offering.seatsAvailable}.`,
+        );
+      }
+    } else if (args.offeringListingId !== undefined) {
+      throw new Error("Only swap requests include an offering listing.");
     }
 
     const requestId = await ctx.db.insert("requests", {
       fromUserId: userId,
       toUserId: target.ownerUserId,
       targetListingId: args.targetListingId,
-      offeringListingId: args.offeringListingId,
-      requestType: "swap",
+      ...(swapSeats > 0 ? { offeringListingId: args.offeringListingId } : {}),
+      requestType: args.requestType,
       message: args.message.trim(),
       status: "pending",
+      ...(party.length > 0 ? { party } : {}),
     });
 
     await ctx.scheduler.runAfter(0, internal.emails.sendNewRequestEmail, {
       requestId,
     });
 
-    const mirrorCandidates = await ctx.db
-      .query("requests")
-      .withIndex("by_targetListingId_and_status", (q) =>
-        q
-          .eq("targetListingId", args.offeringListingId!)
-          .eq("status", "pending"),
-      )
-      .take(200);
-    const mirror = mirrorCandidates.find(
-      (r) =>
-        resolveRequestType(r) === "swap" &&
-        r.offeringListingId === args.targetListingId &&
-        r._id !== requestId,
-    );
+    // Two hosts who each asked for the other's formal: accept both at once.
+    // Only for one-for-one swaps; group swaps always need the host to accept.
+    if (args.requestType === "swap" && party.length === 0 && args.offeringListingId) {
+      const mirrorCandidates = await ctx.db
+        .query("requests")
+        .withIndex("by_targetListingId_and_status", (q) =>
+          q
+            .eq("targetListingId", args.offeringListingId!)
+            .eq("status", "pending"),
+        )
+        .take(200);
+      const mirror = mirrorCandidates.find(
+        (r) =>
+          resolveRequestType(r) === "swap" &&
+          r.offeringListingId === args.targetListingId &&
+          (r.party ?? []).length === 0 &&
+          r._id !== requestId,
+      );
 
-    if (mirror) {
-      await performAccept(ctx, mirror, [requestId]);
-      await ctx.db.patch(requestId, { status: "accepted" });
-      return { requestId, autoAccepted: true as const };
+      if (mirror) {
+        await performAccept(ctx, mirror, [requestId]);
+        await ctx.db.patch(requestId, { status: "accepted" });
+        return { requestId, autoAccepted: true as const };
+      }
     }
 
     return { requestId, autoAccepted: false as const };
@@ -522,11 +530,71 @@ export const withdrawRequest = mutation({
   },
 });
 
+/** Take `count` seats on a listing for `holderId` (plus any named friends). */
+async function seatOnListing(
+  ctx: MutationCtx,
+  listing: Doc<"listings">,
+  args: {
+    newMembers: Id<"users">[];
+    guestHolderId: Id<"users">;
+    guestCount: number;
+    fullStatus: "closed" | "confirmed";
+  },
+): Promise<number> {
+  const taken = args.newMembers.length + args.guestCount;
+  const newSeats = listing.seatsAvailable - taken;
+  await ctx.db.patch(listing._id, {
+    seatsAvailable: newSeats,
+    members: [...listing.members, ...args.newMembers],
+    ...(args.guestCount > 0
+      ? {
+          guestSeats: withGuestSeats(
+            listing.guestSeats,
+            args.guestHolderId,
+            args.guestCount,
+          ),
+        }
+      : {}),
+    ...(newSeats === 0 ? { status: args.fullStatus } : {}),
+  });
+  const updated = await ctx.db.get(listing._id);
+  if (updated) {
+    await syncListingAttendanceGuests(ctx, updated, Date.now());
+  }
+  return newSeats;
+}
+
+async function declinePendingWhenFull(
+  ctx: MutationCtx,
+  listingId: Id<"listings">,
+  index: "by_targetListingId_and_status" | "by_offeringListingId_and_status",
+  skip: Set<Id<"requests">>,
+) {
+  const pending =
+    index === "by_targetListingId_and_status"
+      ? await ctx.db
+          .query("requests")
+          .withIndex(index, (q) =>
+            q.eq("targetListingId", listingId).eq("status", "pending"),
+          )
+          .take(200)
+      : await ctx.db
+          .query("requests")
+          .withIndex(index, (q) =>
+            q.eq("offeringListingId", listingId).eq("status", "pending"),
+          )
+          .take(200);
+  for (const r of pending) {
+    if (skip.has(r._id)) continue;
+    await ctx.db.patch(r._id, { status: "declined" });
+  }
+}
+
 async function assertCanAcceptRequest(
   ctx: MutationCtx,
   req: Doc<"requests">,
+  seats: Seat[],
 ): Promise<{ target: Doc<"listings">; offering?: Doc<"listings"> }> {
-  const requestType = resolveRequestType(req);
   const target = await getListingOrThrow(ctx, req.targetListingId);
 
   if (target.status !== "active") {
@@ -535,13 +603,21 @@ async function assertCanAcceptRequest(
   if (listingIsPast(target.dateTime, Date.now())) {
     throw new Error("This formal has passed, so this request can't be accepted.");
   }
-  if (target.seatsAvailable <= 0) {
+  if (target.seatsAvailable < seats.length) {
     throw new Error(
-      "Your listing has no seats left, so this request can't be accepted.",
+      target.seatsAvailable <= 0
+        ? "Your listing has no seats left, so this request can't be accepted."
+        : `This request needs ${seats.length} seats and your listing has ${target.seatsAvailable} left.`,
     );
   }
+  for (const seat of seats) {
+    if (seat.userId && target.members.includes(seat.userId)) {
+      throw new Error("Someone in this request is already in your group.");
+    }
+  }
 
-  if (requestType === "pay" || requestType === "credit") {
+  const swapSeats = countByMethod(seats, "swap");
+  if (swapSeats === 0) {
     return { target };
   }
 
@@ -560,10 +636,15 @@ async function assertCanAcceptRequest(
       "Their offering formal has passed, so this swap can't be accepted.",
     );
   }
-  if (offering.seatsAvailable <= 0) {
+  if (offering.seatsAvailable < swapSeats) {
     throw new Error(
-      "Their offering listing has no seats left, so this swap can't be accepted.",
+      offering.seatsAvailable <= 0
+        ? "Their offering listing has no seats left, so this swap can't be accepted."
+        : `This swap needs ${swapSeats} seats at their formal and it has ${offering.seatsAvailable} left.`,
     );
+  }
+  if (offering.members.includes(req.toUserId)) {
+    throw new Error("You're already in their group.");
   }
 
   return { target, offering };
@@ -574,77 +655,65 @@ async function performAccept(
   req: Doc<"requests">,
   skipIds: Id<"requests">[] = [],
 ) {
-  const requestType = resolveRequestType(req);
-  const { target, offering } = await assertCanAcceptRequest(ctx, req);
+  const seats = requestSeats(req);
+  const { target, offering } = await assertCanAcceptRequest(ctx, req, seats);
 
   await ctx.db.patch(req._id, { status: "accepted" });
 
-  const newSeats = target.seatsAvailable - 1;
-  const newMembers = [...target.members, req.fromUserId];
-  await ctx.db.patch(req.targetListingId, {
-    seatsAvailable: newSeats,
-    members: newMembers,
-    ...(newSeats === 0 ? { status: "closed" as const } : {}),
+  // Named people become members; unnamed guests are held against the requester.
+  const named = seats.filter((s) => s.userId).map((s) => s.userId!);
+  const guestCount = seats.filter((s) => s.kind === "guest").length;
+  const newSeats = await seatOnListing(ctx, target, {
+    newMembers: named,
+    guestHolderId: req.fromUserId,
+    guestCount,
+    fullStatus: "closed",
   });
 
-  const updatedTarget = await ctx.db.get(req.targetListingId);
-  if (updatedTarget) {
-    await syncListingAttendanceGuests(ctx, updatedTarget, Date.now());
-  }
-
-  if (requestType === "credit") {
+  const creditSeats = seats.filter((s) => s.method === "credit");
+  if (creditSeats.length > 0) {
     await holdSeatCredits(ctx, {
       requestId: req._id,
       listing: target,
-      charges: [
-        { payerId: req.fromUserId, seatHolderId: req.fromUserId, isGuest: false },
-      ],
+      charges: creditSeats.map((s) => ({
+        payerId: s.payerId,
+        seatHolderId: s.userId ?? req.fromUserId,
+        isGuest: s.kind === "guest",
+      })),
     });
   }
 
   const idsToSkip = new Set([req._id, ...skipIds]);
-
   if (newSeats === 0) {
-    const pendingForTarget = await ctx.db
-      .query("requests")
-      .withIndex("by_targetListingId_and_status", (q) =>
-        q.eq("targetListingId", req.targetListingId).eq("status", "pending"),
-      )
-      .take(200);
-    for (const pending of pendingForTarget) {
-      if (idsToSkip.has(pending._id)) continue;
-      await ctx.db.patch(pending._id, { status: "declined" });
-    }
+    await declinePendingWhenFull(
+      ctx,
+      req.targetListingId,
+      "by_targetListingId_and_status",
+      idsToSkip,
+    );
   }
 
-  if (requestType !== "swap" || !offering || !req.offeringListingId) {
+  const swapSeats = countByMethod(seats, "swap");
+  if (swapSeats === 0 || !offering || !req.offeringListingId) {
     return;
   }
 
-  const newOfferingSeats = offering.seatsAvailable - 1;
-  const newOfferingMembers = [...offering.members, req.toUserId];
-  await ctx.db.patch(req.offeringListingId, {
-    seatsAvailable: newOfferingSeats,
-    members: newOfferingMembers,
-    ...(newOfferingSeats === 0 ? { status: "confirmed" as const } : {}),
+  // Seats for seats: the host gets up to as many seats at the requester's
+  // formal — their own plus guest seats they can release later.
+  const newOfferingSeats = await seatOnListing(ctx, offering, {
+    newMembers: [req.toUserId],
+    guestHolderId: req.toUserId,
+    guestCount: swapSeats - 1,
+    fullStatus: "confirmed",
   });
 
-  const updatedOffering = await ctx.db.get(req.offeringListingId);
-  if (updatedOffering) {
-    await syncListingAttendanceGuests(ctx, updatedOffering, Date.now());
-  }
-
   if (newOfferingSeats === 0) {
-    const pendingForOffering = await ctx.db
-      .query("requests")
-      .withIndex("by_offeringListingId_and_status", (q) =>
-        q.eq("offeringListingId", req.offeringListingId!).eq("status", "pending"),
-      )
-      .take(200);
-    for (const pending of pendingForOffering) {
-      if (idsToSkip.has(pending._id)) continue;
-      await ctx.db.patch(pending._id, { status: "declined" });
-    }
+    await declinePendingWhenFull(
+      ctx,
+      req.offeringListingId,
+      "by_offeringListingId_and_status",
+      idsToSkip,
+    );
   }
 }
 
@@ -687,6 +756,37 @@ export const leaveGroup = mutation({
       }
     }
     return result;
+  },
+});
+
+/**
+ * Give back one of your unnamed guest seats (e.g. the host of a group swap
+ * who got more seats than they need).
+ */
+export const releaseGuestSeat = mutation({
+  args: { listingId: v.id("listings") },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    const listing = await getListingOrThrow(ctx, args.listingId);
+    if (guestsBroughtBy(listing, userId) === 0) {
+      throw new Error("You don't have a guest seat here.");
+    }
+    if (listingIsPast(listing.dateTime, Date.now())) {
+      throw new Error("This formal has already happened.");
+    }
+    const newSeats = listing.seatsAvailable + 1;
+    await ctx.db.patch(args.listingId, {
+      guestSeats: withGuestSeats(listing.guestSeats, userId, -1),
+      seatsAvailable: newSeats,
+      ...(listing.status === "closed" || listing.status === "confirmed"
+        ? { status: "active" as const }
+        : {}),
+    });
+    await refundSeatHolderCredits(ctx, listing, userId, {
+      guestsOnly: true,
+      limit: 1,
+    });
+    return args.listingId;
   },
 });
 
@@ -786,7 +886,7 @@ export const updateListing = mutation({
       }
       const nextDateTime = new Date(timestamp).toISOString();
       if (nextDateTime !== listing.dateTime) {
-        if (listing.members.length > 1) {
+        if (occupiedSeats(listing) > 1) {
           throw new Error(
             "You can't change the date once people have joined. Cancel the formal instead.",
           );
@@ -796,13 +896,14 @@ export const updateListing = mutation({
     }
 
     if (args.groupSize !== undefined) {
-      if (args.groupSize < listing.members.length) {
+      const occupied = occupiedSeats(listing);
+      if (args.groupSize < occupied) {
         throw new Error(
-          "Group size cannot be less than the current number of members.",
+          "Group size cannot be less than the number of people already going.",
         );
       }
       patch.groupSize = args.groupSize;
-      patch.seatsAvailable = args.groupSize - listing.members.length;
+      patch.seatsAvailable = args.groupSize - occupied;
     }
 
     if (args.message !== undefined) {

@@ -64,5 +64,8 @@ export function mapListing(doc: ConvexListingDoc): Listing {
     ...(doc.price !== undefined ? { price: doc.price } : {}),
     status: doc.status,
     createdAt: doc._creationTime,
+    ...(doc.guestSeats && doc.guestSeats.length > 0
+      ? { guestSeats: doc.guestSeats }
+      : {}),
   };
 }

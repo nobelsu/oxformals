@@ -32,6 +32,8 @@ export type Listing = {
   price?: number;
   status: ListingStatus;
   createdAt: number;
+  /** Unnamed "+N" guests, keyed by the member who brought them. */
+  guestSeats?: { userId: string; count: number }[];
 };
 
 export type SwapRequestStatus = "pending" | "accepted" | "declined";
@@ -46,6 +48,16 @@ export type SwapRequest = {
   message: string;
   status: SwapRequestStatus;
   createdAt: number;
+  /** Extra seats beyond the requester's own. */
+  party?: PartySeat[];
+};
+
+export type PartySeat = {
+  kind: "guest" | "friend";
+  userId?: string;
+  payerId: string;
+  method: RequestType;
+  response?: "pending" | "in" | "out";
 };
 
 export type Wishlists = Record<string, string[]>;

@@ -14,6 +14,8 @@ import { EditListingBlockedModal } from "@/components/swap/EditListingBlockedMod
 import { SentRequestRow } from "@/components/swap/SentRequestRow";
 import { SignInGate } from "@/components/swap/SignInGate";
 import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
+import { GuestCountLabel, guestCountFor } from "@/components/swap/GuestSeatsNote";
+import { partySuffix, requestSeatCount } from "@/lib/data/party";
 import { ListingGroupChatButton } from "@/components/chat/ListingGroupChatButton";
 import { ReviewFormalSection } from "@/components/colleges/ReviewFormalSection";
 import { ListingFormalBadges } from "@/components/colleges/ListingFormalBadges";
@@ -304,6 +306,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                         {isOwner && (
                           <span className="ml-1 text-[0.65rem] text-[var(--ink-soft)]">(host)</span>
                         )}
+                        <GuestCountLabel count={guestCountFor(listing.guestSeats, m.id)} />
                       </div>
                       {!isOwner && user && listing.ownerUserId === user.id && (
                         <button
@@ -378,14 +381,18 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                     onAccept={() => {
                       const kind = resolveRequestType(r);
                       const isPay = kind !== "swap";
+                      const who =
+                        requestSeatCount(r) > 1
+                          ? `${fromUser.name} ${partySuffix(r, (id) => getUser(id)?.name)} (${requestSeatCount(r)} seats)`
+                          : fromUser.name;
                       setAcceptError(null);
                       setConfirmDialog({
                         message:
                           kind === "credit"
-                            ? `Accept ${fromUser.name}'s credit? They join your group, and you earn a credit 24 hours after the formal.`
+                            ? `Accept ${who}? They join your group, and you earn ${requestSeatCount(r) > 1 ? `${requestSeatCount(r)} credits` : "a credit"} 24 hours after the formal.`
                             : kind === "pay"
-                              ? `Accept this pay request? ${fromUser.name} will join your group.`
-                              : `Accept this swap? ${fromUser.name} will join your group.`,
+                              ? `Accept this pay request? ${who} will join your group.`
+                              : `Accept this swap? ${who} will join your group${requestSeatCount(r) > 1 ? `, and you get up to ${requestSeatCount(r)} seats at their formal` : ""}.`,
                         confirmLabel: "Accept",
                         onConfirm: async () => {
                           setConfirmDialog(null);

@@ -41,6 +41,8 @@ export type DataContextValue = {
     message: string;
     /** When the target listing is not in the cached global listings slice (e.g. profile-only view). */
     targetOwnerUserId?: string;
+    /** Unnamed "+N" guests. */
+    guests?: number;
   }) => Promise<SwapRequest | null>;
   /** @deprecated Use sendRequest */
   requestSwap: (args: {
@@ -88,6 +90,7 @@ function mapRequest(doc: Doc<"requests">): SwapRequest {
     message: doc.message,
     status: doc.status,
     createdAt: doc._creationTime,
+    ...(doc.party && doc.party.length > 0 ? { party: doc.party } : {}),
   };
 }
 
@@ -237,6 +240,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       offeringListingId?: string;
       message: string;
       targetOwnerUserId?: string;
+      guests?: number;
     }): Promise<SwapRequest | null> => {
       if (!user) return null;
       const targetFromCache = listings.find((l) => l.id === args.targetListingId);
@@ -252,6 +256,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             ? { offeringListingId: args.offeringListingId as Id<"listings"> }
             : {}),
           message: args.message,
+          ...(args.guests ? { guests: args.guests } : {}),
         });
       } catch (err) {
         const message =

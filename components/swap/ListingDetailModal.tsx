@@ -6,6 +6,11 @@ import { api } from "@/convex/_generated/api";
 import { BioText } from "@/components/profile/BioText";
 import { ShareButton } from "@/components/share/ShareButton";
 import { CreditDisputeLink } from "@/components/credits/CreditDisputeLink";
+import {
+  GuestCountLabel,
+  ReleaseGuestSeatButton,
+  guestCountFor,
+} from "@/components/swap/GuestSeatsNote";
 import { Avatar } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Modal";
 import { ListingGroupChatButton } from "@/components/chat/ListingGroupChatButton";
@@ -204,11 +209,20 @@ export function ListingDetailModal({
                           (host)
                         </span>
                       )}
+                      <GuestCountLabel count={guestCountFor(listing.guestSeats, m.id)} />
                     </div>
                   </div>
                 );
               })}
             </div>
+            {user && !isPast ? (
+              <div className="mt-2">
+                <ReleaseGuestSeatButton
+                  listingId={listing.id}
+                  count={guestCountFor(listing.guestSeats, user.id)}
+                />
+              </div>
+            ) : null}
             {isListingMember ? (
               <ListingGroupChatButton
                 listingId={listing.id as Id<"listings">}

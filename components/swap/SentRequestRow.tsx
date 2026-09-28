@@ -7,6 +7,7 @@ import type { User } from "@/lib/auth/types";
 import { formatListingDate, formatPrice, formatRelativeTime } from "@/lib/data/format";
 import type { Listing, SwapRequest } from "@/lib/data/types";
 import { resolveRequestType } from "@/lib/data/requestFilters";
+import { requestSeatCount } from "@/lib/data/party";
 import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { RequestMessage } from "@/components/swap/RequestMessage";
 import { ListingTag } from "@/components/swap/ListingTag";
@@ -58,10 +59,13 @@ export function SentRequestRow({
             </div>
           </div>
           <div className="text-sm leading-snug text-[var(--ink-muted)]">
+            {requestSeatCount(request) > 1 ? `${requestSeatCount(request)} seats · ` : ""}
             {requestType === "credit" ? (
               <>
-                {targetListing ? `${targetListing.college} · ` : ""}Paying with a
-                credit
+                {targetListing ? `${targetListing.college} · ` : ""}Paying with{" "}
+                {requestSeatCount(request) > 1
+                  ? `${requestSeatCount(request)} credits`
+                  : "a credit"}
               </>
             ) : requestType === "pay" ? (
               <>

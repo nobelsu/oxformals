@@ -106,6 +106,10 @@ export const getNewRequestEmailPayload = internalQuery({
       requestTypeLabel = "Swap request";
     }
 
+    const extraSeats = (req.party ?? []).filter((p) => p.response !== "out").length;
+    if (extraSeats > 0) {
+      requestTypeLabel = `${extraSeats + 1} seats · ${requestTypeLabel}`;
+    }
     const formalLabel = `${targetListing.college} · ${formalDate}`;
     const reviewUrl = `${siteUrl()}/requests/${req.targetListingId}`;
 

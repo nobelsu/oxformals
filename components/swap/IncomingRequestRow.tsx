@@ -8,6 +8,7 @@ import { formatListingDate, formatPrice, formatRelativeTime } from "@/lib/data/f
 import { ListingTag } from "@/components/swap/ListingTag";
 import type { Listing, SwapRequest } from "@/lib/data/types";
 import { resolveRequestType } from "@/lib/data/requestFilters";
+import { partySuffix, requestSeatCount } from "@/lib/data/party";
 import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { RequestMessage } from "@/components/swap/RequestMessage";
 import { RequestTypeTag } from "@/components/swap/RequestTypeTag";
@@ -50,20 +51,29 @@ export function IncomingRequestRow({
         </Link>
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-            <Link
-              href={`/profile/${fromUser.id}`}
-              className="min-w-0 text-lg leading-tight hover:underline break-words"
-            >
-              {fromUser.name}
-            </Link>
+            <span className="min-w-0 text-lg leading-tight break-words">
+              <Link href={`/profile/${fromUser.id}`} className="hover:underline">
+                {fromUser.name}
+              </Link>
+              {request.party?.length ? (
+                <span className="text-[var(--ink-muted)]"> {partySuffix(request)}</span>
+              ) : null}
+            </span>
             <div className="flex shrink-0 flex-wrap items-center gap-1.5">
               <RequestTypeTag requestType={requestType} />
               <ListingTag className="whitespace-nowrap">{statusLabel}</ListingTag>
             </div>
           </div>
+          {requestSeatCount(request) > 1 ? (
+            <div className="text-sm font-bold leading-snug text-[var(--ink)]">
+              {requestSeatCount(request)} seats
+            </div>
+          ) : null}
           {requestType === "credit" ? (
             <div className="text-sm leading-snug text-[var(--ink-muted)]">
-              Paying with a credit · you earn one when they come
+              {requestSeatCount(request) > 1
+                ? `Paying with ${requestSeatCount(request)} credits · you earn them when they come`
+                : "Paying with a credit · you earn one when they come"}
             </div>
           ) : requestType === "pay" ? (
             <div className="text-sm leading-snug text-[var(--ink-muted)]">

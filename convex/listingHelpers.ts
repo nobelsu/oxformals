@@ -1,5 +1,6 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { occupiedSeats } from "./seats";
 import { claimStorageOwnership, deleteStorageAndOwnership } from "./uploadOwnership";
 
 const ALLOWED_MENU_FILE_TYPES = new Set([
@@ -49,13 +50,13 @@ export function listingIsPast(dateTime: string, nowMs: number): boolean {
 }
 
 export function resolveStatusAfterEdit(
-  listing: Pick<Doc<"listings">, "status" | "members" | "groupSize">,
+  listing: Pick<Doc<"listings">, "status" | "members" | "groupSize" | "guestSeats">,
   finalDateTime: string,
   finalGroupSize: number,
   nowMs: number,
 ): Doc<"listings">["status"] | undefined {
   const past = listingIsPast(finalDateTime, nowMs);
-  const newSeats = finalGroupSize - listing.members.length;
+  const newSeats = finalGroupSize - occupiedSeats(listing);
 
   if (past) {
     if (listing.status === "active") {
