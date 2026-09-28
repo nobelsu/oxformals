@@ -460,6 +460,7 @@ function NavInner() {
                   (isCollegeDetail && t.id === "colleges")
                 }
                 totalUnread={totalUnread}
+                onboardingId={t.id === "browse" ? "browse" : undefined}
               />
             ))}
           </ul>
@@ -714,6 +715,7 @@ function NavTabLink({
   totalUnread,
   onNavigate,
   className = "",
+  onboardingId,
 }: {
   tab: NavTab;
   href: string;
@@ -721,12 +723,15 @@ function NavTabLink({
   totalUnread: number;
   onNavigate?: () => void;
   className?: string;
+  /** Target for the first-run tour (`data-onboarding`). */
+  onboardingId?: string;
 }) {
   const showUnread = tab.id === "chats" && totalUnread > 0;
 
   return (
     <Link
       href={href}
+      data-onboarding={onboardingId}
       onClick={onNavigate}
       className={`inline-flex items-center gap-2 font-display uppercase tracking-[0.2em] whitespace-nowrap pb-0.5 transition-opacity ${
         isActive

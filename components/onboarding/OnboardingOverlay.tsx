@@ -6,7 +6,7 @@ import { SketchCard } from "@/components/ui/SketchCard";
 import { PencilArrow } from "./PencilArrow";
 import { RulesSlide } from "./RulesSlide";
 
-type CoachId = "request" | "activity" | "me";
+type CoachId = "list" | "browse" | "me";
 
 type CoachStep = {
   id: CoachId;
@@ -16,17 +16,19 @@ type CoachStep = {
   hintWhenFallback: string;
 };
 
+// Every target is always on screen on the feed (the home page); on mobile the
+// Browse tab and the avatar live in the menu, so those steps point at it.
 const COACH_STEPS: readonly CoachStep[] = [
   {
-    id: "request",
-    label: "Ask to join",
-    selector: '[data-onboarding="request"]',
+    id: "list",
+    label: "List yours",
+    selector: '[data-onboarding="list"]',
     hintWhenFallback: "",
   },
   {
-    id: "activity",
-    label: "List yours",
-    selector: '[data-onboarding="activity"]',
+    id: "browse",
+    label: "Find a seat",
+    selector: '[data-onboarding="browse"]',
     fallbackSelector: '[data-onboarding="menu"]',
     hintWhenFallback: "in the menu",
   },
@@ -174,18 +176,16 @@ function SpotlightDim({ hole }: { hole: Hole }) {
 
 export function OnboardingOverlay() {
   const { needsRulesAgreement, agreeToRules } = useAuth();
-  const [hasRequestCta, setHasRequestCta] = useState(false);
+  // Steps whose target is on screen; fixed once the user moves past step one.
+  const [availableIds, setAvailableIds] = useState<readonly CoachId[]>([]);
   const [stepIndex, setStepIndex] = useState(0);
   const [rulesAgreed, setRulesAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [target, setTarget] = useState<Target | null>(null);
 
   const coachSteps = useMemo(
-    () =>
-      hasRequestCta
-        ? COACH_STEPS
-        : COACH_STEPS.filter((step) => step.id !== "request"),
-    [hasRequestCta],
+    () => COACH_STEPS.filter((step) => availableIds.includes(step.id)),
+    [availableIds],
   );
   const totalSteps = coachSteps.length + 1;
   const currentIndex = Math.min(stepIndex, coachSteps.length);
@@ -194,13 +194,20 @@ export function OnboardingOverlay() {
 
   useEffect(() => {
     if (!needsRulesAgreement) return;
-    function scanCta() {
-      const found = queryLaidOut('[data-onboarding="request"]') !== null;
-      setHasRequestCta((prev) => (stepIndex > 0 ? prev : found));
+    function scanTargets() {
+      if (stepIndex > 0) return;
+      const found = COACH_STEPS.filter((step) => readTarget(step) !== null).map(
+        (step) => step.id,
+      );
+      setAvailableIds((prev) =>
+        prev.length === found.length && prev.every((id, i) => id === found[i])
+          ? prev
+          : found,
+      );
     }
-    const observer = new MutationObserver(scanCta);
+    const observer = new MutationObserver(scanTargets);
     observer.observe(document.body, { childList: true, subtree: true });
-    const timeout = window.setTimeout(scanCta, 0);
+    const timeout = window.setTimeout(scanTargets, 0);
     return () => {
       observer.disconnect();
       window.clearTimeout(timeout);

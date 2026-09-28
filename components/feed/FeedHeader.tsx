@@ -14,14 +14,18 @@ function Chip({
   href,
   children,
   solid,
+  onboardingId,
 }: {
   href: string;
   children: ReactNode;
   solid?: boolean;
+  /** Target for the first-run tour (`data-onboarding`). */
+  onboardingId?: string;
 }) {
   return (
     <Link
       href={href}
+      data-onboarding={onboardingId}
       className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] px-4 py-2 text-[0.84rem] font-medium transition-colors ${
         solid
           ? "border-[var(--ink)] bg-[var(--ink)] text-[var(--bg)] hover:bg-[color-mix(in_srgb,var(--ink)_88%,var(--accent))]"
@@ -74,7 +78,7 @@ export function FeedHeader({
         <p className="mt-0.5 text-[0.92rem] text-[var(--ink-muted)]">{subline}</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Chip href="/?tab=requests&openList=1" solid>
+        <Chip href="/?tab=requests&openList=1" solid onboardingId="list">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="h-[14px] w-[14px]" aria-hidden>
             <path d="M12 5v14M5 12h14" />
           </svg>
