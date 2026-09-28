@@ -470,7 +470,6 @@ function NavInner() {
           {status !== "ready" ? null : isAuthenticated && user ? (
             <AccountMenu
               name={user.name}
-              college={user.college}
               avatar={user.avatar}
               onProfile={activeTab === "mine"}
               onOpenSettings={() => setSettingsOpen(true)}
@@ -586,14 +585,12 @@ function NavInner() {
  *  Sign out menu (mobile reaches the same actions through the drawer). */
 function AccountMenu({
   name,
-  college,
   avatar,
   onProfile,
   onOpenSettings,
   onSignOut,
 }: {
   name: string;
-  college: string;
   avatar?: AvatarSource;
   onProfile: boolean;
   onOpenSettings: () => void;
@@ -648,7 +645,6 @@ function AccountMenu({
       >
         <span className="min-w-0 truncate whitespace-nowrap text-[var(--nav-ink-muted)] group-hover:text-[var(--nav-ink)]">
           {name.split(" ")[0]}
-          <span className="text-[var(--nav-ink-muted)]"> · {college}</span>
         </span>
         <span
           className={`shrink-0 rounded-full transition-shadow ${
