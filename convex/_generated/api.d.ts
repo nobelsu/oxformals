@@ -10,6 +10,7 @@
 
 import type * as AdminEmail from "../AdminEmail.js";
 import type * as ResendOTP from "../ResendOTP.js";
+import type * as accountDeletion from "../accountDeletion.js";
 import type * as adminReset from "../adminReset.js";
 import type * as auth from "../auth.js";
 import type * as badges from "../badges.js";
@@ -53,6 +54,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   AdminEmail: typeof AdminEmail;
   ResendOTP: typeof ResendOTP;
+  accountDeletion: typeof accountDeletion;
   adminReset: typeof adminReset;
   auth: typeof auth;
   badges: typeof badges;

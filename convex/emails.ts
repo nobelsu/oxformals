@@ -852,3 +852,144 @@ export const sendReviewReminderEmail = internalAction({
     return null;
   },
 });
+
+// ── Account deletion notices ────────────────────────────────────────────────
+
+const accountDeletionNoticeValidator = v.object({
+  kind: v.union(v.literal("hostLeft"), v.literal("guestLeft")),
+  toEmail: v.string(),
+  college: v.string(),
+  dateTime: v.string(),
+});
+
+type AccountDeletionNoticeCopy = {
+  kind: "hostLeft" | "guestLeft";
+  formalLabel: string;
+};
+
+function accountDeletionSentence({
+  kind,
+  formalLabel,
+}: AccountDeletionNoticeCopy): string {
+  return kind === "hostLeft"
+    ? `The host of your ${formalLabel} formal has left Oxformals, so the formal is cancelled.`
+    : `A guest has left your ${formalLabel} formal, so a seat is free again.`;
+}
+
+function accountDeletionCta(kind: AccountDeletionNoticeCopy["kind"]): {
+  href: string;
+  label: string;
+} {
+  return kind === "hostLeft"
+    ? { href: `${siteUrl()}/?tab=browse`, label: "Find another formal" }
+    : {
+        href: `${siteUrl()}/?tab=requests&section=listings`,
+        label: "See your formal",
+      };
+}
+
+export function buildAccountDeletionNoticeText(
+  copy: AccountDeletionNoticeCopy,
+): string {
+  const cta = accountDeletionCta(copy.kind);
+  return `${accountDeletionSentence(copy)}
+
+${cta.label}: ${cta.href}
+
+For inquiries or issues, contact us at team@oxformals.com.
+
+See you at dinner,
+The Oxformals Team`;
+}
+
+/** The review-reminder email's shell: wordmark, title, one paragraph, one button. */
+function buildSimpleNoticeHtml(payload: {
+  title: string;
+  body: string;
+  cta: { href: string; label: string };
+}): string {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(payload.title)}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Schoolbell&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet" />
+  </head>
+  <body style="margin:0;padding:0;background:#f2ecdd;color:#1b1a12;font-family:'Space Grotesk',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f2ecdd;padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border:2px solid #1b1a12;border-radius:20px;overflow:hidden;">
+            <tr>
+              <td style="padding:28px 24px 10px 24px;text-align:center;">
+                <div style="font-family:'Schoolbell','Marker Felt','Comic Sans MS','Space Grotesk',ui-sans-serif,sans-serif;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Oxformals</div>
+                <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:#565039;">${escapeHtml(payload.title)}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 24px 0 24px;">
+                <p style="margin:0;font-size:16px;line-height:1.6;color:#1b1a12;">${escapeHtml(payload.body)}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:20px 24px 0 24px;text-align:center;">
+                <a href="${escapeHtml(payload.cta.href)}" style="display:inline-block;background:#b8524c;color:#ffffff;font-size:15px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:999px;border:2px solid #b8524c;">${escapeHtml(payload.cta.label)}</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 24px 0 24px;">
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#565039;">For inquiries or issues, contact us at <a href="mailto:team@oxformals.com" style="color:#1b1a12;font-weight:700;text-decoration:underline;">team@oxformals.com</a>.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 24px 28px 24px;">
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#1b1a12;">See you at dinner,<br />The Oxformals Team</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+export const sendAccountDeletionNotices = internalAction({
+  args: { notices: v.array(accountDeletionNoticeValidator) },
+  returns: v.null(),
+  handler: async (_ctx, { notices }) => {
+    const apiKey = process.env.AUTH_RESEND_KEY;
+    if (!apiKey) {
+      console.error("sendAccountDeletionNotices: AUTH_RESEND_KEY is not set");
+      return null;
+    }
+    const resend = new ResendAPI(apiKey);
+    for (const notice of notices) {
+      const copy: AccountDeletionNoticeCopy = {
+        kind: notice.kind,
+        formalLabel: `${notice.college} · ${formatListingDate(notice.dateTime)}`,
+      };
+      const { error } = await resend.emails.send({
+        from: "Oxformals <team@oxformals.com>",
+        to: [notice.toEmail],
+        subject:
+          notice.kind === "hostLeft"
+            ? "Your formal has been cancelled"
+            : "A seat is free at your formal",
+        html: buildSimpleNoticeHtml({
+          title: "A change to your formal",
+          body: accountDeletionSentence(copy),
+          cta: accountDeletionCta(copy.kind),
+        }),
+        text: buildAccountDeletionNoticeText(copy),
+      });
+      if (error) {
+        console.error("sendAccountDeletionNotices: Resend error", error);
+      }
+    }
+    return null;
+  },
+});
