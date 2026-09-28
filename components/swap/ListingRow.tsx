@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
-import { Chip } from "@/components/ui/Chip";
 import type { User } from "@/lib/auth/types";
 import {
   clampSeatsAvailable,
@@ -29,7 +28,6 @@ type Props = {
   onPress?: () => void;
   disabled?: boolean;
   disabledLabel?: string;
-  hideInterests?: boolean;
   /** Headline override — the college page uses the host's name instead. */
   title?: string;
   /** Narrow contexts (the landing hero): no day rail, so the row states its own date. */
@@ -55,7 +53,6 @@ export function ListingRow({
   onRequest,
   onPress,
   disabled,
-  hideInterests,
   title,
   compact = false,
   align = "start",
@@ -383,15 +380,6 @@ export function ListingRow({
           </p>
         ) : null}
 
-        {!hideInterests && owner.interests.length > 0 ? (
-          <div className={`${spacious ? "mt-2.5" : "mt-2"} flex flex-wrap gap-1.5`}>
-            {owner.interests.map((tag) => (
-              <Chip key={tag} size="sm" as="span" className="!text-[0.75rem]">
-                {tag}
-              </Chip>
-            ))}
-          </div>
-        ) : null}
       </div>
 
       {compact ? (

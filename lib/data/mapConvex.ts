@@ -11,6 +11,7 @@ export type PublicUserDoc = {
   year?: string;
   role?: string;
   interests?: string[];
+  bio?: string;
   subject?: string;
   uiFont?: Doc<"users">["uiFont"];
   instagramHandle?: string;
@@ -27,6 +28,7 @@ export function mapUser(doc: PublicUserDoc): User {
     year: doc.year ?? "",
     role: doc.role ?? "",
     interests: doc.interests ?? [],
+    bio: doc.bio ?? "",
     subject: doc.subject ?? "",
     uiFont: doc.uiFont ?? DEFAULT_UI_FONT,
     ...(doc.instagramHandle ? { instagramHandle: doc.instagramHandle } : {}),

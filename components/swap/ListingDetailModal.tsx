@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { BioText } from "@/components/profile/BioText";
 import { Avatar } from "@/components/ui/Avatar";
-import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
 import { ListingGroupChatButton } from "@/components/chat/ListingGroupChatButton";
 import { MessageUserButton } from "@/components/chat/MessageUserButton";
@@ -40,7 +40,6 @@ type Props = {
   onRequest?: () => void;
   disabled?: boolean;
   disabledLabel?: string;
-  hideInterests?: boolean;
 };
 
 export function ListingDetailModal({
@@ -52,7 +51,6 @@ export function ListingDetailModal({
   onRequest,
   disabled,
   disabledLabel,
-  hideInterests,
 }: Props) {
   const { user, isAuthenticated } = useAuth();
   const nowMs = useNowMs();
@@ -211,15 +209,7 @@ export function ListingDetailModal({
           </section>
         )}
 
-        {!hideInterests && owner.interests.length > 0 && (
-          <div className="flex min-w-0 flex-wrap gap-2">
-            {owner.interests.map((tag) => (
-              <Chip key={tag} size="md" as="span">
-                {tag}
-              </Chip>
-            ))}
-          </div>
-        )}
+        <BioText bio={owner.bio ?? ""} userId={owner.id} canReport={false} />
 
         {listing.message && (
           <p className="min-h-0 overflow-y-auto text-sm italic text-[var(--ink-muted)]">

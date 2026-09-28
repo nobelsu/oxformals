@@ -6,11 +6,11 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent,
   type ReactNode,
 } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { Avatar, PRESET_AVATARS, PresetAvatarIcon } from "@/components/ui/Avatar";
+import { BIO_ERRORS, BioTextarea } from "@/components/ui/BioTextarea";
 import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
 import type { AvatarSource } from "@/lib/auth/types";
 import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
@@ -20,8 +20,6 @@ const TARGET_SIZE = 256;
 const MAX_DATA_URL_BYTES = 250 * 1024;
 
 const COLLEGE_LIST = OXFORD_COLLEGES as readonly string[];
-
-const MAX_INTEREST_LENGTH = 40;
 
 const UNDERLINE_INPUT =
   "w-full border-0 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_28%,transparent)] bg-transparent px-0 py-1.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:border-[var(--ink)] focus:outline-none";
@@ -62,10 +60,6 @@ function Field({
       </span>
     </div>
   );
-}
-
-function normalizeInterest(raw: string): string {
-  return raw.trim().replace(/\s+/g, " ").slice(0, MAX_INTEREST_LENGTH);
 }
 
 async function fileToSquareDataUrl(file: File): Promise<string | null> {
@@ -110,7 +104,7 @@ type Props = {
 };
 
 export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: Props) {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, saveBio } = useAuth();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const rolePickerRef = useRef<HTMLDivElement | null>(null);
   const avatarPickerRef = useRef<HTMLDivElement | null>(null);
@@ -132,10 +126,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
   const [subjectDraft, setSubjectDraft] = useState(user?.subject ?? "");
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
-  const [interestsDraft, setInterestsDraft] = useState<string[]>(
-    user?.interests ?? [],
-  );
-  const [interestInput, setInterestInput] = useState("");
+  const [bioDraft, setBioDraft] = useState(user?.bio ?? "");
   const [avatarDraft, setAvatarDraft] = useState<AvatarSource | undefined>(
     user?.avatar,
   );
@@ -155,13 +146,12 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     setWhatsappPhoneDraft(user.whatsappPhone ?? "");
     setDietaryRequirementsDraft(user.dietaryRequirements ?? "");
     setSubjectDraft(user.subject ?? "");
-    setInterestsDraft(user.interests);
+    setBioDraft(user.bio ?? "");
     setAvatarDraft(user.avatar);
     setCollegePickerOpen(false);
     setRolePickerOpen(false);
     setAvatarPickerOpen(false);
     setError(null);
-    setInterestInput("");
   }, [user]);
 
   useEffect(() => {
@@ -228,7 +218,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
   const initialWhatsappPhone = user?.whatsappPhone?.trim() ?? "";
   const initialDietaryRequirements = user?.dietaryRequirements?.trim() ?? "";
   const initialSubject = user?.subject?.trim() ?? "";
-  const initialInterests = user?.interests ?? [];
+  const initialBio = user?.bio?.trim() ?? "";
   const initialAvatar = user?.avatar;
 
   const profileDirty =
@@ -240,7 +230,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     whatsappPhoneDraft.trim() !== initialWhatsappPhone ||
     dietaryRequirementsDraft.trim() !== initialDietaryRequirements ||
     subjectDraft.trim() !== initialSubject ||
-    JSON.stringify(interestsDraft) !== JSON.stringify(initialInterests) ||
+    bioDraft.trim() !== initialBio ||
     JSON.stringify(avatarDraft ?? null) !== JSON.stringify(initialAvatar ?? null);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -289,6 +279,13 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
         setError("Year must be a number, e.g. 2.");
         return;
       }
+      if (bioDraft.trim() !== initialBio) {
+        const result = await saveBio(bioDraft);
+        if (!result.ok) {
+          setError(BIO_ERRORS[result.reason]);
+          return;
+        }
+      }
       await updateProfile({
         name: trimmedName,
         college: normalizeCollegeName(collegeDraft),
@@ -299,7 +296,6 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
         dietaryRequirements: dietaryRequirementsDraft.trim(),
         subject: subjectDraft.trim(),
         avatar: avatarDraft,
-        interests: interestsDraft,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 1200);
@@ -320,7 +316,9 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     dietaryRequirementsDraft,
     subjectDraft,
     avatarDraft,
-    interestsDraft,
+    bioDraft,
+    initialBio,
+    saveBio,
   ]);
 
   useEffect(() => {
@@ -344,28 +342,6 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
 
   const presetActiveId =
     avatarDraft?.kind === "preset" ? avatarDraft.id : null;
-
-  function addInterest(raw: string) {
-    const next = normalizeInterest(raw);
-    if (!next) return;
-    if (
-      interestsDraft.some((interest) => interest.toLowerCase() === next.toLowerCase())
-    ) {
-      return;
-    }
-    setInterestsDraft((prev) => [...prev, next]);
-  }
-
-  function removeInterest(index: number) {
-    setInterestsDraft((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function onInterestKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    addInterest(interestInput);
-    setInterestInput("");
-  }
 
   return (
     <div className="flex flex-col">
@@ -612,54 +588,13 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
             />
           </Field>
 
-          <Field label="interests">
-            <div className="flex min-h-[2.35rem] flex-wrap items-center gap-1.5 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_28%,transparent)] pb-1.5 focus-within:border-[var(--ink)]">
-              {interestsDraft.map((interest, index) => (
-                <span
-                  key={`${interest}-${index}`}
-                  className="inline-flex max-w-full items-center gap-1 rounded-full border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] px-2.5 py-0.5 text-sm text-[var(--ink)]"
-                >
-                  <span className="truncate">{interest}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeInterest(index)}
-                    className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-                    aria-label={`Remove ${interest}`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              <input
-                type="text"
-                enterKeyHint="done"
-                value={interestInput}
-                onChange={(e) =>
-                  setInterestInput(e.target.value.slice(0, MAX_INTEREST_LENGTH))
-                }
-                onKeyDown={onInterestKeyDown}
-                maxLength={MAX_INTEREST_LENGTH}
-                placeholder={
-                  interestsDraft.length === 0 ? "Type an interest…" : ""
-                }
-                aria-label="Add an interest"
-                className="min-w-[6rem] flex-1 border-0 bg-transparent py-0.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  addInterest(interestInput);
-                  setInterestInput("");
-                }}
-                disabled={!normalizeInterest(interestInput)}
-                aria-label="Add interest"
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:pointer-events-none disabled:opacity-30"
-              >
-                <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-                  <path d="M10 3a1 1 0 0 1 1 1v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H4a1 1 0 1 1 0-2h5V4a1 1 0 0 1 1-1Z" />
-                </svg>
-              </button>
-            </div>
+          <Field label="bio" htmlFor="profile-bio" className="sm:col-span-2">
+            <BioTextarea
+              id="profile-bio"
+              value={bioDraft}
+              onChange={setBioDraft}
+              className={UNDERLINE_INPUT}
+            />
           </Field>
         </div>
       </section>

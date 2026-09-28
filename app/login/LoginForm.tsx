@@ -7,9 +7,9 @@ import {
   useRef,
   useState,
   type FormEvent,
-  type KeyboardEvent,
 } from "react";
 import { useAuth } from "@/components/auth/useAuth";
+import { BIO_ERRORS, BioTextarea } from "@/components/ui/BioTextarea";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
 import { ROLE_OPTIONS } from "@/lib/data/roles";
@@ -34,10 +34,6 @@ function normalizeEmail(raw: string): string {
 
 function isOxfordEmail(email: string): boolean {
   return email.endsWith("@ox.ac.uk") || email.endsWith("@oxford.said.edu") || email.endsWith("@said.ox.ac.uk") || email.endsWith("@said.oxford.edu");
-}
-
-function normalizeInterest(raw: string): string {
-  return raw.trim().replace(/\s+/g, " ");
 }
 
 function renderHighlightedMatch(label: string, query: string) {
@@ -128,6 +124,7 @@ export function LoginForm() {
     signInWithPassword,
     hasPassword,
     setPassword,
+    saveBio,
     completeSignup,
   } = useAuth();
   const router = useRouter();
@@ -150,8 +147,7 @@ export function LoginForm() {
   const [collegeSearch, setCollegeSearch] = useState("");
   const [collegePickerOpen, setCollegePickerOpen] = useState(false);
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
-  const [interests, setInterests] = useState<string[]>([]);
-  const [interestInput, setInterestInput] = useState("");
+  const [bio, setBio] = useState("");
   const [instagramHandle, setInstagramHandle] = useState("");
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -362,13 +358,19 @@ export function LoginForm() {
     }
     setSubmitting(true);
     try {
+      if (bio.trim()) {
+        const result = await saveBio(bio);
+        if (!result.ok) {
+          setError(BIO_ERRORS[result.reason]);
+          return;
+        }
+      }
       await completeSignup({
         email: email.trim(),
         name: name.trim(),
         college: normalizeCollegeName(college),
         year: normalizedYear,
         role: role.trim(),
-        interests,
         instagramHandle: instagramHandle.trim() || undefined,
         whatsappPhone: whatsappPhone.trim() || undefined,
       });
@@ -382,24 +384,6 @@ export function LoginForm() {
 
   const inputCls =
     "w-full rounded-xl border-[2px] border-[var(--ink)] bg-[var(--paper)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2.5 text-base transition-shadow focus:outline-none focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-wash)]";
-  function addInterest(raw: string) {
-    const next = normalizeInterest(raw);
-    if (!next) return;
-    if (interests.some((item) => item.toLowerCase() === next.toLowerCase())) return;
-    setInterests((prev) => [...prev, next]);
-  }
-
-  function removeInterest(index: number) {
-    setInterests((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function onInterestKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    addInterest(interestInput);
-    setInterestInput("");
-  }
-
   const stepEyebrow =
     step === "email"
       ? "Sign in"
@@ -879,57 +863,15 @@ export function LoginForm() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <label htmlFor="interest-input" className="text-sm text-[var(--ink-muted)]">
-                Interests
+              <label htmlFor="bio-input" className="text-sm text-[var(--ink-muted)]">
+                Bio (optional)
               </label>
-              <div className="rounded-3xl border-[2px] border-[var(--ink)] bg-[var(--paper)] px-3 py-3">
-                {interests.length > 0 ? (
-                  <div className="mb-2 flex flex-wrap gap-2">
-                    {interests.map((interest, index) => (
-                      <span
-                        key={`${interest}-${index}`}
-                        className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--ink)] bg-[var(--bg)] px-3.5 py-1 text-sm text-[var(--ink)]"
-                      >
-                        {interest}
-                        <button
-                          type="button"
-                          onClick={() => removeInterest(index)}
-                          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-                          aria-label={`Remove ${interest}`}
-                        >
-                          x
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-                <div className="flex items-center gap-2">
-                  <input
-                    id="interest-input"
-                    type="text"
-                    enterKeyHint="done"
-                    value={interestInput}
-                    onChange={(e) => setInterestInput(e.target.value)}
-                    onKeyDown={onInterestKeyDown}
-                    placeholder="Type an interest…"
-                    className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      addInterest(interestInput);
-                      setInterestInput("");
-                    }}
-                    disabled={!normalizeInterest(interestInput)}
-                    aria-label="Add interest"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-30 disabled:pointer-events-none"
-                  >
-                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                      <path d="M10 3a1 1 0 0 1 1 1v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H4a1 1 0 1 1 0-2h5V4a1 1 0 0 1 1-1Z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+              <BioTextarea
+                id="bio-input"
+                value={bio}
+                onChange={setBio}
+                className={inputCls}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

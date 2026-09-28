@@ -165,7 +165,6 @@ export function CollegeListingsSection({ college }: Props) {
               onPress={() => setDetailListing(l)}
               onRequest={() => handleRequestClick(l)}
               disabled={listingDisabled}
-              hideInterests
               disabledLabel={!isAuthenticated ? "Sign in to request" : undefined}
             />
           );
@@ -189,7 +188,6 @@ export function CollegeListingsSection({ college }: Props) {
           if (detailListing) handleRequestClick(detailListing);
         }}
         disabled={listingDisabled}
-        hideInterests
         disabledLabel={!isAuthenticated ? "Sign in to request" : undefined}
       />
 

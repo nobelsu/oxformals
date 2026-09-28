@@ -520,7 +520,6 @@ export function BrowseTab({
         }}
         disabled={!isAuthenticated}
         disabledLabel={isAuthenticated ? undefined : "Sign in to request"}
-        hideInterests
       />
 
       <RequestTypeChooserModal

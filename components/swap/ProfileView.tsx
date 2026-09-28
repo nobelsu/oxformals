@@ -1,5 +1,6 @@
 "use client";
 
+import { BioText } from "@/components/profile/BioText";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -328,6 +329,7 @@ export function ProfileView({
     year,
     role,
     interests,
+    bio: profileUser.bio ?? "",
     subject,
     uiFont: profileUser.uiFont ?? DEFAULT_UI_FONT,
     avatar,
@@ -457,6 +459,13 @@ export function ProfileView({
           </button>
         )}
       </div>
+
+      <BioText
+        bio={profileUser.bio ?? ""}
+        userId={userId}
+        canReport={isAuthenticated && !isOwnProfile}
+        className="-mt-3"
+      />
 
       {(instagramHandle || whatsappPhone) && (
         <div className="flex flex-wrap gap-2">
@@ -592,7 +601,6 @@ export function ProfileView({
           if (detailListing) handleRequestClick(detailListing);
         }}
         disabled={listingDisabled}
-        hideInterests
         disabledLabel={
           isOwnProfile
             ? "Your listing"

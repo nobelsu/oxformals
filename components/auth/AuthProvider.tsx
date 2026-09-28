@@ -11,7 +11,12 @@ import {
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
-import type { SignInResult, SignupInput, User } from "@/lib/auth/types";
+import type {
+  SaveBioResult,
+  SignInResult,
+  SignupInput,
+  User,
+} from "@/lib/auth/types";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 
 type Status = "hydrating" | "ready";
@@ -36,6 +41,7 @@ function mapDocToUser(doc: Doc<"users">): User {
     year: doc.year ?? "",
     role: doc.role ?? "",
     interests: doc.interests ?? [],
+    bio: doc.bio ?? "",
     instagramHandle: doc.instagramHandle ?? "",
     whatsappPhone: doc.whatsappPhone ?? "",
     dietaryRequirements: doc.dietaryRequirements ?? "",
@@ -75,6 +81,8 @@ export type AuthContextValue = {
   hasPassword: boolean | undefined;
   /** Attach a password to the current (OTP-verified) account. */
   setPassword: (password: string) => Promise<void>;
+  /** Save the bio after a moderation check; an empty bio clears it. */
+  saveBio: (bio: string) => Promise<SaveBioResult>;
   completeSignup: (input: SignupInput) => Promise<User>;
   signOut: () => Promise<void>;
   updateProfile: (
@@ -101,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const patchProfileMut = useMutation(api.users.patchProfile);
   const agreeToRulesMut = useMutation(api.users.agreeToRules);
   const setPasswordAction = useAction(api.password.setPassword);
+  const saveBioAction = useAction(api.bio.saveBio);
 
   const status: Status =
     authLoading || (jwtAuthenticated && convexUserDoc === undefined)
@@ -198,6 +207,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await setPasswordAction({ password });
     },
     [setPasswordAction],
+  );
+
+  const saveBio = useCallback(
+    (bio: string) => saveBioAction({ bio }),
+    [saveBioAction],
   );
 
   const completeSignup = useCallback(
@@ -321,6 +335,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithPassword,
       hasPassword,
       setPassword,
+      saveBio,
       completeSignup,
       signOut,
       updateProfile,
@@ -338,6 +353,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithPassword,
       hasPassword,
       setPassword,
+      saveBio,
       completeSignup,
       signOut,
       updateProfile,

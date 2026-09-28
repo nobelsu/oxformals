@@ -13,6 +13,8 @@ export type User = {
   /** e.g. Undergraduate, Postgraduate — shown on listings when you post. */
   role: string;
   interests: string[];
+  /** Free-form, moderated bio (max 150 chars). */
+  bio?: string;
   instagramHandle?: string;
   whatsappPhone?: string;
   dietaryRequirements?: string;
@@ -31,6 +33,10 @@ export type Session = {
   token: string;
   issuedAt: number;
 };
+
+export type SaveBioResult =
+  | { ok: true }
+  | { ok: false; reason: "tooLong" | "flagged" | "unavailable" };
 
 export type SignInResult = { status: "code-sent"; email: string };
 

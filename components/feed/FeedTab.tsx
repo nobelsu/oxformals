@@ -166,7 +166,6 @@ export function FeedTab() {
         onClose={() => setOpen(null)}
         listing={open?.listing ?? null}
         owner={open?.owner ?? null}
-        hideInterests
       />
     </div>
   );

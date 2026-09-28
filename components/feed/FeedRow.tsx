@@ -212,7 +212,6 @@ export function FeedRow({ item, onOpenListing }: Props) {
             listing={item.listing}
             owner={item.actor}
             card
-            hideInterests
             onPress={() => onOpenListing(item.listing, item.actor)}
           />
         </div>

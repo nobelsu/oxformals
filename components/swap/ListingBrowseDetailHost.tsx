@@ -134,7 +134,6 @@ export function ListingBrowseDetailHost({ listingId, open, onClose }: Props) {
         }
         disabled={!isAuthenticated}
         disabledLabel={isAuthenticated ? undefined : "Sign in to request"}
-        hideInterests
       />
 
       <RequestTypeChooserModal

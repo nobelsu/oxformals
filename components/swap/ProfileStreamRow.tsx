@@ -70,7 +70,6 @@ export function ProfileStreamRow({
           owner={owner}
           memberUsers={memberUsers}
           align="center"
-          hideInterests
           onPress={() => onPress(item.listing)}
           onRequest={onRequest ? () => onRequest(item.listing) : undefined}
           disabled={disabled}
