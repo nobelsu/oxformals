@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useEffect, type ReactNode } from "react";
 import { SketchCard } from "./SketchCard";
 
@@ -45,7 +46,9 @@ export function Modal({
 
   if (!open) return null;
 
-  return (
+  // Render on <body> so a parent with a transform/filter (e.g. the blurred
+  // nav) can't trap this full-screen layer inside its own box.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden p-3 sm:p-4"
       role="dialog"
@@ -89,6 +92,7 @@ export function Modal({
           {children}
         </div>
       </SketchCard>
-    </div>
+    </div>,
+    document.body,
   );
 }

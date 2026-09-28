@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useEffect, type ReactNode } from "react";
 
 type Props = {
@@ -39,7 +40,9 @@ export function Drawer({
       ? "left-0 border-r-[2.5px]"
       : "right-0 border-l-[2.5px]";
 
-  return (
+  // Render on <body> so a parent with a transform/filter (e.g. the blurred
+  // nav) can't trap this full-screen layer inside its own box.
+  return createPortal(
     <div
       className="fixed inset-0 z-50"
       role="dialog"
@@ -64,6 +67,7 @@ export function Drawer({
           {children}
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }
