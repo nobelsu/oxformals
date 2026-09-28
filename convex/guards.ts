@@ -84,6 +84,7 @@ export function sanitizePublicUser(user: Doc<"users">) {
     year: user.year,
     role: user.role,
     interests: user.interests,
+    bio: user.bio ?? "",
     subject: user.subject ?? "",
     uiFont: user.uiFont,
     avatar: user.avatar,

@@ -993,3 +993,32 @@ export const sendAccountDeletionNotices = internalAction({
     return null;
   },
 });
+
+// ── Bio reports ─────────────────────────────────────────────────────────────
+
+export const sendBioReportEmail = internalAction({
+  args: { reportedUserId: v.id("users"), bioText: v.string() },
+  returns: v.null(),
+  handler: async (_ctx, { reportedUserId, bioText }) => {
+    const apiKey = process.env.AUTH_RESEND_KEY;
+    if (!apiKey) {
+      console.error("sendBioReportEmail: AUTH_RESEND_KEY is not set");
+      return null;
+    }
+    const profileUrl = `${siteUrl()}/profile/${reportedUserId}`;
+    const body = `A bio was reported: "${bioText}". To remove it, run: npx convex run --prod bio:clearBio '{"userId":"${reportedUserId}"}'`;
+    const { error } = await new ResendAPI(apiKey).emails.send({
+      from: "Oxformals <team@oxformals.com>",
+      to: ["team@oxformals.com"],
+      subject: "A bio was reported",
+      html: buildSimpleNoticeHtml({
+        title: "Bio reported",
+        body,
+        cta: { href: profileUrl, label: "View profile" },
+      }),
+      text: `${body}\n\nProfile: ${profileUrl}`,
+    });
+    if (error) console.error("sendBioReportEmail: Resend error", error);
+    return null;
+  },
+});

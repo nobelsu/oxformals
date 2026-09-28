@@ -39,6 +39,8 @@ export default defineSchema({
     avatar,
     /** Set when the account was deleted; the row is a "Deleted user" placeholder. */
     deletedAt: v.optional(v.number()),
+    /** Free-form, moderated bio (max 150 chars); replaces interests on the web. */
+    bio: v.optional(v.string()),
   })
     .index("email", ["email"])
     .index("phone", ["phone"]),
@@ -247,6 +249,15 @@ export default defineSchema({
     .index("by_targetKey", ["targetKey"])
     .index("by_targetKey_and_userId", ["targetKey", "userId"])
     .index("by_userId", ["userId"]),
+  /** Reports of another user's bio; one per reporter per user. */
+  bioReports: defineTable({
+    reportedUserId: v.id("users"),
+    reporterUserId: v.id("users"),
+    bioText: v.string(),
+  }).index("by_reportedUserId_and_reporterUserId", [
+    "reportedUserId",
+    "reporterUserId",
+  ]),
   /** Per-user saved feed items, keyed by the same stable `targetKey`. */
   feedBookmarks: defineTable({
     targetKey: v.string(),

@@ -344,6 +344,7 @@ export const getPublicProfile = query({
         year: user.year,
         role: user.role,
         interests: user.interests,
+        bio: user.bio ?? "",
         ...(revealContact
           ? {
               instagramHandle: user.instagramHandle,
