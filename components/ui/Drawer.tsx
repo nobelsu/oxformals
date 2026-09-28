@@ -2,6 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { useEffect, type ReactNode } from "react";
+import { useIsClient } from "@/lib/hooks/useIsClient";
 
 type Props = {
   open: boolean;
@@ -19,6 +20,8 @@ export function Drawer({
   side = "left",
   children,
 }: Props) {
+  // The portal target (document.body) only exists in the browser.
+  const isClient = useIsClient();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -33,7 +36,7 @@ export function Drawer({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !isClient) return null;
 
   const panelPosition =
     side === "left"
@@ -44,7 +47,7 @@ export function Drawer({
   // nav) can't trap this full-screen layer inside its own box.
   return createPortal(
     <div
-      className="fixed inset-0 z-50"
+      className="fixed inset-0 z-[100]"
       role="dialog"
       aria-modal="true"
       aria-label={title ?? "Navigation menu"}
