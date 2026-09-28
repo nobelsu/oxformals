@@ -7,6 +7,8 @@ type PersonDot = {
   x: number;
   y: number;
   scale: number;
+  /** Already on Oxformals: gets a small rose check. */
+  onApp: boolean;
 };
 
 const INITIALS = ["JO", "LI", "PR", "MK", "SA", "EM", "AX", "CH"] as const;
@@ -20,14 +22,15 @@ const PEOPLE: PersonDot[] = INITIALS.map((initials, i) => {
     x: Math.round(Math.cos(angle) * RING_RADIUS),
     y: Math.round(Math.sin(angle) * RING_RADIUS),
     scale: i % 2 === 0 ? 1.02 : 0.94,
+    onApp: i % 3 === 0,
   };
 });
 
 /**
- * Cover card for SprayFinale — shows "your friends are probably already here".
- * When scrolled into view the avatars pop out of the centre Instagram ring one
- * by one into fixed positions, then stay put (no floating), hinting at the
- * upcoming Instagram integration.
+ * Cover card for SprayFinale — "someone you know is going". When scrolled into
+ * view, contacts pop out of the centre address book one by one into fixed
+ * positions and stay put; a few carry a rose check for "already on Oxformals",
+ * hinting at contact sync in the app.
  */
 export function SprayFinaleCover() {
   const [visible, setVisible] = useState(false);
@@ -48,21 +51,20 @@ export function SprayFinaleCover() {
 
   return (
     <div ref={ref} className="flex flex-col items-center gap-8 text-center">
-      {/* Avatars popping outward from an IG-gradient ring */}
+      {/* Contacts popping outward from an address book */}
       <div className="relative h-[340px] w-[340px] sm:h-[420px] sm:w-[420px]">
-        {/* Pulsing Instagram conic-gradient glow */}
+        {/* Soft rose glow */}
         <div
-          className="absolute inset-4 rounded-full opacity-50 blur-xl"
+          className="absolute inset-10 rounded-full opacity-70 blur-2xl"
           style={{
             background:
-              "conic-gradient(from 0deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #833ab4, #5851db, #405de6, #f09433)",
-            animation: "spin 6s linear infinite",
+              "radial-gradient(circle, var(--accent-wash) 0%, transparent 70%)",
           }}
         />
 
-        {/* Center icon */}
+        {/* Centre: address book */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-[var(--ink)] bg-[var(--bg)] sm:h-20 sm:w-20 sm:rounded-[20px]">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-[var(--ink)] bg-[var(--bg)] shadow-[3px_3px_0_var(--ink)] sm:h-20 sm:w-20 sm:rounded-[20px]">
             <svg
               viewBox="0 0 24 24"
               className="h-8 w-8 sm:h-10 sm:w-10"
@@ -71,10 +73,12 @@ export function SprayFinaleCover() {
               strokeWidth={1.5}
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden
             >
-              <rect x={2} y={2} width={20} height={20} rx={5} />
-              <circle cx={12} cy={12} r={5} />
-              <circle cx={17.5} cy={6.5} r={1} fill="var(--ink)" stroke="none" />
+              <rect x={5} y={2.5} width={15} height={19} rx={2.5} />
+              <path d="M3 7h3M3 12h3M3 17h3" />
+              <circle cx={12.5} cy={10} r={2.6} />
+              <path d="M8.5 17c.6-2.2 2.2-3.3 4-3.3s3.4 1.1 4 3.3" />
             </svg>
           </div>
         </div>
@@ -97,6 +101,16 @@ export function SprayFinaleCover() {
               }}
             >
               {person.initials}
+              {person.onApp ? (
+                <span
+                  aria-hidden
+                  className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--accent)] text-[var(--accent-ink)]"
+                >
+                  <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2.5 6.2 5 8.5l4.5-5" />
+                  </svg>
+                </span>
+              ) : null}
             </span>
           );
         })}
@@ -112,9 +126,9 @@ export function SprayFinaleCover() {
             transition: "opacity 0.6s ease 0.9s, transform 0.6s ease 0.9s",
           }}
         >
-          your friends are
+          someone you know
           <br />
-          probably already here
+          is going
         </h3>
         <p
           className="max-w-[30ch] text-sm leading-relaxed text-[var(--ink-muted)] sm:text-base"
@@ -124,9 +138,9 @@ export function SprayFinaleCover() {
             transition: "opacity 0.5s ease 1.1s, transform 0.5s ease 1.1s",
           }}
         >
-          Connect your Instagram
+          Sync your contacts in the app to see
           <br />
-          to find them instantly.
+          which friends are already swapping.
         </p>
       </div>
     </div>
