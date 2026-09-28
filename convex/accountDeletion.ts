@@ -14,6 +14,7 @@ import {
   listingIsPast,
 } from "./listingHelpers";
 import { removeUserFromListingGroup } from "./listingMembership";
+import { refundListingCredits } from "./credits";
 
 /** Per-table bound; an account never comes close to this many rows. */
 const MAX_ROWS = 1000;
@@ -179,6 +180,7 @@ export const deleteMyAccount = mutation({
         }
       }
       await declinePendingRequestsForListing(ctx, listing._id);
+      await refundListingCredits(ctx, listing._id);
       await deleteMenuPdfIfPresent(ctx, listing.menuPdfId);
       await ctx.db.delete(listing._id);
     }

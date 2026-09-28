@@ -9,7 +9,7 @@ export type ListingType = "swap" | "pay" | "both";
 /** The "vibe" of a formal, shown as a small hand-drawn tag on listings. */
 export type FormalType = "matchmaking" | "social" | "networking";
 
-export type RequestType = "swap" | "pay";
+export type RequestType = "swap" | "pay" | "credit";
 
 export type Listing = {
   id: string;

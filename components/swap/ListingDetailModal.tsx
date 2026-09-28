@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { BioText } from "@/components/profile/BioText";
 import { ShareButton } from "@/components/share/ShareButton";
+import { CreditDisputeLink } from "@/components/credits/CreditDisputeLink";
 import { Avatar } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Modal";
 import { ListingGroupChatButton } from "@/components/chat/ListingGroupChatButton";
@@ -148,6 +149,11 @@ export function ListingDetailModal({
           ) : canRate && isPast ? (
             <div className="mt-2 flex justify-end">
               <RateFormalIndicator />
+            </div>
+          ) : null}
+          {isListingMember && isPast ? (
+            <div className="mt-2 flex flex-col">
+              <CreditDisputeLink listingId={listing.id} />
             </div>
           ) : null}
         </header>

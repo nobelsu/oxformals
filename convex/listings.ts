@@ -11,6 +11,7 @@ import {
   syncListingAttendanceGuests,
 } from "./collegeStats";
 import { detachMember, removeUserFromListingGroup } from "./listingMembership";
+import { creditBalance, holdSeatCredits, refundListingCredits } from "./credits";
 import {
   sendFormalNotices,
   swapSeatingMember,
@@ -44,7 +45,11 @@ const formalTypeValidator = v.union(
   v.literal("networking"),
 );
 
-const requestTypeValidator = v.union(v.literal("swap"), v.literal("pay"));
+const requestTypeValidator = v.union(
+  v.literal("swap"),
+  v.literal("pay"),
+  v.literal("credit"),
+);
 
 const menuPdfIdOrClear = v.optional(v.union(v.id("_storage"), v.null()));
 
@@ -84,7 +89,7 @@ function resolveListingType(
   return listing.listingType ?? "swap";
 }
 
-function resolveRequestType(req: Doc<"requests">): "swap" | "pay" {
+function resolveRequestType(req: Doc<"requests">): "swap" | "pay" | "credit" {
   return req.requestType ?? (req.offeringListingId !== undefined ? "swap" : "pay");
 }
 
@@ -105,8 +110,10 @@ function validateListingTypeAndPrice(
 
 function listingAllowsRequestType(
   listingType: "swap" | "pay" | "both",
-  requestType: "swap" | "pay",
+  requestType: "swap" | "pay" | "credit",
 ): boolean {
+  // Every listing takes credits; that's what makes them worth earning.
+  if (requestType === "credit") return true;
   if (listingType === "both") return true;
   return listingType === requestType;
 }
@@ -361,6 +368,30 @@ export const createRequest = mutation({
       );
     }
 
+    if (args.requestType === "credit") {
+      if (args.offeringListingId !== undefined) {
+        throw new Error("Credit requests cannot include an offering listing.");
+      }
+      const balance = await creditBalance(ctx, userId);
+      if (balance < 1) {
+        throw new Error(
+          "You don't have any credits. Host a guest at your college's formal to earn one.",
+        );
+      }
+      const requestId = await ctx.db.insert("requests", {
+        fromUserId: userId,
+        toUserId: target.ownerUserId,
+        targetListingId: args.targetListingId,
+        requestType: "credit",
+        message: args.message.trim(),
+        status: "pending",
+      });
+      await ctx.scheduler.runAfter(0, internal.emails.sendNewRequestEmail, {
+        requestId,
+      });
+      return { requestId, autoAccepted: false as const };
+    }
+
     if (args.requestType === "pay") {
       if (args.offeringListingId !== undefined) {
         throw new Error("Pay requests cannot include an offering listing.");
@@ -510,7 +541,7 @@ async function assertCanAcceptRequest(
     );
   }
 
-  if (requestType === "pay") {
+  if (requestType === "pay" || requestType === "credit") {
     return { target };
   }
 
@@ -561,6 +592,16 @@ async function performAccept(
     await syncListingAttendanceGuests(ctx, updatedTarget, Date.now());
   }
 
+  if (requestType === "credit") {
+    await holdSeatCredits(ctx, {
+      requestId: req._id,
+      listing: target,
+      charges: [
+        { payerId: req.fromUserId, seatHolderId: req.fromUserId, isGuest: false },
+      ],
+    });
+  }
+
   const idsToSkip = new Set([req._id, ...skipIds]);
 
   if (newSeats === 0) {
@@ -576,7 +617,7 @@ async function performAccept(
     }
   }
 
-  if (requestType === "pay" || !offering || !req.offeringListingId) {
+  if (requestType !== "swap" || !offering || !req.offeringListingId) {
     return;
   }
 
@@ -983,6 +1024,9 @@ export const deleteListing = mutation({
         });
       }
       await sendFormalNotices(ctx, notices);
+    }
+    if (!listingIsPast(listing.dateTime, Date.now())) {
+      await refundListingCredits(ctx, listing._id);
     }
 
     await deleteMenuPdfIfPresent(ctx, listing.menuPdfId);

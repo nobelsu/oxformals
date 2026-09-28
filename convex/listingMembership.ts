@@ -1,6 +1,7 @@
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { syncListingAttendanceGuests } from "./collegeStats";
+import { refundSeatHolderCredits } from "./credits";
 import { listingIsPast } from "./listingHelpers";
 
 /**
@@ -36,6 +37,7 @@ export async function detachMember(
   if (updated) {
     await syncListingAttendanceGuests(ctx, updated, nowMs);
   }
+  await refundSeatHolderCredits(ctx, listing, userId);
   return true;
 }
 

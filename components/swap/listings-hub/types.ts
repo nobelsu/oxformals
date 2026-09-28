@@ -10,7 +10,7 @@ export type ListingsSection = (typeof LISTINGS_SECTIONS)[number];
 export const LISTINGS_SECTION_LABELS: Record<ListingsSection, string> = {
   overview: "Overview",
   listings: "My listings",
-  pay: "Pay requests",
+  pay: "Sent requests",
   attended: "Formals attended",
 };
 

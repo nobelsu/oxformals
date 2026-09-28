@@ -21,11 +21,11 @@ export function PayRequestsSection({
   return (
     <div className="flex flex-col gap-4">
       <h2 className="font-display text-3xl uppercase tracking-wide">
-        Pay requests sent
+        Requests you sent
       </h2>
       {myPayRequests.length === 0 ? (
         <p className="text-[var(--ink-muted)]">
-          You haven&apos;t sent any pay requests yet.
+          You haven&apos;t paid for a seat with cash or a credit yet.
         </p>
       ) : (
         <div className="flex flex-col gap-3">

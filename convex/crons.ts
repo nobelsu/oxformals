@@ -10,4 +10,11 @@ crons.interval(
   {},
 );
 
+crons.interval(
+  "pay hosts their credits",
+  { hours: 1 },
+  internal.credits.settleDueHolds,
+  {},
+);
+
 export default crons;

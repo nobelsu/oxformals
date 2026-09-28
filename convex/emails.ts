@@ -10,7 +10,7 @@ import { emailNotificationsEnabled } from "./emailNotifications";
 import { listingIsPast } from "./listingHelpers";
 import { normalizeCollegeName } from "../lib/data/colleges";
 
-function resolveRequestType(req: Doc<"requests">): "swap" | "pay" {
+function resolveRequestType(req: Doc<"requests">): "swap" | "pay" | "credit" {
   return (
     req.requestType ?? (req.offeringListingId !== undefined ? "swap" : "pay")
   );
@@ -90,7 +90,9 @@ export const getNewRequestEmailPayload = internalQuery({
     const formalDate = formatListingDate(targetListing.dateTime);
 
     let requestTypeLabel: string;
-    if (requestType === "pay") {
+    if (requestType === "credit") {
+      requestTypeLabel = "Credit request · you earn a credit when they come";
+    } else if (requestType === "pay") {
       requestTypeLabel =
         targetListing.price !== undefined
           ? `Pay request · ${formatPrice(targetListing.price)}`
@@ -1140,6 +1142,60 @@ export const sendSwapBreakReport = internalAction({
       text: `${body}\n\nProfile: ${profileUrl}`,
     });
     if (error) console.error("sendSwapBreakReport: Resend error", error);
+    return null;
+  },
+});
+
+// ── Credit disputes ─────────────────────────────────────────────────────────
+
+export const getCreditDisputeDetails = internalQuery({
+  args: { listingId: v.id("listings"), reporterId: v.id("users") },
+  returns: v.object({ reporter: v.string(), host: v.string(), formal: v.string() }),
+  handler: async (ctx, { listingId, reporterId }) => {
+    const listing = await ctx.db.get(listingId);
+    const reporter = await ctx.db.get(reporterId);
+    const host = listing ? await ctx.db.get(listing.ownerUserId) : null;
+    return {
+      reporter: `${reporter?.name ?? "Unknown"} <${reporter?.email ?? "?"}>`,
+      host: `${host?.name ?? "Unknown"} <${host?.email ?? "?"}>`,
+      formal: listing
+        ? `${listing.college} · ${formatListingDate(listing.dateTime)}`
+        : "a deleted listing",
+    };
+  },
+});
+
+export const sendCreditDisputeEmail = internalAction({
+  args: {
+    listingId: v.id("listings"),
+    reporterId: v.id("users"),
+    credits: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const apiKey = process.env.AUTH_RESEND_KEY;
+    if (!apiKey) {
+      console.error("sendCreditDisputeEmail: AUTH_RESEND_KEY is not set");
+      return null;
+    }
+    const d: { reporter: string; host: string; formal: string } =
+      await ctx.runQuery(internal.emails.getCreditDisputeDetails, {
+        listingId: args.listingId,
+        reporterId: args.reporterId,
+      });
+    const body = `${d.reporter} says ${d.formal} (hosted by ${d.host}) didn't happen, and paid ${args.credits} credit${args.credits === 1 ? "" : "s"} for it. The payout is on hold. Settle each hold with: npx convex run --prod credits:resolveDispute '{"holdId":"…","outcome":"refund"}' (or "payHost"). Listing ${args.listingId}.`;
+    const { error } = await new ResendAPI(apiKey).emails.send({
+      from: "Oxformals <team@oxformals.com>",
+      to: ["team@oxformals.com"],
+      subject: "A formal was reported as not happening",
+      html: buildSimpleNoticeHtml({
+        title: "Credit dispute",
+        body,
+        cta: { href: listingBrowseUrl(args.listingId), label: "View listing" },
+      }),
+      text: body,
+    });
+    if (error) console.error("sendCreditDisputeEmail: Resend error", error);
     return null;
   },
 });

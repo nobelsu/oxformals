@@ -3,7 +3,7 @@
 import { BioText } from "@/components/profile/BioText";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -12,23 +12,16 @@ import type { ListingWithMenuPdfUrl } from "@/convex/listingHelpers";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Avatar, PRESET_AVATARS, PresetAvatarIcon, initialsFor } from "@/components/ui/Avatar";
-import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
-import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
-import { RequestPayModal } from "@/components/swap/RequestPayModal";
-import { RequestSwapModal } from "@/components/swap/RequestSwapModal";
-import { RequestTypeChooserModal } from "@/components/swap/RequestTypeChooserModal";
+import { JoinRequestFlow } from "@/components/swap/JoinRequestFlow";
 import { MessageUserButton } from "@/components/chat/MessageUserButton";
-import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { ProfileActivityStream } from "./ProfileActivityStream";
 import { BadgeCaseModal } from "./BadgeCaseModal";
 import { BadgeArt } from "@/components/badges/BadgeArt";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
-import { listingSupportsSwap } from "@/lib/data/listingType";
-import { findBlockingOutgoingRequestForTarget } from "@/lib/data/requestFilters";
-import type { GroupSize, Listing, RequestType } from "@/lib/data/types";
+import type { GroupSize, Listing } from "@/lib/data/types";
 import { formatYearLabel } from "@/lib/data/format";
 import { TOTAL_BADGE_COUNT, badgeById } from "@/lib/data/badges";
 import type { ProfileActivityItem } from "@/lib/data/groupActivityByDay";
@@ -152,24 +145,10 @@ export function ProfileView({
 }: ProfileViewProps) {
   const router = useRouter();
   const { user: currentUser, isAuthenticated } = useAuth();
-  const { getUser, listings, requests, sendRequest, getListing } = useData();
+  const { getUser } = useData();
   const [detailListing, setDetailListing] = useState<Listing | null>(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
-  const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
-  const [pendingRequestType, setPendingRequestType] =
-    useState<RequestType | null>(null);
-  const [typeChooserTarget, setTypeChooserTarget] = useState<Listing | null>(
-    null,
-  );
-  const [showNoListingPrompt, setShowNoListingPrompt] = useState(false);
-  const [blockingRequestOpen, setBlockingRequestOpen] = useState(false);
-  const [blockingHasAccepted, setBlockingHasAccepted] = useState(false);
-  const [confirmed, setConfirmed] = useState<{
-    requestType: RequestType;
-    mine: Listing | null;
-    theirs: Listing | null;
-    otherUserId: string | null;
-  } | null>(null);
+  const [joinTarget, setJoinTarget] = useState<Listing | null>(null);
   const [badgeCaseOpen, setBadgeCaseOpen] = useState(false);
   const closeAvatar = useCallback(() => setAvatarOpen(false), []);
 
@@ -188,43 +167,6 @@ export function ProfileView({
     badgeCaseOpen ? { userId: userId as Id<"users"> } : "skip",
   );
 
-  const myActiveListings = useMemo(
-    () =>
-      currentUser
-        ? listings.filter(
-            (l) =>
-              l.ownerUserId === currentUser.id &&
-              l.status === "active" &&
-              listingSupportsSwap(l.listingType),
-          )
-        : [],
-    [listings, currentUser],
-  );
-
-  const openRequestFlow = useCallback(
-    (listing: Listing, requestType: RequestType) => {
-      if (currentUser) {
-        const blocking = findBlockingOutgoingRequestForTarget(
-          requests,
-          currentUser.id,
-          listing.id,
-        );
-        if (blocking) {
-          setBlockingHasAccepted(blocking.status === "accepted");
-          setBlockingRequestOpen(true);
-          return;
-        }
-      }
-      if (requestType === "swap" && myActiveListings.length === 0) {
-        setShowNoListingPrompt(true);
-        return;
-      }
-      setPendingRequestType(requestType);
-      setRequestTarget(listing);
-    },
-    [currentUser, requests, myActiveListings.length],
-  );
-
   const handleRequestClick = useCallback(
     (listing: Listing) => {
       if (!isAuthenticated) {
@@ -233,27 +175,9 @@ export function ProfileView({
         );
         return;
       }
-      if (listing.listingType === "both") {
-        setTypeChooserTarget(listing);
-        return;
-      }
-      if (listing.listingType === "pay") {
-        openRequestFlow(listing, "pay");
-        return;
-      }
-      openRequestFlow(listing, "swap");
+      setJoinTarget(listing);
     },
-    [isAuthenticated, router, userId, openRequestFlow],
-  );
-
-  const handleRequestTypeChosen = useCallback(
-    (requestType: RequestType) => {
-      if (!typeChooserTarget) return;
-      const target = typeChooserTarget;
-      setTypeChooserTarget(null);
-      openRequestFlow(target, requestType);
-    },
-    [typeChooserTarget, openRequestFlow],
+    [isAuthenticated, router, userId],
   );
 
   const Outer = embedded ? "div" : "main";
@@ -616,112 +540,7 @@ export function ProfileView({
         }
       />
 
-      <RequestTypeChooserModal
-        open={!!typeChooserTarget}
-        onClose={() => setTypeChooserTarget(null)}
-        college={typeChooserTarget?.college ?? ""}
-        onChoose={handleRequestTypeChosen}
-      />
-
-      <RequestSwapModal
-        open={!!requestTarget && pendingRequestType === "swap"}
-        onClose={() => {
-          setRequestTarget(null);
-          setPendingRequestType(null);
-        }}
-        targetListing={requestTarget}
-        myListings={myActiveListings}
-        onSubmit={async ({ offeringListingId, message }) => {
-          if (!requestTarget) return;
-          const result = await sendRequest({
-            requestType: "swap",
-            targetListingId: requestTarget.id,
-            offeringListingId,
-            message,
-            targetOwnerUserId: requestTarget.ownerUserId,
-          });
-          if (!result) throw new Error("Could not send request.");
-          setRequestTarget(null);
-          setPendingRequestType(null);
-          if (result.status === "accepted") {
-            setConfirmed({
-              requestType: "swap",
-              mine: getListing(offeringListingId) ?? null,
-              theirs:
-                getListing(requestTarget.id) ?? requestTarget,
-              otherUserId: requestTarget.ownerUserId,
-            });
-          }
-        }}
-      />
-
-      <RequestPayModal
-        open={!!requestTarget && pendingRequestType === "pay"}
-        onClose={() => {
-          setRequestTarget(null);
-          setPendingRequestType(null);
-        }}
-        targetListing={requestTarget}
-        onSubmit={async ({ message }) => {
-          if (!requestTarget) return;
-          const result = await sendRequest({
-            requestType: "pay",
-            targetListingId: requestTarget.id,
-            message,
-            targetOwnerUserId: requestTarget.ownerUserId,
-          });
-          if (!result) throw new Error("Could not send request.");
-          setRequestTarget(null);
-          setPendingRequestType(null);
-          if (result.status === "accepted") {
-            setConfirmed({
-              requestType: "pay",
-              mine: null,
-              theirs:
-                getListing(requestTarget.id) ?? requestTarget,
-              otherUserId: requestTarget.ownerUserId,
-            });
-          }
-        }}
-      />
-
-      <SwapConfirmedModal
-        open={!!confirmed}
-        onClose={() => setConfirmed(null)}
-        requestType={confirmed?.requestType ?? "swap"}
-        myListing={confirmed?.mine ?? null}
-        theirListing={confirmed?.theirs ?? null}
-        otherUser={
-          confirmed?.otherUserId ? (getUser(confirmed.otherUserId) ?? null) : null
-        }
-        otherUserId={confirmed?.otherUserId ?? null}
-      />
-
-      <BlockingRequestModal
-        open={blockingRequestOpen}
-        onClose={() => setBlockingRequestOpen(false)}
-        hasAccepted={blockingHasAccepted}
-        onViewRequests={() => router.push("/?tab=requests")}
-      />
-
-      <Modal
-        open={showNoListingPrompt}
-        onClose={() => setShowNoListingPrompt(false)}
-        title="List your formal first"
-        panelClassName="max-w-sm"
-      >
-        <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">
-          You need an active swap listing before you can request a swap.
-          Pay-only listings cannot be used in swaps.
-        </p>
-        <Link
-          href="/?tab=requests&openList=1"
-          className="flex w-full cursor-pointer items-center justify-center rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
-          onClick={() => setShowNoListingPrompt(false)}
-        >
-          + List my formal
-        </Link>
-      </Modal>
+      <JoinRequestFlow target={joinTarget} onClose={() => setJoinTarget(null)} />
     </Outer>
   );
 }

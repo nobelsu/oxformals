@@ -12,4 +12,6 @@ export const LISTING_TYPE_TAG_CLASS: Record<
 export const REQUEST_TYPE_TAG_CLASS: Record<RequestType, string> = {
   swap: LISTING_TYPE_TAG_CLASS.swap,
   pay: LISTING_TYPE_TAG_CLASS.pay,
+  credit:
+    "bg-[var(--accent-wash)] text-[var(--accent-wash-ink)] border-[var(--ink)]",
 };

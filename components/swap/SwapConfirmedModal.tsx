@@ -30,7 +30,7 @@ export function SwapConfirmedModal({
   otherUser,
   otherUserId,
 }: Props) {
-  const isPay = requestType === "pay";
+  const isPay = requestType !== "swap";
   const gatedProfile = useQuery(
     api.users.getPublicProfile,
     open && otherUserId ? { userId: otherUserId as Id<"users"> } : "skip",

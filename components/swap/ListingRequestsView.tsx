@@ -9,13 +9,8 @@ import { Avatar } from "@/components/ui/Avatar";
 import { IncomingRequestRow } from "@/components/swap/IncomingRequestRow";
 import { ListingMenu } from "@/components/swap/ListingMenu";
 import { ListFormalForm } from "@/components/swap/ListFormalForm";
-import { NewRequestPicker } from "@/components/swap/NewRequestPicker";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
-import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
 import { EditListingBlockedModal } from "@/components/swap/EditListingBlockedModal";
-import { RequestPayModal } from "@/components/swap/RequestPayModal";
-import { RequestSwapModal } from "@/components/swap/RequestSwapModal";
-import { RequestTypeChooserModal } from "@/components/swap/RequestTypeChooserModal";
 import { SentRequestRow } from "@/components/swap/SentRequestRow";
 import { SignInGate } from "@/components/swap/SignInGate";
 import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
@@ -32,9 +27,7 @@ import {
   formatYearLabel,
 } from "@/lib/data/format";
 import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
-import { listingSupportsSwap } from "@/lib/data/listingType";
 import {
-  findBlockingOutgoingRequestForTarget,
   incomingRequestsForListing,
   pendingIncomingRequestsForListing,
   resolveRequestType,
@@ -57,9 +50,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     acceptRequest,
     declineRequest,
     withdrawRequest,
-    leaveGroup,
     removeMember,
-    sendRequest,
     updateListing,
     deleteListing,
   } = useData();
@@ -73,28 +64,6 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
   const isMember = !!(user && listing && listing.members.includes(user.id));
   const canViewListing = isOwner || isMember;
 
-  const myActiveListings = useMemo(
-    () =>
-      user
-        ? listings.filter(
-            (item) =>
-              item.ownerUserId === user.id &&
-              item.status === "active" &&
-              listingSupportsSwap(item.listingType),
-          )
-        : [],
-    [listings, user],
-  );
-
-  const browseable = useMemo(
-    () =>
-      user
-        ? listings
-            .filter((item) => item.status === "active" && item.ownerUserId !== user.id)
-            .sort((a, b) => +new Date(a.dateTime) - +new Date(b.dateTime))
-        : [],
-    [listings, user],
-  );
 
   const incoming = useMemo(
     () =>
@@ -137,12 +106,6 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editBlockedOpen, setEditBlockedOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
-  const [pendingRequestType, setPendingRequestType] = useState<RequestType | null>(
-    null,
-  );
-  const [typeChooserTarget, setTypeChooserTarget] = useState<Listing | null>(null);
   const [confirmed, setConfirmed] = useState<{
     requestType: RequestType;
     mine: Listing | null;
@@ -155,8 +118,6 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     confirmLabel?: string;
     onConfirm: () => void | Promise<void>;
   } | null>(null);
-  const [blockingRequestOpen, setBlockingRequestOpen] = useState(false);
-  const [blockingHasAccepted, setBlockingHasAccepted] = useState(false);
   const [acceptError, setAcceptError] = useState<string | null>(null);
 
   const handleWithdraw = useCallback(
@@ -237,35 +198,6 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
 
   const isPast = listingIsPast(listing.dateTime, nowMs);
 
-  function openOutboundRequest(target: Listing, requestType: RequestType) {
-    if (user) {
-      const blocking = findBlockingOutgoingRequestForTarget(
-        requests,
-        user.id,
-        target.id,
-      );
-      if (blocking) {
-        setBlockingHasAccepted(blocking.status === "accepted");
-        setBlockingRequestOpen(true);
-        return;
-      }
-    }
-    if (requestType === "swap" && myActiveListings.length === 0) return;
-    setPendingRequestType(requestType);
-    setRequestTarget(target);
-  }
-
-  function handleOutboundPick(target: Listing) {
-    if (target.listingType === "both") {
-      setTypeChooserTarget(target);
-      return;
-    }
-    if (target.listingType === "pay") {
-      openOutboundRequest(target, "pay");
-      return;
-    }
-    openOutboundRequest(target, "swap");
-  }
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6">
@@ -444,12 +376,16 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                     }
                     targetListing={listing}
                     onAccept={() => {
-                      const isPay = resolveRequestType(r) === "pay";
+                      const kind = resolveRequestType(r);
+                      const isPay = kind !== "swap";
                       setAcceptError(null);
                       setConfirmDialog({
-                        message: isPay
-                          ? `Accept this pay request? ${fromUser.name} will join your group.`
-                          : `Accept this swap? ${fromUser.name} will join your group.`,
+                        message:
+                          kind === "credit"
+                            ? `Accept ${fromUser.name}'s credit? They join your group, and you earn a credit 24 hours after the formal.`
+                            : kind === "pay"
+                              ? `Accept this pay request? ${fromUser.name} will join your group.`
+                              : `Accept this swap? ${fromUser.name} will join your group.`,
                         confirmLabel: "Accept",
                         onConfirm: async () => {
                           setConfirmDialog(null);
@@ -458,7 +394,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                             if (!updated) return;
                             if (isPay) {
                               setConfirmed({
-                                requestType: "pay",
+                                requestType: kind,
                                 mine: listing,
                                 theirs: null,
                                 otherUserId: r.fromUserId,
@@ -486,9 +422,9 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                     onDecline={() => {
                       setConfirmDialog({
                         message:
-                          resolveRequestType(r) === "pay"
-                            ? "Decline this pay request?"
-                            : "Decline this swap request?",
+                          resolveRequestType(r) === "swap"
+                            ? "Decline this swap request?"
+                            : "Decline this request?",
                         variant: "destructive",
                         confirmLabel: "Decline",
                         onConfirm: () => {
@@ -531,87 +467,6 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
         </section>
       </div>
 
-      <NewRequestPicker
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        listings={browseable}
-        getUser={getUser}
-        onSelect={(item) => {
-          setPickerOpen(false);
-          handleOutboundPick(item);
-        }}
-      />
-
-      <RequestTypeChooserModal
-        open={!!typeChooserTarget}
-        onClose={() => setTypeChooserTarget(null)}
-        college={typeChooserTarget?.college ?? ""}
-        onChoose={(requestType) => {
-          if (!typeChooserTarget) return;
-          const target = typeChooserTarget;
-          setTypeChooserTarget(null);
-          openOutboundRequest(target, requestType);
-        }}
-      />
-
-      <RequestSwapModal
-        open={!!requestTarget && pendingRequestType === "swap"}
-        onClose={() => {
-          setRequestTarget(null);
-          setPendingRequestType(null);
-        }}
-        targetListing={requestTarget}
-        myListings={myActiveListings.filter((l) => l.id !== listing.id)}
-        onSubmit={async ({ offeringListingId, message }) => {
-          if (!requestTarget) return;
-          const result = await sendRequest({
-            requestType: "swap",
-            targetListingId: requestTarget.id,
-            offeringListingId,
-            message,
-          });
-          if (!result) throw new Error("Could not send request.");
-          setRequestTarget(null);
-          setPendingRequestType(null);
-          if (result.status === "accepted") {
-            setConfirmed({
-              requestType: "swap",
-              mine: getListing(offeringListingId) ?? null,
-              theirs: getListing(requestTarget.id) ?? null,
-              otherUserId: requestTarget.ownerUserId,
-            });
-          }
-        }}
-      />
-
-      <RequestPayModal
-        open={!!requestTarget && pendingRequestType === "pay"}
-        onClose={() => {
-          setRequestTarget(null);
-          setPendingRequestType(null);
-        }}
-        targetListing={requestTarget}
-        onSubmit={async ({ message }) => {
-          if (!requestTarget) return;
-          const result = await sendRequest({
-            requestType: "pay",
-            targetListingId: requestTarget.id,
-            message,
-          });
-          if (!result) throw new Error("Could not send request.");
-          setRequestTarget(null);
-          setPendingRequestType(null);
-          if (result.status === "accepted") {
-            setConfirmed({
-              requestType: "pay",
-              mine: listing,
-              theirs: requestTarget,
-              otherUserId: requestTarget.ownerUserId,
-            });
-          }
-        }}
-      />
-
       <SwapConfirmedModal
         open={!!confirmed}
         onClose={() => setConfirmed(null)}
@@ -624,12 +479,6 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
         otherUserId={confirmed?.otherUserId ?? null}
       />
 
-      <BlockingRequestModal
-        open={blockingRequestOpen}
-        onClose={() => setBlockingRequestOpen(false)}
-        hasAccepted={blockingHasAccepted}
-        onViewRequests={() => router.push("/?tab=requests")}
-      />
 
       <EditListingBlockedModal
         open={editBlockedOpen}

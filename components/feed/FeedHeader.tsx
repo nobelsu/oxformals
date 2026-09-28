@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { CreditsChip } from "@/components/credits/CreditsChip";
 
 function greetingWord(): string {
   const h = new Date().getHours();
@@ -86,6 +87,7 @@ export function FeedHeader({
         </Chip>
         <Chip href="/?tab=requests&section=listings">Your formals</Chip>
         <Chip href="/?tab=mine&edit=1">Wishlist</Chip>
+        <CreditsChip />
       </div>
     </div>
   );

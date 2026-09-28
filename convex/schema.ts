@@ -96,7 +96,9 @@ export default defineSchema({
     toUserId: v.id("users"),
     targetListingId: v.id("listings"),
     offeringListingId: v.optional(v.id("listings")),
-    requestType: v.optional(v.union(v.literal("swap"), v.literal("pay"))),
+    requestType: v.optional(
+      v.union(v.literal("swap"), v.literal("pay"), v.literal("credit")),
+    ),
     message: v.string(),
     status: v.union(
       v.literal("pending"),
@@ -278,4 +280,37 @@ export default defineSchema({
     listingId: v.id("listings"),
     createdAt: v.number(),
   }).index("by_brokenByUserId", ["brokenByUserId"]),
+  /**
+   * Seat credits: earned by hosting a credit-paying guest, spent on a seat at
+   * any formal. No row means the user still has their 1 starter credit.
+   */
+  creditAccounts: defineTable({
+    userId: v.id("users"),
+    balance: v.number(),
+  }).index("by_userId", ["userId"]),
+  /**
+   * One credit for one seat, taken from the payer when the host accepts and
+   * paid to the host 24h after the formal (unless disputed). `seatHolderId` is
+   * the member whose seat it is (or who brought the unnamed guest).
+   */
+  creditHolds: defineTable({
+    requestId: v.id("requests"),
+    listingId: v.id("listings"),
+    payerId: v.id("users"),
+    hostId: v.id("users"),
+    seatHolderId: v.id("users"),
+    isGuest: v.boolean(),
+    status: v.union(
+      v.literal("held"),
+      v.literal("paid"),
+      v.literal("refunded"),
+      v.literal("disputed"),
+    ),
+    releaseAt: v.number(),
+  })
+    .index("by_status_and_releaseAt", ["status", "releaseAt"])
+    .index("by_listingId_and_seatHolderId", ["listingId", "seatHolderId"])
+    .index("by_listingId", ["listingId"])
+    .index("by_payerId_and_status", ["payerId", "status"])
+    .index("by_hostId_and_status", ["hostId", "status"]),
 });

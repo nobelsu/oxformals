@@ -22,6 +22,7 @@ import type * as collegeAttendance from "../collegeAttendance.js";
 import type * as collegeReviewHelpers from "../collegeReviewHelpers.js";
 import type * as collegeReviews from "../collegeReviews.js";
 import type * as collegeStats from "../collegeStats.js";
+import type * as credits from "../credits.js";
 import type * as crons from "../crons.js";
 import type * as emailNotifications from "../emailNotifications.js";
 import type * as emails from "../emails.js";
@@ -71,6 +72,7 @@ declare const fullApi: ApiFromModules<{
   collegeReviewHelpers: typeof collegeReviewHelpers;
   collegeReviews: typeof collegeReviews;
   collegeStats: typeof collegeStats;
+  credits: typeof credits;
   crons: typeof crons;
   emailNotifications: typeof emailNotifications;
   emails: typeof emails;

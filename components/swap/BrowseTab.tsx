@@ -11,21 +11,13 @@ import {
 } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
-import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { MY_FORMALS_SENTINEL } from "./CollegeFilter";
 import { ListingDayList } from "./ListingDayList";
 import { ListingDetailModal } from "./ListingDetailModal";
 import { ListingRow } from "./ListingRow";
-import { BlockingRequestModal } from "./BlockingRequestModal";
-import { RequestPayModal } from "./RequestPayModal";
-import { RequestSwapModal } from "./RequestSwapModal";
-import { RequestTypeChooserModal } from "./RequestTypeChooserModal";
-import { SwapConfirmedModal } from "./SwapConfirmedModal";
-import { listingSupportsSwap } from "@/lib/data/listingType";
-import type { RequestType } from "@/lib/data/types";
+import { JoinRequestFlow } from "./JoinRequestFlow";
 import { isoToLocalDateKey } from "@/lib/data/format";
-import { findBlockingOutgoingRequestForTarget } from "@/lib/data/requestFilters";
 import { BrowseFiltersModal } from "./BrowseFiltersModal";
 import type { Listing } from "@/lib/data/types";
 
@@ -101,14 +93,7 @@ export function BrowseTab({
   const clearedListingParamRef = useRef<string | null>(null);
 
   const { user, isAuthenticated } = useAuth();
-  const {
-    listings,
-    requests,
-    wishlist,
-    sendRequest,
-    getUser,
-    getListing,
-  } = useData();
+  const { listings, wishlist, getUser, getListing } = useData();
 
   const [collegeFilter, setCollegeFilter] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
@@ -134,20 +119,7 @@ export function BrowseTab({
   );
   const [filterOpen, setFilterOpen] = useState(false);
   const [detailListing, setDetailListing] = useState<Listing | null>(null);
-  const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
-  const [pendingRequestType, setPendingRequestType] = useState<RequestType | null>(
-    null,
-  );
-  const [typeChooserTarget, setTypeChooserTarget] = useState<Listing | null>(null);
-  const [showNoListingPrompt, setShowNoListingPrompt] = useState(false);
-  const [blockingRequestOpen, setBlockingRequestOpen] = useState(false);
-  const [blockingHasAccepted, setBlockingHasAccepted] = useState(false);
-  const [confirmed, setConfirmed] = useState<{
-    requestType: RequestType;
-    mine: Listing | null;
-    theirs: Listing | null;
-    otherUserId: string | null;
-  } | null>(null);
+  const [joinTarget, setJoinTarget] = useState<Listing | null>(null);
 
   // Every college with an open listing, most-listed first — feeds the College
   // dropdown in the filter bar.
@@ -255,62 +227,12 @@ export function BrowseTab({
 
   const hasCollegeMatches = collegeFilteredListings.length > 0;
 
-  const myActiveListings = useMemo(
-    () =>
-      user
-        ? listings.filter(
-            (l) =>
-              l.ownerUserId === user.id &&
-              l.status === "active" &&
-              listingSupportsSwap(l.listingType),
-          )
-        : [],
-    [listings, user],
-  );
-
-
-  function openRequestFlow(listing: Listing, requestType: RequestType) {
-    if (user) {
-      const blocking = findBlockingOutgoingRequestForTarget(
-        requests,
-        user.id,
-        listing.id,
-      );
-      if (blocking) {
-        setBlockingHasAccepted(blocking.status === "accepted");
-        setBlockingRequestOpen(true);
-        return;
-      }
-    }
-    if (requestType === "swap" && myActiveListings.length === 0) {
-      setShowNoListingPrompt(true);
-      return;
-    }
-    setPendingRequestType(requestType);
-    setRequestTarget(listing);
-  }
-
   function handleRequestClick(listing: Listing) {
     if (!isAuthenticated) {
       onSignInRequired();
       return;
     }
-    if (listing.listingType === "both") {
-      setTypeChooserTarget(listing);
-      return;
-    }
-    if (listing.listingType === "pay") {
-      openRequestFlow(listing, "pay");
-      return;
-    }
-    openRequestFlow(listing, "swap");
-  }
-
-  function handleRequestTypeChosen(requestType: RequestType) {
-    if (!typeChooserTarget) return;
-    const target = typeChooserTarget;
-    setTypeChooserTarget(null);
-    openRequestFlow(target, requestType);
+    setJoinTarget(listing);
   }
 
   function scrollToBrowseListings() {
@@ -522,111 +444,11 @@ export function BrowseTab({
         disabledLabel={isAuthenticated ? undefined : "Sign in to request"}
       />
 
-      <RequestTypeChooserModal
-        open={!!typeChooserTarget}
-        onClose={() => setTypeChooserTarget(null)}
-        college={typeChooserTarget?.college ?? ""}
-        onChoose={handleRequestTypeChosen}
+      <JoinRequestFlow
+        target={joinTarget}
+        onClose={() => setJoinTarget(null)}
+        onNavigateToRequests={onNavigateToRequests}
       />
-
-      <RequestSwapModal
-        open={!!requestTarget && pendingRequestType === "swap"}
-        onClose={() => {
-          setRequestTarget(null);
-          setPendingRequestType(null);
-        }}
-        targetListing={requestTarget}
-        myListings={myActiveListings}
-        onSubmit={async ({ offeringListingId, message }) => {
-          if (!requestTarget) return;
-          const result = await sendRequest({
-            requestType: "swap",
-            targetListingId: requestTarget.id,
-            offeringListingId,
-            message,
-          });
-          if (!result) throw new Error("Could not send request.");
-          setRequestTarget(null);
-          setPendingRequestType(null);
-          if (result.status === "accepted") {
-            setConfirmed({
-              requestType: "swap",
-              mine: getListing(offeringListingId) ?? null,
-              theirs: getListing(requestTarget.id) ?? null,
-              otherUserId: requestTarget.ownerUserId,
-            });
-          }
-        }}
-      />
-
-      <RequestPayModal
-        open={!!requestTarget && pendingRequestType === "pay"}
-        onClose={() => {
-          setRequestTarget(null);
-          setPendingRequestType(null);
-        }}
-        targetListing={requestTarget}
-        onSubmit={async ({ message }) => {
-          if (!requestTarget) return;
-          const result = await sendRequest({
-            requestType: "pay",
-            targetListingId: requestTarget.id,
-            message,
-          });
-          if (!result) throw new Error("Could not send request.");
-          setRequestTarget(null);
-          setPendingRequestType(null);
-          if (result.status === "accepted") {
-            setConfirmed({
-              requestType: "pay",
-              mine: null,
-              theirs: getListing(requestTarget.id) ?? null,
-              otherUserId: requestTarget.ownerUserId,
-            });
-          }
-        }}
-      />
-
-      <SwapConfirmedModal
-        open={!!confirmed}
-        onClose={() => setConfirmed(null)}
-        requestType={confirmed?.requestType ?? "swap"}
-        myListing={confirmed?.mine ?? null}
-        theirListing={confirmed?.theirs ?? null}
-        otherUser={
-          confirmed?.otherUserId ? (getUser(confirmed.otherUserId) ?? null) : null
-        }
-        otherUserId={confirmed?.otherUserId ?? null}
-      />
-
-      <BlockingRequestModal
-        open={blockingRequestOpen}
-        onClose={() => setBlockingRequestOpen(false)}
-        hasAccepted={blockingHasAccepted}
-        onViewRequests={onNavigateToRequests}
-      />
-
-      <Modal
-        open={showNoListingPrompt}
-        onClose={() => setShowNoListingPrompt(false)}
-        title="List your formal first"
-        panelClassName="max-w-sm"
-      >
-        <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">
-          You need an active swap listing before you can request a swap.
-          Pay-only listings cannot be used in swaps.
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            setShowNoListingPrompt(false);
-            onNavigateToRequests();
-          }}
-          className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
-        >
-          + List my formal
-        </button>
-      </Modal>
     </>
   );
 }

@@ -125,7 +125,7 @@ export function ListingsOverview({
           value={totalPendingIncoming}
           highlight
         />
-        <StatTile label="Pay requests" value={payRequestCount} />
+        <StatTile label="Sent requests" value={payRequestCount} />
         <StatTile
           label="Formals to review"
           value={formalsToReviewCount}

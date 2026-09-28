@@ -61,7 +61,11 @@ export function IncomingRequestRow({
               <ListingTag className="whitespace-nowrap">{statusLabel}</ListingTag>
             </div>
           </div>
-          {requestType === "pay" ? (
+          {requestType === "credit" ? (
+            <div className="text-sm leading-snug text-[var(--ink-muted)]">
+              Paying with a credit · you earn one when they come
+            </div>
+          ) : requestType === "pay" ? (
             <div className="text-sm leading-snug text-[var(--ink-muted)]">
               Pay request
               {targetListing?.price !== undefined

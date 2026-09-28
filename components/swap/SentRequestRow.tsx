@@ -58,7 +58,12 @@ export function SentRequestRow({
             </div>
           </div>
           <div className="text-sm leading-snug text-[var(--ink-muted)]">
-            {requestType === "pay" ? (
+            {requestType === "credit" ? (
+              <>
+                {targetListing ? `${targetListing.college} · ` : ""}Paying with a
+                credit
+              </>
+            ) : requestType === "pay" ? (
               <>
                 Pay request
                 {targetListing?.price !== undefined
