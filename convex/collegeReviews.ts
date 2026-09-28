@@ -30,6 +30,7 @@ import {
   type CollegeReviewCategory,
 } from "../lib/data/collegeReviews";
 import { optionalUserId, requireActiveUser } from "./guards";
+import { canSeeActivity } from "./follows";
 
 const ratingsValidator = v.object({
   food: v.number(),
@@ -97,8 +98,10 @@ async function enrichReview(
 ) {
   const listing = await ctx.db.get(review.listingId);
   const authorUser = await ctx.db.get(review.userId);
+  // A private member's name only shows to their followers.
   const showAuthor =
-    !review.isAnonymous || (viewerId !== null && viewerId === review.userId);
+    (viewerId !== null && viewerId === review.userId) ||
+    (!review.isAnonymous && (await canSeeActivity(ctx, viewerId, authorUser)));
 
   let viewerVote: 1 | -1 | null = null;
   if (viewerId) {

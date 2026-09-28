@@ -19,6 +19,11 @@ import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { ProfileActivityStream } from "./ProfileActivityStream";
 import { BadgeCaseModal } from "./BadgeCaseModal";
 import { BadgeArt } from "@/components/badges/BadgeArt";
+import {
+  FollowButton,
+  FollowCounts,
+  PrivateActivityNotice,
+} from "@/components/follows/FollowControls";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
 import type { GroupSize, Listing } from "@/lib/data/types";
@@ -160,6 +165,9 @@ export function ProfileView({
     userId: userId as Id<"users">,
   });
   const earnedBadges = useQuery(api.badges.getUserBadges, {
+    userId: userId as Id<"users">,
+  });
+  const followState = useQuery(api.follows.getFollowState, {
     userId: userId as Id<"users">,
   });
   const badgeProgress = useQuery(
@@ -358,6 +366,11 @@ export function ProfileView({
           {profileLine ? (
             <p className="mt-0.5 text-sm text-[var(--ink-soft)]">{profileLine}</p>
           ) : null}
+          {followState ? (
+            <div className="mt-1">
+              <FollowCounts userId={userId} state={followState} />
+            </div>
+          ) : null}
         </div>
         {isOwnProfile ? (
           onEditProfile ? (
@@ -370,10 +383,15 @@ export function ProfileView({
             </Link>
           )
         ) : isAuthenticated ? (
-          <MessageUserButton
-            otherUserId={userId as Id<"users">}
-            className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
-          />
+          <div className="flex shrink-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+            {followState ? (
+              <FollowButton userId={userId} name={name} state={followState} />
+            ) : null}
+            <MessageUserButton
+              otherUserId={userId as Id<"users">}
+              className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
+            />
+          </div>
         ) : (
           <button
             type="button"
@@ -459,13 +477,13 @@ export function ProfileView({
           </span>
         </span>
         <span className="text-[1.05rem]">
-          <span className="font-extrabold">{stats ? stats.reviewCount : "–"}</span>{" "}
+          <span className="font-extrabold">{stats && !activity?.hidden ? stats.reviewCount : "–"}</span>{" "}
           <span className="text-[0.75rem] uppercase tracking-[0.05em] text-[var(--ink-muted)]">
             reviews
           </span>
         </span>
         <span className="text-[1.05rem]">
-          <span className="font-extrabold">{stats ? stats.attendedCount : "–"}</span>{" "}
+          <span className="font-extrabold">{stats && !activity?.hidden ? stats.attendedCount : "–"}</span>{" "}
           <span className="text-[0.75rem] uppercase tracking-[0.05em] text-[var(--ink-muted)]">
             formals
           </span>
@@ -479,6 +497,11 @@ export function ProfileView({
         </h2>
         {activity === undefined ? (
           <p className="mt-3 text-[var(--ink-muted)]">Loading activity…</p>
+        ) : activity.hidden && streamItems.length === 0 ? (
+          <PrivateActivityNotice
+            name={name}
+            pending={followState?.following === "pending"}
+          />
         ) : streamItems.length === 0 ? (
           <div className="mt-3 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_25%,transparent)] px-5 py-8 text-center text-[var(--ink-muted)]">
             {isOwnProfile
@@ -505,6 +528,12 @@ export function ProfileView({
             }
           />
         )}
+        {activity?.hidden && streamItems.length > 0 ? (
+          <PrivateActivityNotice
+            name={name}
+            pending={followState?.following === "pending"}
+          />
+        ) : null}
       </section>
 
       <BadgeCaseModal

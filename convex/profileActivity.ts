@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { enrichListing } from "./listingHelpers";
 import { rowCountsAsAttended } from "../lib/data/formalAttendance";
+import { canSeeActivity } from "./follows";
+import { optionalUserId } from "./guards";
 
 /**
  * The Beli-style profile stream: active listings, attended formals and
@@ -11,6 +13,11 @@ import { rowCountsAsAttended } from "../lib/data/formalAttendance";
 export const getProfileActivity = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    // Listings are always public; a private account's formals attended and
+    // reviews are only for itself and its followers.
+    const owner = await ctx.db.get(args.userId);
+    const visible = await canSeeActivity(ctx, await optionalUserId(ctx), owner);
+
     const listingDocs = await ctx.db
       .query("listings")
       .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", args.userId))
@@ -23,10 +30,12 @@ export const getProfileActivity = query({
       activeListings.push(await enrichListing(ctx, listing));
     }
 
-    const attendanceRows = await ctx.db
-      .query("formalAttendanceConfirmations")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .take(200);
+    const attendanceRows = visible
+      ? await ctx.db
+          .query("formalAttendanceConfirmations")
+          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .take(200)
+      : [];
     const attendedItems: Array<
       | {
           kind: "attended";
@@ -52,10 +61,12 @@ export const getProfileActivity = query({
       });
     }
 
-    const reviewDocs = await ctx.db
-      .query("collegeReviews")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .take(200);
+    const reviewDocs = visible
+      ? await ctx.db
+          .query("collegeReviews")
+          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .take(200)
+      : [];
     const reviewItems = reviewDocs
       .filter((r) => !r.isAnonymous)
       .map((r) => ({
@@ -80,6 +91,7 @@ export const getProfileActivity = query({
 
     return {
       items,
+      hidden: !visible,
       stats: {
         activeCount: activeListings.length,
         reviewCount: reviewItems.length,

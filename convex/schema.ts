@@ -61,6 +61,11 @@ export default defineSchema({
     bio: v.optional(v.string()),
     /** Badges earned after this are celebrated once (see badges.getMyNewBadges). */
     badgesSeenAt: v.optional(v.number()),
+    /**
+     * Private account: follows need approval, and activity (reviews, formals
+     * attended, badges, feed items) is hidden from non-followers.
+     */
+    isPrivate: v.optional(v.boolean()),
   })
     .index("email", ["email"])
     .index("phone", ["phone"]),
@@ -311,6 +316,18 @@ export default defineSchema({
     listingId: v.id("listings"),
     createdAt: v.number(),
   }).index("by_brokenByUserId", ["brokenByUserId"]),
+  /**
+   * Who follows whom. Following a private account starts "pending" until
+   * they approve. Two active follows either way make two people friends.
+   */
+  follows: defineTable({
+    followerId: v.id("users"),
+    followeeId: v.id("users"),
+    status: v.union(v.literal("active"), v.literal("pending")),
+  })
+    .index("by_followerId_and_followeeId", ["followerId", "followeeId"])
+    .index("by_followerId_and_status", ["followerId", "status"])
+    .index("by_followeeId_and_status", ["followeeId", "status"]),
   /**
    * Seat credits: earned by hosting a credit-paying guest, spent on a seat at
    * any formal. No row means the user still has their 1 starter credit.

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { optionalUserId, requireUserId } from "./guards";
+import { canSeeActivity } from "./follows";
 import { mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { normalizeCollegeName } from "../lib/data/colleges";
@@ -115,6 +116,8 @@ export async function awardNewBadges(
 export const getUserBadges = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    const owner = await ctx.db.get(args.userId);
+    if (!(await canSeeActivity(ctx, await optionalUserId(ctx), owner))) return [];
     return await ctx.db
       .query("userBadges")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -127,6 +130,10 @@ export const getBadgeProgress = query({
   args: { userId: v.id("users") },
   returns: v.object({ formals: v.number(), reviews: v.number() }),
   handler: async (ctx, { userId }) => {
+    const owner = await ctx.db.get(userId);
+    if (!(await canSeeActivity(ctx, await optionalUserId(ctx), owner))) {
+      return { formals: 0, reviews: 0 };
+    }
     const inputs = await collectBadgeInputs(ctx, userId);
     return {
       formals: inputs.attendedCount,

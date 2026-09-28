@@ -30,6 +30,7 @@ import type * as feed from "../feed.js";
 import type * as feedBookmarks from "../feedBookmarks.js";
 import type * as feedComments from "../feedComments.js";
 import type * as feedLikes from "../feedLikes.js";
+import type * as follows from "../follows.js";
 import type * as formalAttendance from "../formalAttendance.js";
 import type * as groupSize from "../groupSize.js";
 import type * as guards from "../guards.js";
@@ -81,6 +82,7 @@ declare const fullApi: ApiFromModules<{
   feedBookmarks: typeof feedBookmarks;
   feedComments: typeof feedComments;
   feedLikes: typeof feedLikes;
+  follows: typeof follows;
   formalAttendance: typeof formalAttendance;
   groupSize: typeof groupSize;
   guards: typeof guards;

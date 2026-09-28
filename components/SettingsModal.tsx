@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { Modal } from "@/components/ui/Modal";
+import { PrivateAccountSetting } from "@/components/follows/PrivateAccountSetting";
 import { UiFontDropdown } from "@/components/ui/UiFontDropdown";
 import type { UiFontId } from "@/convex/uiFont";
 
@@ -204,6 +205,8 @@ export function SettingsModal({ open, onClose, onDeleteAccount }: Props) {
             <p className="mt-2 text-sm text-[var(--danger)]">{notificationsError}</p>
           ) : null}
         </div>
+
+        <PrivateAccountSetting />
 
         {hasPassword !== undefined ? (
           <div className="min-w-0 border-t border-[var(--ink-soft)] pt-5">

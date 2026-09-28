@@ -227,6 +227,24 @@ export const deleteMyAccount = mutation({
     await deleteByUserId("feedBookmarks");
     await deleteByUserId("pushTokens");
     await deleteByUserId("userBadges");
+    for (const status of ["active", "pending"] as const) {
+      for (const row of await ctx.db
+        .query("follows")
+        .withIndex("by_followerId_and_status", (q) =>
+          q.eq("followerId", userId).eq("status", status),
+        )
+        .take(MAX_ROWS)) {
+        await ctx.db.delete(row._id);
+      }
+      for (const row of await ctx.db
+        .query("follows")
+        .withIndex("by_followeeId_and_status", (q) =>
+          q.eq("followeeId", userId).eq("status", status),
+        )
+        .take(MAX_ROWS)) {
+        await ctx.db.delete(row._id);
+      }
+    }
     // Upload bookkeeping only: review photos stay because the reviews stay.
     const files = await ctx.db
       .query("uploadedFiles")

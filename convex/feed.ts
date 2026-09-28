@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import { optionalUserId, sanitizePublicUser } from "./guards";
+import { activityVisibility } from "./follows";
 import { enrichListing } from "./listingHelpers";
 import { rowCountsAsAttended } from "../lib/data/formalAttendance";
 import { collegeToSlug } from "../lib/data/collegeSlug";
@@ -49,6 +50,9 @@ export const getCampusFeed = query({
       actorCache.set(userId, actor);
       return actor;
     };
+
+    // Private accounts' reviews and attendances are only for their followers.
+    const canSee = activityVisibility(ctx, viewerId);
 
     const nowIso = new Date().toISOString();
 
@@ -112,6 +116,7 @@ export const getCampusFeed = query({
       .take(SOURCE_SCAN);
     for (const review of reviewDocs) {
       if (review.isAnonymous) continue;
+      if (!(await canSee(review.userId))) continue;
       const actor = await getActor(review.userId);
       if (!actor) continue;
       const imageUrls: string[] = [];
@@ -148,6 +153,7 @@ export const getCampusFeed = query({
     const bundles = new Map<string, AttendedBundle>();
     for (const row of attendanceDocs) {
       if (!rowCountsAsAttended(row)) continue;
+      if (!(await canSee(row.userId))) continue;
       const listing = await ctx.db.get(row.listingId);
       if (!listing) continue;
       const actor = await getActor(row.userId);

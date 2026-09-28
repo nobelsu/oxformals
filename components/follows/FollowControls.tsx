@@ -1,0 +1,331 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import { Avatar } from "@/components/ui/Avatar";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Modal } from "@/components/ui/Modal";
+import type { AvatarSource } from "@/lib/auth/types";
+
+type FollowState = NonNullable<
+  ReturnType<typeof useQuery<typeof api.follows.getFollowState>>
+>;
+
+const pill =
+  "shrink-0 cursor-pointer rounded-full border-[2px] px-5 py-2 text-sm transition-colors disabled:opacity-50";
+
+/** Follow / Requested / Following for someone else's profile. */
+export function FollowButton({
+  userId,
+  name,
+  state,
+}: {
+  userId: string;
+  name: string;
+  state: FollowState;
+}) {
+  const follow = useMutation(api.follows.follow);
+  const unfollow = useMutation(api.follows.unfollow);
+  const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const id = userId as Id<"users">;
+
+  const run = async (fn: () => Promise<unknown>) => {
+    setBusy(true);
+    try {
+      await fn();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (state.following === "none") {
+    return (
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void run(() => follow({ userId: id }))}
+        className={`${pill} border-[var(--ink)] bg-[var(--ink)] text-[var(--bg)] hover:bg-[color-mix(in_srgb,var(--ink)_85%,var(--accent))]`}
+      >
+        {state.followsYou ? "Follow back" : "Follow"}
+      </button>
+    );
+  }
+
+  const first = name.split(" ")[0];
+  return (
+    <>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() =>
+          state.following === "pending"
+            ? void run(() => unfollow({ userId: id }))
+            : setConfirming(true)
+        }
+        className={`${pill} border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)]`}
+      >
+        {state.following === "pending" ? "Requested" : "Following"}
+      </button>
+      <ConfirmDialog
+        open={confirming}
+        message={
+          state.isPrivate
+            ? `Unfollow ${first}? Their account is private, so you'd need to ask again to see their formals.`
+            : `Unfollow ${first}?`
+        }
+        confirmLabel="Unfollow"
+        variant="destructive"
+        onCancel={() => setConfirming(false)}
+        onConfirm={async () => {
+          setConfirming(false);
+          await run(() => unfollow({ userId: id }));
+        }}
+      />
+    </>
+  );
+}
+
+/** "12 followers · 8 following · Follows you", each count opening its list. */
+export function FollowCounts({
+  userId,
+  state,
+}: {
+  userId: string;
+  state: FollowState;
+}) {
+  const [list, setList] = useState<"followers" | "following" | "requests" | null>(null);
+  const fmt = (n: number) => (n > 500 ? "500+" : String(n));
+  const countCls =
+    "cursor-pointer text-sm text-[var(--ink-muted)] hover:text-[var(--ink)] disabled:cursor-default disabled:hover:text-[var(--ink-muted)]";
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <button
+          type="button"
+          className={countCls}
+          disabled={!state.canSeeActivity}
+          onClick={() => setList("followers")}
+        >
+          <span className="font-bold text-[var(--ink)]">{fmt(state.followers)}</span>{" "}
+          follower{state.followers === 1 ? "" : "s"}
+        </button>
+        <button
+          type="button"
+          className={countCls}
+          disabled={!state.canSeeActivity}
+          onClick={() => setList("following")}
+        >
+          <span className="font-bold text-[var(--ink)]">{fmt(state.followingCount)}</span>{" "}
+          following
+        </button>
+        {state.followsYou ? (
+          <span className="rounded-full bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] px-2 py-0.5 text-[0.72rem] text-[var(--ink-muted)]">
+            Follows you
+          </span>
+        ) : null}
+        {state.isSelf && state.isPrivate ? (
+          <span className="inline-flex items-center gap-1 text-[0.72rem] text-[var(--ink-muted)]">
+            <LockIcon /> Private
+          </span>
+        ) : null}
+        {state.isSelf && state.requests > 0 ? (
+          <button
+            type="button"
+            onClick={() => setList("requests")}
+            className="cursor-pointer rounded-full bg-[var(--accent)] px-2.5 py-0.5 text-[0.75rem] font-bold text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]"
+          >
+            {state.requests} follow request{state.requests === 1 ? "" : "s"}
+          </button>
+        ) : null}
+      </div>
+      {list === "requests" ? (
+        <FollowRequestsModal onClose={() => setList(null)} />
+      ) : list ? (
+        <FollowListModal
+          userId={userId}
+          direction={list}
+          canRemove={state.isSelf && list === "followers"}
+          onClose={() => setList(null)}
+        />
+      ) : null}
+    </>
+  );
+}
+
+type PublicUser = {
+  _id: string;
+  name?: string;
+  college?: string;
+  avatar?: AvatarSource;
+};
+
+function PersonRow({
+  user,
+  onNavigate,
+  actions,
+}: {
+  user: PublicUser;
+  onNavigate: () => void;
+  actions?: React.ReactNode;
+}) {
+  const name = user.name ?? "Oxford student";
+  return (
+    <li className="flex items-center gap-3 py-2">
+      <Link href={`/profile/${user._id}`} onClick={onNavigate} className="shrink-0">
+        <Avatar name={name} size="sm" source={user.avatar} />
+      </Link>
+      <Link href={`/profile/${user._id}`} onClick={onNavigate} className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-bold hover:underline">{name}</span>
+        {user.college ? (
+          <span className="block truncate text-xs text-[var(--ink-muted)]">{user.college}</span>
+        ) : null}
+      </Link>
+      {actions}
+    </li>
+  );
+}
+
+function FollowListModal({
+  userId,
+  direction,
+  canRemove,
+  onClose,
+}: {
+  userId: string;
+  direction: "followers" | "following";
+  canRemove: boolean;
+  onClose: () => void;
+}) {
+  const people = useQuery(api.follows.listFollows, {
+    userId: userId as Id<"users">,
+    direction,
+  });
+  const removeFollower = useMutation(api.follows.removeFollower);
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={direction === "followers" ? "Followers" : "Following"}
+      panelClassName="max-w-md"
+    >
+      {people === undefined ? (
+        <p className="text-sm text-[var(--ink-muted)]">Loading…</p>
+      ) : people === null ? (
+        <p className="text-sm text-[var(--ink-muted)]">This account is private.</p>
+      ) : people.length === 0 ? (
+        <p className="text-sm text-[var(--ink-muted)]">
+          {direction === "followers" ? "No followers yet." : "Not following anyone yet."}
+        </p>
+      ) : (
+        <ul className="divide-y divide-[color-mix(in_srgb,var(--ink)_10%,transparent)]">
+          {people.map((p) => (
+            <PersonRow
+              key={p._id}
+              user={p as PublicUser}
+              onNavigate={onClose}
+              actions={
+                canRemove ? (
+                  <button
+                    type="button"
+                    onClick={() => void removeFollower({ userId: p._id })}
+                    className="cursor-pointer rounded-full border-[1.5px] border-[var(--ink)] px-3 py-1 text-xs hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                  >
+                    Remove
+                  </button>
+                ) : null
+              }
+            />
+          ))}
+        </ul>
+      )}
+    </Modal>
+  );
+}
+
+function FollowRequestsModal({ onClose }: { onClose: () => void }) {
+  const people = useQuery(api.follows.listFollowRequests, {});
+  const approve = useMutation(api.follows.approveFollower);
+  const decline = useMutation(api.follows.removeFollower);
+  return (
+    <Modal open onClose={onClose} title="Follow requests" panelClassName="max-w-md">
+      {people === undefined ? (
+        <p className="text-sm text-[var(--ink-muted)]">Loading…</p>
+      ) : people.length === 0 ? (
+        <p className="text-sm text-[var(--ink-muted)]">No one&apos;s waiting.</p>
+      ) : (
+        <ul className="divide-y divide-[color-mix(in_srgb,var(--ink)_10%,transparent)]">
+          {people.map((p) => (
+            <PersonRow
+              key={p._id}
+              user={p as PublicUser}
+              onNavigate={onClose}
+              actions={
+                <span className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => void approve({ userId: p._id })}
+                    className="cursor-pointer rounded-full bg-[var(--accent)] px-3 py-1 text-xs text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void decline({ userId: p._id })}
+                    className="cursor-pointer rounded-full border-[1.5px] border-[var(--ink)] px-3 py-1 text-xs hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                  >
+                    Decline
+                  </button>
+                </span>
+              }
+            />
+          ))}
+        </ul>
+      )}
+    </Modal>
+  );
+}
+
+export function LockIcon({ className = "h-3.5 w-3.5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
+/** Stands in for a private account's activity when you don't follow them. */
+export function PrivateActivityNotice({
+  name,
+  pending,
+}: {
+  name: string;
+  pending: boolean;
+}) {
+  return (
+    <div className="mt-3 flex flex-col items-center gap-2 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_18%,transparent)] px-5 py-8 text-center">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[var(--ink)]">
+        <LockIcon className="h-5 w-5" />
+      </span>
+      <p className="font-bold">This account is private</p>
+      <p className="max-w-[32ch] text-sm text-[var(--ink-muted)]">
+        {pending
+          ? `You've asked to follow ${name.split(" ")[0]}. Their formals and reviews show up once they say yes.`
+          : `Follow ${name.split(" ")[0]} to see the formals they've been to and their reviews. Their listings are still open to everyone.`}
+      </p>
+    </div>
+  );
+}
