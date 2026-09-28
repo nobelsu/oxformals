@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { query } from "./_generated/server";
+import { optionalUserId, requireUserId } from "./guards";
+import { mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { normalizeCollegeName } from "../lib/data/colleges";
 import { rowCountsAsAttended } from "../lib/data/formalAttendance";
@@ -118,5 +119,69 @@ export const getUserBadges = query({
       .query("userBadges")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .take(100);
+  },
+});
+
+/** Counts behind the milestone ladders in the badge case. */
+export const getBadgeProgress = query({
+  args: { userId: v.id("users") },
+  returns: v.object({ formals: v.number(), reviews: v.number() }),
+  handler: async (ctx, { userId }) => {
+    const inputs = await collectBadgeInputs(ctx, userId);
+    return {
+      formals: inputs.attendedCount,
+      reviews: inputs.publicReviewCount,
+    };
+  },
+});
+
+/**
+ * Badges the signed-in user earned since they last saw one, oldest first.
+ * `needsBaseline` means they have never had a baseline set: the client sets
+ * one to "now" so existing badges aren't celebrated all at once.
+ */
+export const getMyNewBadges = query({
+  args: {},
+  returns: v.object({
+    needsBaseline: v.boolean(),
+    badges: v.array(v.object({ badgeId: v.string(), earnedAt: v.number() })),
+  }),
+  handler: async (ctx) => {
+    const userId = await optionalUserId(ctx);
+    if (!userId) return { needsBaseline: false, badges: [] };
+    const user = await ctx.db.get(userId);
+    if (!user || user.deletedAt !== undefined) {
+      return { needsBaseline: false, badges: [] };
+    }
+    if (user.badgesSeenAt === undefined) {
+      return { needsBaseline: true, badges: [] };
+    }
+    const seenAt = user.badgesSeenAt;
+    const rows = await ctx.db
+      .query("userBadges")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .take(100);
+    return {
+      needsBaseline: false,
+      badges: rows
+        .filter((r) => r.earnedAt > seenAt)
+        .sort((a, b) => a.earnedAt - b.earnedAt)
+        .map((r) => ({ badgeId: r.badgeId, earnedAt: r.earnedAt })),
+    };
+  },
+});
+
+/** Move the "seen" line forward (never back). */
+export const markBadgesSeen = mutation({
+  args: { upTo: v.number() },
+  returns: v.null(),
+  handler: async (ctx, { upTo }) => {
+    const userId = await requireUserId(ctx);
+    const user = await ctx.db.get(userId);
+    if (!user) return null;
+    if (user.badgesSeenAt === undefined || upTo > user.badgesSeenAt) {
+      await ctx.db.patch(userId, { badgesSeenAt: upTo });
+    }
+    return null;
   },
 });

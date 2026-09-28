@@ -41,6 +41,8 @@ export default defineSchema({
     deletedAt: v.optional(v.number()),
     /** Free-form, moderated bio (max 150 chars); replaces interests on the web. */
     bio: v.optional(v.string()),
+    /** Badges earned after this are celebrated once (see badges.getMyNewBadges). */
+    badgesSeenAt: v.optional(v.number()),
   })
     .index("email", ["email"])
     .index("phone", ["phone"]),

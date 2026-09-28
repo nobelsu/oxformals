@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { query, type QueryCtx } from "./_generated/server";
+import { COLLEGE_BADGES } from "../lib/data/badges";
 
 /**
  * Data for the Instagram story share cards (app/api/share/*). Public: returns
@@ -66,6 +67,33 @@ export const getReviewShareCard = query({
         ? null
         : await firstNameOf(ctx, review.userId),
       photoUrl: firstImage ? await ctx.storage.getUrl(firstImage) : null,
+    };
+  },
+});
+
+export const getBadgeShareCard = query({
+  args: { userId: v.id("users"), badgeId: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({
+      firstName: v.string(),
+      badgeId: v.string(),
+      collegesVisited: v.number(),
+      totalColleges: v.number(),
+    }),
+  ),
+  handler: async (ctx, { userId, badgeId }) => {
+    const rows = await ctx.db
+      .query("userBadges")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .take(100);
+    if (!rows.some((r) => r.badgeId === badgeId)) return null;
+    return {
+      firstName: await firstNameOf(ctx, userId),
+      badgeId,
+      collegesVisited: rows.filter((r) => r.badgeId.startsWith("college-"))
+        .length,
+      totalColleges: COLLEGE_BADGES.length,
     };
   },
 });
