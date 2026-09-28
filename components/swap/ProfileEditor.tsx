@@ -131,6 +131,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     user?.avatar,
   );
   const [error, setError] = useState<string | null>(null);
+  const [bioError, setBioError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -152,6 +153,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     setRolePickerOpen(false);
     setAvatarPickerOpen(false);
     setError(null);
+    setBioError(null);
   }, [user]);
 
   useEffect(() => {
@@ -264,26 +266,28 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     setAvatarPickerOpen(false);
   }
 
-  const save = useCallback(async () => {
-    if (!user) return;
+  /** Returns whether everything saved. */
+  const save = useCallback(async (): Promise<boolean> => {
+    if (!user) return false;
     setError(null);
+    setBioError(null);
     setBusy(true);
     try {
       const trimmedName = nameDraft.trim();
       if (!trimmedName) {
         setError("Name cannot be empty.");
-        return;
+        return false;
       }
       const normalizedYear = yearDraft.trim();
       if (!/^\d+$/.test(normalizedYear)) {
         setError("Year must be a number, e.g. 2.");
-        return;
+        return false;
       }
       if (bioDraft.trim() !== initialBio) {
         const result = await saveBio(bioDraft);
         if (!result.ok) {
-          setError(BIO_ERRORS[result.reason]);
-          return;
+          setBioError(BIO_ERRORS[result.reason]);
+          return false;
         }
       }
       await updateProfile({
@@ -299,8 +303,10 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 1200);
+      return true;
     } catch {
       setError("Could not save — try again.");
+      return false;
     } finally {
       setBusy(false);
     }
@@ -328,7 +334,9 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
   useEffect(() => {
     registerSave?.(async () => {
       if (!profileDirty || busy) return;
-      await save();
+      // Throw so the page's Save button doesn't report "Saved"; the reason is
+      // already shown inline.
+      if (!(await save())) throw new Error("Profile not saved");
     });
   }, [registerSave, profileDirty, busy, save]);
 
@@ -592,9 +600,17 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
             <BioTextarea
               id="profile-bio"
               value={bioDraft}
-              onChange={setBioDraft}
+              onChange={(next) => {
+                setBioDraft(next);
+                setBioError(null);
+              }}
               className={UNDERLINE_INPUT}
             />
+            {bioError ? (
+              <p className="mt-1 text-sm text-[var(--danger)]" role="alert">
+                {bioError}
+              </p>
+            ) : null}
           </Field>
         </div>
       </section>

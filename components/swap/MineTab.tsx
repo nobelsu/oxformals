@@ -70,6 +70,8 @@ export function MineTab() {
       await wishlistSave?.();
       setSaved(true);
       setTimeout(() => setSaved(false), 1200);
+    } catch {
+      // The editor shows why it didn't save; just don't claim "Saved".
     } finally {
       setSaving(false);
     }
