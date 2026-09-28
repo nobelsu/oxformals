@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Earned medal: `--accent-wash` disc, 2px `--ink` border, `3px 3px 0 var(--ink)` shadow, ink line icon. Locked: 2px border at 22% ink, icon at 28% ink.
-- Earned stamp: `--accent` double ring rotated −7°..+7° (stable per college), Schoolbell label. Locked: dashed 20%-ink ring.
+- Earned stamp: `--accent` double ring rotated −7°..+7° (stable per college), Schoolbell label. Locked: upright "ghost" double ring at 12% ink.
 - 1A: profile shows up to 3 earned medals (most recent first) and "+N"; nothing when none are earned.
 - 2B: two ladders, Formals (1, 5, 10, 25) and Reviews (1, 5, 10), each with its current count.
 - 4A: detail card — earned: name, description, "earned {d MMM yyyy}"; locked milestone: "{n} more {formals|reviews} to go" + progress bar; locked college: "Attend a formal at {college}".

@@ -110,7 +110,7 @@ function tiltFor(college: string): number {
   return (Math.abs(h) % 15) - 7;
 }
 
-/** College passport stamp: rose double ring, tilted, when earned. */
+/** College passport stamp: pale "ghost" double ring until earned, then rose and tilted. */
 export function Stamp({
   college,
   earned,
@@ -126,7 +126,7 @@ export function Stamp({
       className={`relative flex shrink-0 items-center justify-center rounded-full border-[2.5px] ${
         earned
           ? "border-[var(--accent)] text-[var(--accent)]"
-          : "border-dashed border-[color-mix(in_srgb,var(--ink)_20%,transparent)] text-[color-mix(in_srgb,var(--ink)_28%,transparent)]"
+          : "border-[color-mix(in_srgb,var(--ink)_12%,transparent)] text-[color-mix(in_srgb,var(--ink)_22%,transparent)]"
       }`}
       style={{
         width: size,
@@ -134,9 +134,13 @@ export function Stamp({
         transform: earned ? `rotate(${tiltFor(college)}deg)` : undefined,
       }}
     >
-      {earned ? (
-        <span className="absolute inset-[5px] rounded-full border border-[var(--accent)]" />
-      ) : null}
+      <span
+        className={`absolute inset-[5px] rounded-full border ${
+          earned
+            ? "border-[var(--accent)]"
+            : "border-[color-mix(in_srgb,var(--ink)_12%,transparent)]"
+        }`}
+      />
       <span
         className="font-display leading-none"
         style={{ fontSize: size * (label.length > 3 ? 0.24 : 0.3) }}
