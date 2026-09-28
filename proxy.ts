@@ -19,6 +19,7 @@ const isPublicRoute = createRouteMatcher([
   "/colleges",
   "/college/:slug",
   "/api/auth(.*)",
+  "/api/share(.*)",
 ]);
 
 export default convexAuthNextjsMiddleware(
