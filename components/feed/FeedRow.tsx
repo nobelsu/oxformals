@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useAuth } from "@/components/auth/useAuth";
+import { ShareButton } from "@/components/share/ShareButton";
 import { Avatar } from "@/components/ui/Avatar";
 import { ListingRow } from "@/components/swap/ListingRow";
 import {
@@ -117,6 +119,15 @@ export function FeedRow({ item, onOpenListing }: Props) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const toggleLike = useMutation(api.feedLikes.toggleLike);
   const toggleBookmark = useMutation(api.feedBookmarks.toggleBookmark);
+  const { user } = useAuth();
+  // Listings can be shared by anyone; a review only by its author.
+  const keyId = item.key.slice(item.key.indexOf(":") + 1);
+  const shareTarget =
+    item.kind === "listing"
+      ? { kind: "listing" as const, id: keyId }
+      : item.kind === "review" && user?.id === item.actor.id
+        ? { kind: "review" as const, id: keyId }
+        : null;
   const toggleWishlist = useMutation(api.users.toggleWishlistCollege);
   const [liked, setLiked] = useState(item.viewerLiked);
   const [likeCount, setLikeCount] = useState(item.likeCount);
@@ -302,6 +313,9 @@ export function FeedRow({ item, onOpenListing }: Props) {
           </button>
         </div>
         <div className="flex items-center gap-4">
+          {shareTarget ? (
+            <ShareButton kind={shareTarget.kind} id={shareTarget.id} />
+          ) : null}
           <button
             type="button"
             onClick={onFavourite}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { BioText } from "@/components/profile/BioText";
+import { ShareButton } from "@/components/share/ShareButton";
 import { Avatar } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Modal";
 import { ListingGroupChatButton } from "@/components/chat/ListingGroupChatButton";
@@ -109,6 +110,9 @@ export function ListingDetailModal({
             </h2>
             <ListingTypeTag listingType={listing.listingType} />
             <FormalTypeTag formalType={listing.formalType} />
+            {!isPast ? (
+              <ShareButton kind="listing" id={listing.id} variant="pill" />
+            ) : null}
             <ListingFormalBadges
               isPast={isPast}
               showCompleted={!isGuestMember}
