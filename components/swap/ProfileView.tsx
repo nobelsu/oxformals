@@ -556,7 +556,7 @@ export function ProfileView({
         {activity === undefined ? (
           <p className="mt-3 text-[var(--ink-muted)]">Loading activity…</p>
         ) : streamItems.length === 0 ? (
-          <div className="mt-3 rounded-[18px] border-[1.5px] border-dashed border-[color-mix(in_srgb,var(--ink)_25%,transparent)] px-5 py-8 text-center text-[var(--ink-muted)]">
+          <div className="mt-3 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_25%,transparent)] px-5 py-8 text-center text-[var(--ink-muted)]">
             {isOwnProfile
               ? "No activity yet — list a formal to get started."
               : `${name.split(" ")[0]} hasn\u2019t been active yet.`}

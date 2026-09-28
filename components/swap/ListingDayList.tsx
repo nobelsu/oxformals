@@ -18,7 +18,7 @@ type Props = {
   /** Sticky offset + background for the mobile day header. Override inside a modal. */
   stickyClassName?: string;
   /**
-   * "flat" (default): rows separated by dashed hairlines — used inside profiles,
+   * "flat" (default): rows separated by hairlines — used inside profiles,
    * pickers and college pages. "card": each listing is a distinct raised block
    * with its own border and spacing — the Luma-style browse feed.
    */
@@ -92,7 +92,7 @@ export function ListingDayList({
             </div>
 
             <div
-              className={`relative sm:border-l-2 sm:border-dashed sm:border-[color-mix(in_srgb,var(--ink)_28%,transparent)] sm:pl-6 ${
+              className={`relative sm:border-l-2 sm:border-[color-mix(in_srgb,var(--ink)_28%,transparent)] sm:pl-6 ${
                 isCard && !isLastGroup ? "pb-4 sm:pb-6" : ""
               }`}
             >
@@ -114,7 +114,7 @@ export function ListingDayList({
                   ) : (
                     <li
                       key={listing.id}
-                      className="border-t border-dashed border-[color-mix(in_srgb,var(--ink)_18%,transparent)] first:border-t-0"
+                      className="border-t border-[color-mix(in_srgb,var(--ink)_18%,transparent)] first:border-t-0"
                     >
                       {content}
                     </li>

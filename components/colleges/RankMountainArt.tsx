@@ -332,7 +332,6 @@ export function MountainTrail({ className = "" }: { className?: string }) {
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeDasharray="5 4"
           opacity="0.85"
         />
         <path

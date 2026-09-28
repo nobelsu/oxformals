@@ -132,7 +132,7 @@ export function NewsletterMobileHighlight() {
         </div>
       </div>
 
-      <div className="relative mt-5 space-y-3 border-t border-dashed border-[var(--ink-soft)] pt-5">
+      <div className="relative mt-5 space-y-3 border-t border-[var(--ink-soft)] pt-5">
         <div className="flex flex-col gap-3 sm:flex-row">
           {appLinks.map((link) => (
             <AppStoreButton key={link.id} link={link} />

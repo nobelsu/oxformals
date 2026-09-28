@@ -46,7 +46,7 @@ export function LandingHero({
         return (
           <li
             key={listing.id}
-            className="border-t border-dashed border-[color-mix(in_srgb,var(--ink)_18%,transparent)] first:border-t-0"
+            className="border-t border-[color-mix(in_srgb,var(--ink)_18%,transparent)] first:border-t-0"
           >
             <ListingRow listing={listing} owner={owner} compact />
           </li>

@@ -42,7 +42,7 @@ export function NewsletterLetter({ animateIn = true }: Props) {
 
       <div className="newsletter-letter-paper mx-auto w-full">
         <div className="newsletter-letter-inner flex min-w-0 flex-col gap-6 px-6 py-7 text-[var(--ink)] text-base leading-relaxed sm:gap-7 sm:px-8 sm:py-9">
-            <header className="flex items-start justify-between gap-4 border-b border-dashed border-[var(--ink-soft)] pb-5">
+            <header className="flex items-start justify-between gap-4 border-b border-[var(--ink-soft)] pb-5">
               <div className="min-w-0 flex-1 space-y-1.5">
                 <p className="font-display text-xs uppercase tracking-[0.35em] text-[var(--ink-muted)]">
                   Subject
@@ -119,7 +119,7 @@ export function NewsletterLetter({ animateIn = true }: Props) {
               ))}
             </div>
 
-            <footer className="flex items-end justify-between gap-4 border-t border-dashed border-[var(--ink-soft)] pt-5 text-[var(--ink-muted)]">
+            <footer className="flex items-end justify-between gap-4 border-t border-[var(--ink-soft)] pt-5 text-[var(--ink-muted)]">
               <div className="min-w-0">
                 <p>{NEWSLETTER_SIGN_OFF.line}</p>
                 <p className="font-display mt-2 text-xl uppercase tracking-wide text-[var(--ink)]">

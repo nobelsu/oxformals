@@ -120,7 +120,7 @@ function Detail({
       className={`flex items-center gap-4 rounded-2xl border-[2px] p-4 ${
         earned
           ? "border-[var(--ink)] bg-[var(--bg)]"
-          : "border-dashed border-[color-mix(in_srgb,var(--ink)_30%,transparent)]"
+          : "border-[color-mix(in_srgb,var(--ink)_18%,transparent)]"
       }`}
     >
       <BadgeArt def={def} earned={earned} size={56} />

@@ -330,7 +330,7 @@ export function BrowseTab({
         {/* Search + filters bar — sticky below nav on sm+ (scrolls away on
             mobile so the day-rail's sticky day headers never collide with it) */}
         <div className="bg-[var(--bg)] pb-3 pt-3 sm:sticky sm:top-[var(--app-nav-height)] sm:z-10">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 border-b border-dashed border-[color-mix(in_srgb,var(--ink)_18%,transparent)] pb-3">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 border-b border-[color-mix(in_srgb,var(--ink)_18%,transparent)] pb-3">
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)] sm:text-3xl">
               Upcoming formals

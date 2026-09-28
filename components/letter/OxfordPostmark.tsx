@@ -13,7 +13,6 @@ export function OxfordPostmark({ className = "" }: { className?: string }) {
           fill="none"
           stroke="var(--ink-soft)"
           strokeWidth="2"
-          strokeDasharray="4 3"
           opacity="0.85"
         />
         <circle
