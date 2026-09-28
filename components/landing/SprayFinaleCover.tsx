@@ -1,35 +1,70 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
-type PersonDot = {
+type Notice = {
   initials: string;
-  x: number;
-  y: number;
-  scale: number;
-  /** Already on Oxformals: gets a small rose check. */
-  onApp: boolean;
+  body: ReactNode;
+  /** Resting tilt in degrees. */
+  rotate: number;
+  /** Horizontal nudge so the stack looks hand-placed. */
+  offsetX: number;
+  /** The last card: rose wash and a check on the avatar. */
+  highlight?: boolean;
 };
 
-const INITIALS = ["JO", "LI", "PR", "MK", "SA", "EM", "AX", "CH"] as const;
+const NOTICES: Notice[] = [
+  {
+    initials: "JY",
+    body: (
+      <>
+        <b>Juyeon</b> from your contacts just joined Oxformals
+      </>
+    ),
+    rotate: -3,
+    offsetX: 10,
+  },
+  {
+    initials: "MK",
+    body: (
+      <>
+        <b>Max</b> listed a Keble formal ·{" "}
+        <span className="font-bold text-[var(--accent)]">2 seats left</span>
+      </>
+    ),
+    rotate: 2.5,
+    offsetX: -8,
+  },
+  {
+    initials: "PR",
+    body: (
+      <>
+        <b>Priya</b> is going to Worcester on Saturday. Want in?
+      </>
+    ),
+    rotate: -1,
+    offsetX: 4,
+    highlight: true,
+  },
+];
 
-// Fixed, evenly-spaced ring positions (deterministic → SSR-safe, no jitter).
-const RING_RADIUS = 148;
-const PEOPLE: PersonDot[] = INITIALS.map((initials, i) => {
-  const angle = ((-90 + i * (360 / INITIALS.length)) * Math.PI) / 180;
-  return {
-    initials,
-    x: Math.round(Math.cos(angle) * RING_RADIUS),
-    y: Math.round(Math.sin(angle) * RING_RADIUS),
-    scale: i % 2 === 0 ? 1.02 : 0.94,
-    onApp: i % 3 === 0,
-  };
-});
+function Check() {
+  return (
+    <span
+      aria-hidden
+      className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--accent)] text-[var(--accent-ink)]"
+    >
+      <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2.5 6.2 5 8.5l4.5-5" />
+      </svg>
+    </span>
+  );
+}
 
 /**
  * Cover card for SprayFinale — "someone you know is going". When scrolled into
- * view, contacts pop out of the centre address book one by one into fixed
- * positions and stay put; a few carry a rose check for "already on Oxformals",
+ * view, three friend notifications drop onto a loose stack one after another,
  * hinting at contact sync in the app.
  */
 export function SprayFinaleCover() {
@@ -51,69 +86,56 @@ export function SprayFinaleCover() {
 
   return (
     <div ref={ref} className="flex flex-col items-center gap-8 text-center">
-      {/* Contacts popping outward from an address book */}
-      <div className="relative h-[340px] w-[340px] sm:h-[420px] sm:w-[420px]">
-        {/* Soft rose glow */}
-        <div
-          className="absolute inset-10 rounded-full opacity-70 blur-2xl"
-          style={{
-            background:
-              "radial-gradient(circle, var(--accent-wash) 0%, transparent 70%)",
-          }}
-        />
-
-        {/* Centre: address book */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-[var(--ink)] bg-[var(--bg)] shadow-[3px_3px_0_var(--ink)] sm:h-20 sm:w-20 sm:rounded-[20px]">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-8 w-8 sm:h-10 sm:w-10"
-              fill="none"
-              stroke="var(--ink)"
-              strokeWidth={1.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <rect x={5} y={2.5} width={15} height={19} rx={2.5} />
-              <path d="M3 7h3M3 12h3M3 17h3" />
-              <circle cx={12.5} cy={10} r={2.6} />
-              <path d="M8.5 17c.6-2.2 2.2-3.3 4-3.3s3.4 1.1 4 3.3" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Avatars pop out to fixed positions, one after another */}
-        {PEOPLE.map((person, i) => {
-          const delay = 120 + i * 90;
-          const baseRotation = (i % 2 === 0 ? -1 : 1) * (4 + (i % 3) * 1.5);
-
+      {/* Notification stack */}
+      <div className="relative flex w-full max-w-[360px] flex-col gap-4 px-4 py-6 sm:max-w-[400px]">
+        {NOTICES.map((n, i) => {
+          const delay = 150 + i * 220;
           return (
-            <span
-              key={person.initials}
-              className="absolute left-1/2 top-1/2 flex h-9 w-9 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[0.7rem] font-bold text-[var(--ink)] shadow-sm sm:h-10 sm:w-10"
+            <div
+              key={n.initials}
+              className={`flex items-center gap-3 rounded-2xl border-2 border-[var(--ink)] p-3 text-left shadow-[4px_4px_0_var(--ink)] ${
+                n.highlight
+                  ? "bg-[var(--accent-wash)] text-[var(--accent-wash-ink)]"
+                  : "bg-[var(--paper)] text-[var(--ink)]"
+              }`}
               style={{
                 transform: visible
-                  ? `translate(calc(-50% + ${person.x}px), calc(-50% + ${person.y}px)) rotate(${baseRotation}deg) scale(${person.scale})`
-                  : "translate(-50%, -50%) scale(0)",
+                  ? `translateX(${n.offsetX}px) rotate(${n.rotate}deg)`
+                  : `translateX(${n.offsetX}px) translateY(-28px) rotate(${n.rotate * 2}deg) scale(0.92)`,
                 opacity: visible ? 1 : 0,
-                transition: `transform 0.7s cubic-bezier(0.22, 1.6, 0.36, 1) ${delay}ms, opacity 0.25s ease ${delay}ms`,
+                transition: `transform 0.6s cubic-bezier(0.22, 1.4, 0.36, 1) ${delay}ms, opacity 0.3s ease ${delay}ms`,
               }}
             >
-              {person.initials}
-              {person.onApp ? (
-                <span
-                  aria-hidden
-                  className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--accent)] text-[var(--accent-ink)]"
-                >
-                  <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M2.5 6.2 5 8.5l4.5-5" />
-                  </svg>
-                </span>
-              ) : null}
-            </span>
+              <span
+                className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[var(--ink)] text-[0.7rem] font-bold text-[var(--accent-wash-ink)] ${
+                  n.highlight ? "bg-[var(--paper)] !text-[var(--ink)]" : "bg-[var(--accent-wash)]"
+                }`}
+              >
+                {n.initials}
+                {n.highlight ? <Check /> : null}
+              </span>
+              <p className="text-[0.8rem] leading-snug sm:text-sm">{n.body}</p>
+            </div>
           );
         })}
+
+        {/* Hand-drawn burst */}
+        <svg
+          aria-hidden
+          viewBox="0 0 36 36"
+          className="absolute -right-1 top-1 h-9 w-9 text-[var(--accent)]"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "scale(1) rotate(0deg)" : "scale(0.4) rotate(-30deg)",
+            transition: "opacity 0.3s ease 0.8s, transform 0.5s cubic-bezier(0.22, 1.6, 0.36, 1) 0.8s",
+          }}
+        >
+          <path d="M18 3v9M18 24v9M3 18h9M24 18h9M8 8l5 5M23 23l5 5M28 8l-5 5M13 23l-5 5" />
+        </svg>
       </div>
 
       {/* Copy */}
