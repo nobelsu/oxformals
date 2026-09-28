@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "security:check": "node scripts/security-checks.mjs",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "test": "vitest run"
   },
   "dependencies": {
     "@auth/core": "^0.37.4",
@@ -22,14 +23,17 @@
     "roughjs": "^4.6.6"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "convex-test": "^0.0.60",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "patch-package": "^8.0.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }

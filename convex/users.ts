@@ -124,7 +124,9 @@ export const listPublic = query({
   args: {},
   handler: async (ctx) => {
     const users = await ctx.db.query("users").order("desc").take(500);
-    return users.map(sanitizePublicUser);
+    return users
+      .filter((u) => u.deletedAt === undefined)
+      .map(sanitizePublicUser);
   },
 });
 
@@ -138,7 +140,12 @@ export const listForChatPicker = query({
 
     const users = await ctx.db.query("users").order("desc").take(500);
     return users
-      .filter((u) => u._id !== viewerId && hasVerifiedEmail(u))
+      .filter(
+        (u) =>
+          u._id !== viewerId &&
+          u.deletedAt === undefined &&
+          hasVerifiedEmail(u),
+      )
       .map((u) => ({
         _id: u._id,
         name: u.name,
@@ -312,7 +319,7 @@ export const getPublicProfile = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
-    if (!user) return null;
+    if (!user || user.deletedAt !== undefined) return null;
 
     const viewerId = await optionalUserId(ctx);
     /* Trusted server time for contact privacy; client-supplied `now` would be spoofable. */

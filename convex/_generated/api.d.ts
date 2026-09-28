@@ -10,7 +10,6 @@
 
 import type * as AdminEmail from "../AdminEmail.js";
 import type * as ResendOTP from "../ResendOTP.js";
-import type * as TestEmail from "../TestEmail.js";
 import type * as adminReset from "../adminReset.js";
 import type * as auth from "../auth.js";
 import type * as badges from "../badges.js";
@@ -40,7 +39,6 @@ import type * as password from "../password.js";
 import type * as profileActivity from "../profileActivity.js";
 import type * as pushNotifications from "../pushNotifications.js";
 import type * as storage from "../storage.js";
-import type * as testAuth from "../testAuth.js";
 import type * as uiFont from "../uiFont.js";
 import type * as uploadOwnership from "../uploadOwnership.js";
 import type * as userVerification from "../userVerification.js";
@@ -55,7 +53,6 @@ import type {
 declare const fullApi: ApiFromModules<{
   AdminEmail: typeof AdminEmail;
   ResendOTP: typeof ResendOTP;
-  TestEmail: typeof TestEmail;
   adminReset: typeof adminReset;
   auth: typeof auth;
   badges: typeof badges;
@@ -85,7 +82,6 @@ declare const fullApi: ApiFromModules<{
   profileActivity: typeof profileActivity;
   pushNotifications: typeof pushNotifications;
   storage: typeof storage;
-  testAuth: typeof testAuth;
   uiFont: typeof uiFont;
   uploadOwnership: typeof uploadOwnership;
   userVerification: typeof userVerification;

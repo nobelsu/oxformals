@@ -37,6 +37,8 @@ export default defineSchema({
     agreedToRules: v.optional(v.boolean()),
     uiFont: v.optional(uiFontValidator),
     avatar,
+    /** Set when the account was deleted; the row is a "Deleted user" placeholder. */
+    deletedAt: v.optional(v.number()),
   })
     .index("email", ["email"])
     .index("phone", ["phone"]),
@@ -243,7 +245,8 @@ export default defineSchema({
     userId: v.id("users"),
   })
     .index("by_targetKey", ["targetKey"])
-    .index("by_targetKey_and_userId", ["targetKey", "userId"]),
+    .index("by_targetKey_and_userId", ["targetKey", "userId"])
+    .index("by_userId", ["userId"]),
   /** Per-user saved feed items, keyed by the same stable `targetKey`. */
   feedBookmarks: defineTable({
     targetKey: v.string(),
