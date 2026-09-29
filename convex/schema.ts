@@ -66,7 +66,8 @@ export default defineSchema({
   })
     .index("email", ["email"])
     .index("phone", ["phone"])
-    .index("by_deletedAt", ["deletedAt"]),
+    .index("by_deletedAt", ["deletedAt"])
+    .index("by_college", ["college"]),
   collegeWishlists: defineTable({
     userId: v.id("users"),
     college: v.string(),
@@ -443,4 +444,33 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_endpoint", ["endpoint"]),
+  /** Each person's invite link: /i/<code>. Made the first time they share it. */
+  inviteCodes: defineTable({
+    userId: v.id("users"),
+    code: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_code", ["code"])
+    .index("by_userId", ["userId"]),
+  /**
+   * Who brought whom. One per invitee. "earned" paid the inviter a credit (at
+   * most 5); "void" is past the cap, or the inviter or invitee is gone.
+   */
+  referrals: defineTable({
+    inviterId: v.id("users"),
+    inviteeId: v.id("users"),
+    source: v.union(v.literal("link"), v.literal("seat")),
+    status: v.union(v.literal("pending"), v.literal("earned"), v.literal("void")),
+    createdAt: v.number(),
+  })
+    .index("by_inviteeId", ["inviteeId"])
+    .index("by_inviterId_and_status", ["inviterId", "status"]),
+  /** Lookup for /s/<token>; the seat itself lives on the request's party. */
+  seatLinks: defineTable({
+    token: v.string(),
+    requestId: v.id("requests"),
+    createdAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_requestId", ["requestId"]),
 });

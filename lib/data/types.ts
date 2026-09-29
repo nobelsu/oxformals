@@ -53,11 +53,15 @@ export type SwapRequest = {
 };
 
 export type PartySeat = {
-  kind: "guest" | "friend";
+  kind: "guest" | "friend" | "link";
   userId?: string;
   payerId: string;
   method: RequestType;
   response?: "pending" | "in" | "out";
+  /** Link seats only. */
+  token?: string;
+  expiresAt?: number;
+  paysOwn?: boolean;
 };
 
 export type Wishlists = Record<string, string[]>;

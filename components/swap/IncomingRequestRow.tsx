@@ -13,6 +13,7 @@ import {
   paymentSummary,
   requestSeatCount,
   unconfirmedPayers,
+  unjoinedLinks,
 } from "@/lib/data/party";
 import { useData } from "@/components/data/useData";
 import { MessageUserButton } from "@/components/chat/MessageUserButton";
@@ -43,6 +44,7 @@ export function IncomingRequestRow({
   const isPending = request.status === "pending";
   const seatCount = requestSeatCount(request);
   const waitingOn = isPending ? unconfirmedPayers(request) : [];
+  const waitingToJoin = isPending ? unjoinedLinks(request) : 0;
   const statusLabel =
     request.status === "pending"
       ? "Pending"
@@ -84,6 +86,11 @@ export function IncomingRequestRow({
               Waiting for{" "}
               {waitingOn.map((id) => nameOf(id)?.split(" ")[0] ?? "a friend").join(" and ")}{" "}
               to confirm they&apos;re coming
+            </div>
+          ) : null}
+          {waitingToJoin > 0 ? (
+            <div className="text-xs leading-snug text-[var(--accent)]">
+              Waiting for {waitingToJoin === 1 ? "1 person" : `${waitingToJoin} people`} to join
             </div>
           ) : null}
           {requestType === "credit" ? (

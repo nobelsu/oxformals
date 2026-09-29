@@ -15,15 +15,22 @@ export const seatMethodValidator = v.union(
 );
 
 export const partySeatValidator = v.object({
-  kind: v.union(v.literal("guest"), v.literal("friend")),
-  /** The named friend; absent for an unnamed guest. */
+  kind: v.union(v.literal("guest"), v.literal("friend"), v.literal("link")),
+  /** The named friend; absent for an unnamed guest or an unclaimed link. */
   userId: v.optional(v.id("users")),
+  /** Who pays. For an unclaimed link: the requester, until it's claimed. */
   payerId: v.id("users"),
   method: seatMethodValidator,
-  /** A named friend's answer: "in" (confirmed) or "out" ("Not me"). */
+  /** A named friend's answer: "in" (confirmed) or "out" ("Not me"). A link's "out" = expired. */
   response: v.optional(
     v.union(v.literal("pending"), v.literal("in"), v.literal("out")),
   ),
+  /** Link seats (someone not on Oxformals yet): the token in /s/<token>. */
+  token: v.optional(v.string()),
+  /** Link seats: when an unclaimed link lapses. */
+  expiresAt: v.optional(v.number()),
+  /** Link seats: the new person pays for themselves (with a credit) once they join. */
+  paysOwn: v.optional(v.boolean()),
 });
 
 export type SeatMethod = "swap" | "pay" | "credit";
@@ -98,13 +105,20 @@ export function requestSeats(req: Doc<"requests">): Seat[] {
   for (const p of req.party ?? []) {
     if (p.response === "out") continue;
     seats.push({
-      kind: p.kind,
+      // An unclaimed link holds a seat like an unnamed guest (it can't be
+      // accepted until someone claims it).
+      kind: p.kind === "link" ? "guest" : p.kind,
       ...(p.userId ? { userId: p.userId } : {}),
       payerId: p.payerId,
       method: p.method,
     });
   }
   return seats;
+}
+
+/** Link seats nobody has claimed yet (and that haven't expired). */
+export function unclaimedLinkSeats(req: Pick<Doc<"requests">, "party">): number {
+  return (req.party ?? []).filter((p) => p.kind === "link" && p.response !== "out").length;
 }
 
 export function countByMethod(seats: Seat[], method: SeatMethod): number {

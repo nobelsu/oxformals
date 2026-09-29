@@ -16,9 +16,11 @@ export function partySuffix(
     .filter((p) => p.kind === "friend" && p.userId)
     .map((p) => nameOf(p.userId!)?.split(" ")[0] ?? "a friend");
   const guests = party.filter((p) => p.kind === "guest").length;
+  const invited = party.filter((p) => p.kind === "link").length;
   const parts = [
     ...friends,
     ...(guests > 0 ? [`${guests} guest${guests === 1 ? "" : "s"}`] : []),
+    ...(invited > 0 ? [`${invited} invited`] : []),
   ];
   const joined =
     parts.length <= 1
@@ -58,4 +60,9 @@ export function unconfirmedPayers(request: Pick<SwapRequest, "party">): string[]
         p.response !== "out",
     )
     .map((p) => p.userId!);
+}
+
+/** People invited by link who haven't joined yet (the host can't accept until they do). */
+export function unjoinedLinks(request: Pick<SwapRequest, "party">): number {
+  return (request.party ?? []).filter((p) => p.kind === "link" && p.response !== "out").length;
 }
