@@ -347,8 +347,13 @@ export function LoginForm() {
   async function onProfileSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    if (!name.trim() || !college.trim() || !year.trim() || !role.trim() || !whatsappPhone.trim()) {
-      setError("Add name, college, year, role, and phone number — it only takes a moment.");
+    if (!name.trim() || !college.trim() || !year.trim() || !role.trim()) {
+      setError("Add name, college, year and role — it only takes a moment.");
+      return;
+    }
+    const phoneDigits = whatsappPhone.replace(/\D/g, "").length;
+    if (whatsappPhone.trim() && (phoneDigits < 7 || phoneDigits > 15)) {
+      setError("That phone number doesn't look right — check it or leave it blank.");
       return;
     }
     const normalizedYear = year.trim();
@@ -877,11 +882,11 @@ export function LoginForm() {
             <div className="grid grid-cols-2 gap-4">
               <label className="flex flex-col gap-2">
                 <span className="text-sm text-[var(--ink-muted)]">
-                  Phone number
+                  Phone number{" "}
+                  <span className="text-[var(--ink-soft)]">(optional)</span>
                 </span>
                 <input
                   type="tel"
-                  required
                   value={whatsappPhone}
                   onChange={(e) => setWhatsappPhone(e.target.value)}
                   placeholder="+44 7..."
