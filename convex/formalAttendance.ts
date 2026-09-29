@@ -16,6 +16,7 @@ import { awardNewBadges } from "./badges";
 import { removeUserFromListingGroup } from "./listingMembership";
 import { getOrCreateCollegeStatsDoc } from "./collegeStats";
 import { optionalUserId, requireActiveUser } from "./guards";
+import { earnReferralOnAttendance } from "./referrals";
 
 const declinePresetValidator = v.string();
 
@@ -141,6 +142,7 @@ export const confirmAttendance = mutation({
       args.nowMs,
     );
     await awardNewBadges(ctx, userId, args.nowMs);
+    await earnReferralOnAttendance(ctx, listing._id, userId);
     return confirmationId;
   },
 });

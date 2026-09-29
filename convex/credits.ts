@@ -11,6 +11,7 @@ import {
 import { optionalUserId, requireActiveUser } from "./guards";
 import { listingIsPast } from "./listingHelpers";
 import { notify } from "./notify";
+import { maybeEarnReferral } from "./referrals";
 
 /**
  * Seat credits. Host a guest who pays with a credit and you earn one; spend
@@ -39,7 +40,7 @@ export async function creditBalance(
   return account ? account.balance : STARTER_CREDITS;
 }
 
-async function adjustCredits(
+export async function adjustCredits(
   ctx: MutationCtx,
   userId: Id<"users">,
   delta: number,
@@ -294,6 +295,15 @@ export const settleDueHolds = internalMutation({
           ...(listing ? { college: listing.college, dateTime: listing.dateTime } : {}),
         },
       });
+    }
+    // A settled seat is a completed formal, for the guest and the host.
+    const completed = new Set<Id<"users">>();
+    for (const hold of due) {
+      completed.add(hold.seatHolderId);
+      completed.add(hold.hostId);
+    }
+    for (const userId of completed) {
+      await maybeEarnReferral(ctx, userId);
     }
     if (due.length === 200) {
       await ctx.scheduler.runAfter(0, internal.credits.settleDueHolds, {});
