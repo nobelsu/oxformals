@@ -314,6 +314,8 @@ export const getWeekFormals = query({
     >();
     for (const listing of listings) {
       if (listing.seatsAvailable <= 0) continue;
+      // Your own formals and ones you've already joined aren't for browsing.
+      if (viewerId && listing.members.includes(viewerId)) continue;
       if (viewerId && listing.ownerUserId === viewerId) continue;
       const key = `${collegeToSlug(listing.college)}:${nightOf.format(new Date(listing.dateTime))}`;
       const bubble = bubbles.get(key);

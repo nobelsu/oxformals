@@ -53,6 +53,22 @@ test("this week's formals: one bubble per college per night, next 7 days only", 
   ]);
 });
 
+test("this week's formals leave out ones you're already going to", async () => {
+  const t = convexTest(schema, modules);
+  const s = await seed(t);
+  await t.run(async (ctx) => {
+    const magdalen = (await ctx.db.query("listings").collect()).find(
+      (l) => l.college === "Magdalen",
+    )!;
+    await ctx.db.patch(magdalen._id, {
+      members: [...magdalen.members, s.me],
+      seatsAvailable: 1,
+    });
+  });
+  const bubbles = await as(t, s.me).query(api.feed.getWeekFormals, {});
+  expect(bubbles.map((b) => b.college)).toEqual(["Keble"]);
+});
+
 test("the Following feed only shows people you follow", async () => {
   const t = convexTest(schema, modules);
   const s = await seed(t);
