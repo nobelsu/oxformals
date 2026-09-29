@@ -124,10 +124,10 @@ export default function PrivacyPage() {
           <p className="leading-relaxed text-[var(--ink-muted)]">
             Privacy requests and questions:{" "}
             <a
-              href="mailto:privacy@oxformals.com"
+              href="mailto:team@oxformals.com"
               className="underline underline-offset-4"
             >
-              privacy@oxformals.com
+              team@oxformals.com
             </a>
           </p>
         </section>

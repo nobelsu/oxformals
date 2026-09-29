@@ -124,10 +124,10 @@ export default function TermsPage() {
           <p className="leading-relaxed text-[var(--ink-muted)]">
             Terms questions:{" "}
             <a
-              href="mailto:legal@oxformals.com"
+              href="mailto:team@oxformals.com"
               className="underline underline-offset-4"
             >
-              legal@oxformals.com
+              team@oxformals.com
             </a>
           </p>
         </section>
