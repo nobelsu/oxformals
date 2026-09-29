@@ -28,8 +28,10 @@ Mockup: `notifications.html` (bell panel, alerts prompt, settings grid).
   indexes `by_userId`, `by_endpoint`.
 - `users.notificationPrefs?: { push: Record<category, boolean>, email:
   Record<category, boolean> }`. Absent = defaults: push on for all four;
-  email on for bookings and invites, off for social and credits. If the legacy
-  `emailNotifications === false`, all email defaults are off.
+  email on for bookings, invites and credits (so "new formal at a college you
+  want to go to" and review reminders stay on for existing users), off for
+  social. If the legacy `emailNotifications === false`, all email defaults are
+  off.
   `pushChatAlerts` keeps controlling chat pushes on mobile; web chat pushes
   follow `push.social`.
 
@@ -96,7 +98,10 @@ send a web push, gated by `push.social`.
 
 ### Housekeeping
 
-Daily cron deletes notifications older than 90 days (batched).
+Daily cron deletes notifications older than 90 days (batched). Deleting an
+account (`accountDeletion.purgeUserContent`) deletes the person's
+notifications, browser push subscriptions, invite code and seat links, and
+voids referrals where they are the inviter or invitee.
 
 ### Tests
 

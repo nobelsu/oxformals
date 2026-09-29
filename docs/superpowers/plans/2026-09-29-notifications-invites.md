@@ -21,7 +21,7 @@
 - Notification data model (verbatim from spec): `notifications { userId, category, kind, actorId?, listingId?, requestId?, data?, dedupeKey, readAt?, createdAt }`; categories `bookings | invites | social | credits`; indexes `by_userId_and_createdAt`, `by_userId_and_readAt`, `by_userId_and_dedupeKey`, `by_createdAt`. `webPushSubscriptions { userId, endpoint, p256dh, auth, createdAt }`, indexes `by_userId`, `by_endpoint`.
 - Kinds (fixed): bookings `request_received`, `request_accepted`, `request_declined`, `formal_cancelled`, `swap_undone`; invites `party_invite`, `party_response`, `seat_link_claimed`; social `new_follower`, `follow_request`, `now_friends`, `invite_joined`; credits `credit_earned`, `credit_paid_out`, `formal_tomorrow`, `wishlist_listing`.
 - Dedupe: same `dedupeKey` for the same user within 24h is skipped.
-- Pref defaults when `notificationPrefs` is absent: push on for all four categories; email on for bookings and invites, off for social and credits; if legacy `emailNotifications === false`, all email off. `pushChatAlerts` keeps controlling Expo chat pushes; web chat pushes follow `push.social`.
+- Pref defaults when `notificationPrefs` is absent: push on for all four categories; email on for bookings, invites and credits, off for social; if legacy `emailNotifications === false`, all email off. `pushChatAlerts` keeps controlling Expo chat pushes; web chat pushes follow `push.social`.
 - Chat messages never create bell rows.
 - Retention: notifications older than 90 days are deleted daily (batched). Formal reminders at 09:00 London.
 - UI: calm colours. No tinted unread rows, only a small accent dot. Ink primary buttons (`bg-[var(--ink)] text-[var(--bg)]`), outline secondary (`border-[var(--ink)] bg-[var(--paper)]`). Outlined bell. No emojis. Short copy. No dashed or dotted lines. Theme CSS vars only (`--bg`, `--paper`, `--ink`, `--ink-muted`, `--accent`, plus the nav's `--nav-ink`/`--nav-bg`).
@@ -32,6 +32,33 @@
 - Group limits: `MAX_GUESTS` is 4 (`convex/seats.ts`, derived from `MAX_GROUP_SIZE` 6 in `convex/groupSize.ts`). Link seats count towards it.
 - Tests never run scheduled functions (they call web-push, Expo and Resend). Task 1 turns fake timers on for every test file.
 - Seat links: 48h expiry; invite cookie 30 days; invite codes 6 characters from `abcdefghjkmnpqrstuvwxyz23456789`; referral cap 5 earned per inviter; PYMK score = 3 × mutual friends + 2 × shared formals + 1 × same college, limit 10.
+
+---
+
+## Amendments after approval (2026-09-29)
+
+These override anything below that disagrees.
+
+1. **Email defaults:** on for bookings, invites **and credits**; off only for
+   social. Legacy `emailNotifications === false` still turns every email
+   default off. So wishlist ("Want to go") and review-reminder emails stay on
+   for existing users. `resolvePrefs` and the tests below are updated to match.
+2. **Email template exists:** `convex/emailTemplate.ts` (`renderEmail` /
+   `renderEmailText`, `EmailContent`) and `convex/emailAssets.ts`. Formal
+   notices already use it (`swapLinks.sendFormalNotices` with `eyebrow` /
+   `listingId`). New emails reuse `emails.ts`'s `sendEmail` helper and the
+   existing `formatFormalWhen` style ("Thu 9 Oct · 7:15pm"); nothing is rebuilt.
+3. **Account deletion:** extend `accountDeletion.purgeUserContent` (batched,
+   idempotent) rather than `deleteMyAccount` to delete the deleted user's
+   `notifications`, `webPushSubscriptions`, `inviteCodes` and the `seatLinks`
+   of their requests, and to void (`status: "void"`) pending referrals where
+   they are inviter or invitee.
+4. **Privacy:** actors and PYMK people that are private accounts the viewer
+   can't see are shown through `guards.sanitizeLimitedUser` (no avatar).
+5. **Copy:** the UI says "Want to go", never "wishlist". Tabs switch with
+   `components/ui/ShallowLink.tsx` where the existing code does.
+6. Where a "replace this" snippet no longer matches (copy sweep, GDPR pass,
+   ShallowLink), apply the equivalent change to the current code.
 
 ---
 
@@ -71,8 +98,8 @@
 
 These resolve gaps in the spec; each is marked where it's implemented.
 
-1. **Wishlist emails go off by default.** `wishlist_listing` is in `credits`, whose email default is off, so existing users stop getting wishlist emails unless they turn "Credits & reminders" email on. This is what the spec's defaults say.
-2. **Review-reminder emails** (not in the spec) follow `email.credits` once a user has saved new prefs; until then they keep the legacy `emailNotifications` switch (`emailNotificationsEnabled`, Task 4).
+1. **Want-to-go (wishlist) emails stay on by default.** `wishlist_listing` is in `credits`, whose email default is on (amendment 1), so existing users keep getting them unless they turn "Credits & reminders" email off.
+2. **Review-reminder emails** (not in the spec) follow `email.credits` once a user has saved new prefs; until then they keep the legacy `emailNotifications` switch (default on, `emailNotificationsEnabled`, Task 4).
 3. **Which kinds email:** `request_received` (existing template), `wishlist_listing` (existing template), and on the shared template `party_invite`, `party_response`, `formal_cancelled`, `swap_undone`, `request_accepted` (replaces the "Your swap is on" notice). Everything else is bell + push only.
 4. **Formal notices without a kind** — "You were removed from a formal" and "Your swap partner left" — stay as transactional `sendFormalNotices` emails, unchanged.
 5. **`request_declined`** is also sent when a request is auto-declined because the formal filled up (`declinePendingWhenFull`), not only on the host's explicit decline.
@@ -151,10 +178,10 @@ import { emailAllowed, pushAllowed, resolvePrefs } from "./notificationPrefs";
 import { categoryOf, NOTIFICATION_KINDS } from "./notificationKinds";
 
 describe("notification prefs", () => {
-  test("defaults: push everything, email bookings and invites", () => {
+  test("defaults: push everything, email all but social", () => {
     expect(resolvePrefs({})).toEqual({
       push: { bookings: true, invites: true, social: true, credits: true },
-      email: { bookings: true, invites: true, social: false, credits: false },
+      email: { bookings: true, invites: true, social: false, credits: true },
     });
   });
 
@@ -317,8 +344,8 @@ type PrefsUser = Partial<
 >;
 
 /**
- * Saved prefs, or the defaults: push on for everything; email on for bookings
- * and invites only. Someone who had switched email off (legacy
+ * Saved prefs, or the defaults: push on for everything; email on for all but
+ * social. Someone who had switched email off (legacy
  * `emailNotifications: false`) starts with every email off.
  */
 export function resolvePrefs(user: PrefsUser): NotificationPrefs {
@@ -326,7 +353,7 @@ export function resolvePrefs(user: PrefsUser): NotificationPrefs {
   const emailOn = user.emailNotifications !== false;
   return {
     push: { bookings: true, invites: true, social: true, credits: true },
-    email: { bookings: emailOn, invites: emailOn, social: false, credits: false },
+    email: { bookings: emailOn, invites: emailOn, social: false, credits: emailOn },
   };
 }
 
@@ -2038,7 +2065,7 @@ describe("bell", () => {
     });
     expect(await as(t, me).query(api.notifications.getMyNotificationPrefs, {})).toEqual({
       push: { bookings: true, invites: true, social: true, credits: false },
-      email: { bookings: true, invites: true, social: true, credits: false },
+      email: { bookings: true, invites: true, social: true, credits: true },
     });
   });
 
@@ -4526,7 +4553,7 @@ In `components/SettingsModal.tsx`:
 Run: `npx tsc --noEmit && npm run lint`
 Expected: no errors (no unused variables left in `SettingsModal.tsx`).
 
-In `npm run dev`: Settings shows "Notifications" with a Push / Email grid for Bookings, Group invites, Social, Credits & reminders; defaults are push all on, email on for the first two. Toggling updates instantly and survives a reload. Switches are ink/paper, not accent.
+In `npm run dev`: Settings shows "Notifications" with a Push / Email grid for Bookings, Group invites, Social, Credits & reminders; defaults are push all on, email on for all but Social. Toggling updates instantly and survives a reload. Switches are ink/paper, not accent.
 
 - [ ] **Step 4: Commit**
 
