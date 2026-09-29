@@ -7,7 +7,8 @@ import {
   internalQuery,
   mutation,
 } from "./_generated/server";
-import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { deliverExpoPushMessages } from "./expoPush";
 import {
   formatListingDate,
   formatListingTypeLabel,
@@ -15,7 +16,6 @@ import {
 import { requireActiveUser } from "./guards";
 
 const PUSH_PREVIEW_MAX_LENGTH = 120;
-const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 
 /** Must match src/lib/push/chatNotificationCategory.ts */
 const CHAT_PUSH_CATEGORY_ID = "chat_reply";
@@ -53,6 +53,7 @@ const pushPayloadValidator = v.union(
   }),
 );
 
+/** A chat or "Want to go" push for the phone app (see pushMessageValidator). */
 type PushMessage = {
   to: string;
   title: string;
@@ -64,10 +65,6 @@ type PushMessage = {
   channelId?: string;
   collapseId?: string;
 };
-
-type ExpoPushTicket =
-  | { status: "ok"; id?: string }
-  | { status: "error"; message?: string; details?: { error?: string } };
 
 function conversationKind(convo: Doc<"conversations">): "dm" | "group" {
   if (convo.kind === "group") return "group";
@@ -166,55 +163,6 @@ async function dedupePushTokenRows(
     await ctx.db.delete(dup._id);
   }
   return primary;
-}
-
-async function deliverExpoPushMessages(
-  ctx: ActionCtx,
-  messages: PushMessage[],
-): Promise<void> {
-  if (messages.length === 0) return;
-
-  const response = await fetch(EXPO_PUSH_URL, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Accept-Encoding": "gzip, deflate",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(messages),
-  });
-
-  if (!response.ok) {
-    console.error(
-      "deliverExpoPushMessages: Expo API error",
-      response.status,
-      await response.text(),
-    );
-    return;
-  }
-
-  const result = (await response.json()) as { data?: ExpoPushTicket[] };
-  const tickets = result.data ?? [];
-  const invalidTokens: string[] = [];
-
-  for (let i = 0; i < tickets.length; i++) {
-    const ticket = tickets[i];
-    if (ticket.status === "error") {
-      const err = ticket.details?.error;
-      if (err === "DeviceNotRegistered") {
-        const msg = messages[i];
-        if (msg) invalidTokens.push(msg.to);
-      } else {
-        console.error("deliverExpoPushMessages: ticket error", ticket);
-      }
-    }
-  }
-
-  if (invalidTokens.length > 0) {
-    await ctx.runMutation(internal.pushNotifications.pruneInvalidPushTokens, {
-      tokens: invalidTokens,
-    });
-  }
 }
 
 export const registerPushToken = mutation({

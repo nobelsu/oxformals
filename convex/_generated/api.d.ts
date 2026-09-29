@@ -30,6 +30,7 @@ import type * as emailAssets from "../emailAssets.js";
 import type * as emailNotifications from "../emailNotifications.js";
 import type * as emailTemplate from "../emailTemplate.js";
 import type * as emails from "../emails.js";
+import type * as expoPush from "../expoPush.js";
 import type * as feed from "../feed.js";
 import type * as feedBookmarks from "../feedBookmarks.js";
 import type * as feedComments from "../feedComments.js";
@@ -45,8 +46,12 @@ import type * as listingMembership from "../listingMembership.js";
 import type * as listings from "../listings.js";
 import type * as migrations from "../migrations.js";
 import type * as moderation from "../moderation.js";
+import type * as notificationCopy from "../notificationCopy.js";
+import type * as notificationDelivery from "../notificationDelivery.js";
 import type * as notificationKinds from "../notificationKinds.js";
 import type * as notificationPrefs from "../notificationPrefs.js";
+import type * as notifications from "../notifications.js";
+import type * as notify from "../notify.js";
 import type * as partyInvites from "../partyInvites.js";
 import type * as password from "../password.js";
 import type * as profileActivity from "../profileActivity.js";
@@ -58,7 +63,9 @@ import type * as swapLinks from "../swapLinks.js";
 import type * as uiFont from "../uiFont.js";
 import type * as uploadOwnership from "../uploadOwnership.js";
 import type * as userVerification from "../userVerification.js";
+import type * as userVisibility from "../userVisibility.js";
 import type * as users from "../users.js";
+import type * as webPushCore from "../webPushCore.js";
 
 import type {
   ApiFromModules,
@@ -89,6 +96,7 @@ declare const fullApi: ApiFromModules<{
   emailNotifications: typeof emailNotifications;
   emailTemplate: typeof emailTemplate;
   emails: typeof emails;
+  expoPush: typeof expoPush;
   feed: typeof feed;
   feedBookmarks: typeof feedBookmarks;
   feedComments: typeof feedComments;
@@ -104,8 +112,12 @@ declare const fullApi: ApiFromModules<{
   listings: typeof listings;
   migrations: typeof migrations;
   moderation: typeof moderation;
+  notificationCopy: typeof notificationCopy;
+  notificationDelivery: typeof notificationDelivery;
   notificationKinds: typeof notificationKinds;
   notificationPrefs: typeof notificationPrefs;
+  notifications: typeof notifications;
+  notify: typeof notify;
   partyInvites: typeof partyInvites;
   password: typeof password;
   profileActivity: typeof profileActivity;
@@ -117,7 +129,9 @@ declare const fullApi: ApiFromModules<{
   uiFont: typeof uiFont;
   uploadOwnership: typeof uploadOwnership;
   userVerification: typeof userVerification;
+  userVisibility: typeof userVisibility;
   users: typeof users;
+  webPushCore: typeof webPushCore;
 }>;
 
 /**
