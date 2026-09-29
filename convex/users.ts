@@ -12,6 +12,7 @@ import {
   requireVerifiedUser,
   sanitizePublicUser,
 } from "./guards";
+import { canSeeActivity } from "./follows";
 
 const avatarValue = v.union(
   v.object({ kind: v.literal("preset"), id: v.string() }),
@@ -357,6 +358,11 @@ export const getPublicProfile = query({
         subject: user.subject ?? "",
         uiFont: user.uiFont ?? DEFAULT_UI_FONT,
         avatar: user.avatar,
+        // Colleges they want to go to — part of their activity, so private
+        // accounts only show it to followers.
+        wishlistColleges: (await canSeeActivity(ctx, viewerId, user))
+          ? (user.wishlistColleges ?? [])
+          : [],
       },
       listings: await Promise.all(
         activeListings
