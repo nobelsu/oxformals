@@ -100,7 +100,7 @@ export function BrowseFiltersModal({
                 onClick={() => onCollegeChange(MY_FORMALS_SENTINEL)}
                 className={optionClass(collegeFilter === MY_FORMALS_SENTINEL)}
               >
-                My favourites
+                Want to go
               </button>
             ) : null}
             {filteredColleges.map((name) => (

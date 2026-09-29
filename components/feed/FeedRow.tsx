@@ -322,10 +322,10 @@ export function FeedRow({ item, onOpenListing }: Props) {
             aria-pressed={favourited}
             aria-label={
               favourited
-                ? `Remove ${college} from favourites`
-                : `Add ${college} to favourites`
+                ? `Remove ${college} from Want to go`
+                : `Want to go to ${college}`
             }
-            title={favourited ? "In your favourites" : "Favourite this college"}
+            title={favourited ? "On Want to go" : "Want to go"}
             className={`transition-colors ${
               favourited
                 ? "text-[var(--accent)]"

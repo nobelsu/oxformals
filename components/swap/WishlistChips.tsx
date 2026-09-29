@@ -97,7 +97,7 @@ export function WishlistChips({
           id="wishlist-heading"
           className="font-display text-xl uppercase leading-none tracking-wide text-[var(--ink)]"
         >
-          Colleges you want to go to
+          Want to go
         </h2>
         <input
           type="text"

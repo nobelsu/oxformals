@@ -84,7 +84,7 @@ function CollegeTile({ entry, sort }: { entry: Entry; sort: Sort }) {
       {isAuthenticated ? (
         <button
           type="button"
-          aria-label={wished ? `Remove ${entry.college} from your wishlist` : `Add ${entry.college} to your wishlist`}
+          aria-label={wished ? `Remove ${entry.college} from Want to go` : `Want to go to ${entry.college}`}
           aria-pressed={wished}
           onClick={() => {
             setOptimistic(!wished);
@@ -157,7 +157,7 @@ export function CollegesTab() {
           ))}
         </div>
       ) : shown.length === 0 ? (
-        <EmptyState icon="search" title="No colleges match" body={`Nothing called "${query.trim()}".`} />
+        <EmptyState icon="search" title="No colleges match" />
       ) : (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {shown.map((entry) => (

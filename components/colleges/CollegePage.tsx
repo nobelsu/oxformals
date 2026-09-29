@@ -109,7 +109,7 @@ export function CollegePage({ college }: Props) {
                 className="absolute right-3 top-3 inline-flex cursor-pointer items-center gap-1.5 rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--paper)] px-3 py-1.5 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--bg)]"
               >
                 <HeartIcon filled={wished} />
-                {wished ? "On your wishlist" : "Want to go"}
+                Want to go
               </button>
             ) : null}
           </div>
@@ -182,7 +182,7 @@ export function CollegePage({ college }: Props) {
             title="No reviews yet"
             body={
               overview && overview.friendsBeen > 0
-                ? `${overview.friendsBeen} of your friends ${overview.friendsBeen === 1 ? "has" : "have"} been. Ask them to leave one.`
+                ? `${overview.friendsBeen} ${overview.friendsBeen === 1 ? "friend has" : "friends have"} been.`
                 : "Be the first after a formal here."
             }
           />
