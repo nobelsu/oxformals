@@ -29,6 +29,12 @@ export default defineSchema({
     instagramHandle: v.optional(v.string()),
     whatsappPhone: v.optional(v.string()),
     dietaryRequirements: v.optional(v.string()),
+    /**
+     * When the user opted in to sharing dietary requirements with their formal
+     * matches. New text is only stored with this set; legacy values without it
+     * are kept and re-confirmed on the next edit.
+     */
+    dietaryConsentAt: v.optional(v.number()),
     subject: v.optional(v.string()),
     wishlistColleges: v.optional(v.array(v.string())),
     emailNotifications: v.optional(v.boolean()),
@@ -214,13 +220,16 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_reviewId_and_userId", ["reviewId", "userId"])
-    .index("by_reviewId", ["reviewId"]),
+    .index("by_reviewId", ["reviewId"])
+    .index("by_userId", ["userId"]),
   collegeReviewReports: defineTable({
     reviewId: v.id("collegeReviews"),
     reporterUserId: v.id("users"),
     reason: v.optional(v.string()),
     createdAt: v.number(),
-  }).index("by_reviewId", ["reviewId"]),
+  })
+    .index("by_reviewId", ["reviewId"])
+    .index("by_reporterUserId", ["reporterUserId"]),
   collegeStats: defineTable({
     college: v.string(),
     reviewCount: v.number(),
@@ -263,7 +272,9 @@ export default defineSchema({
     targetKey: v.string(),
     userId: v.id("users"),
     text: v.string(),
-  }).index("by_targetKey", ["targetKey"]),
+  })
+    .index("by_targetKey", ["targetKey"])
+    .index("by_userId", ["userId"]),
   /** Likes on campus-feed items, keyed by the same stable `targetKey`. */
   feedLikes: defineTable({
     targetKey: v.string(),
@@ -277,10 +288,12 @@ export default defineSchema({
     reportedUserId: v.id("users"),
     reporterUserId: v.id("users"),
     bioText: v.string(),
-  }).index("by_reportedUserId_and_reporterUserId", [
-    "reportedUserId",
-    "reporterUserId",
-  ]),
+  })
+    .index("by_reportedUserId_and_reporterUserId", [
+      "reportedUserId",
+      "reporterUserId",
+    ])
+    .index("by_reporterUserId", ["reporterUserId"]),
   /** Per-user saved feed items, keyed by the same stable `targetKey`. */
   feedBookmarks: defineTable({
     targetKey: v.string(),
@@ -316,7 +329,8 @@ export default defineSchema({
         v.literal("casual"),
       ),
     ),
-    updatedBy: v.id("users"),
+    /** Unset when the last editor deletes their account. */
+    updatedBy: v.optional(v.id("users")),
     updatedAt: v.number(),
   }).index("by_college", ["college"]),
   /** Short moderated tips about a college, from its own members. */

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
+  internalMutation,
   mutation,
   query,
   type MutationCtx,
@@ -18,6 +19,9 @@ import { refundListingCredits } from "./credits";
 
 /** Per-table bound; an account never comes close to this many rows. */
 const MAX_ROWS = 1000;
+
+/** Rows changed per `purgeUserContent` run; it reschedules itself until done. */
+const PURGE_BATCH = 200;
 
 type Notice = {
   kind: "hostLeft" | "guestLeft";
@@ -245,12 +249,6 @@ export const deleteMyAccount = mutation({
         await ctx.db.delete(row._id);
       }
     }
-    // Upload bookkeeping only: review photos stay because the reviews stay.
-    const files = await ctx.db
-      .query("uploadedFiles")
-      .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", userId))
-      .take(MAX_ROWS);
-    for (const f of files) await ctx.db.delete(f._id);
 
     // 5. Sign-in records: accounts (+ codes) and sessions (+ refresh tokens).
     const accounts = await ctx.db
@@ -264,6 +262,19 @@ export const deleteMyAccount = mutation({
         .take(MAX_ROWS);
       for (const c of codes) await ctx.db.delete(c._id);
       await ctx.db.delete(account._id);
+    }
+    // Failed sign-in counters are keyed by email (the account id).
+    const identifiers = new Set(
+      [user.email, ...accounts.map((a) => a.providerAccountId)].map(
+        normalizeEmail,
+      ),
+    );
+    for (const identifier of identifiers) {
+      const limits = await ctx.db
+        .query("authRateLimits")
+        .withIndex("identifier", (q) => q.eq("identifier", identifier))
+        .take(MAX_ROWS);
+      for (const row of limits) await ctx.db.delete(row._id);
     }
     const sessions = await ctx.db
       .query("authSessions")
@@ -284,6 +295,11 @@ export const deleteMyAccount = mutation({
       deletedAt: Date.now(),
     });
 
+    // 7. Everything they wrote or uploaded, in batches (see purgeUserContent).
+    await ctx.scheduler.runAfter(0, internal.accountDeletion.purgeUserContent, {
+      userId,
+    });
+
     if (notices.length > 0) {
       await ctx.scheduler.runAfter(
         0,
@@ -294,3 +310,158 @@ export const deleteMyAccount = mutation({
     return null;
   },
 });
+
+/**
+ * The rest of a deleted account's content, a batch at a time so a heavy user
+ * stays inside Convex's per-transaction limits. Each step spends from one
+ * budget of row writes; when it runs out, the mutation schedules itself again
+ * and every step re-checks what's left (all steps are idempotent).
+ *
+ * Deleted: feed comments, bio reports about or by them (they hold a copy of
+ * the bio), college tips, review votes and reports, party invites, the credit
+ * balance, and every uploaded file (review photos, menu PDFs).
+ * Blanked: free text on their requests and attendance "other" reasons; their
+ * id on a college guide they last edited.
+ * Kept on purpose (documented in the privacy policy): reviews (author shows as
+ * "Deleted user"), messages in other people's chats, credit holds (the ledger
+ * other people's balances depend on) and swap-break records (abuse history).
+ */
+export const purgeUserContent = internalMutation({
+  args: { userId: v.id("users") },
+  returns: v.null(),
+  handler: async (ctx, { userId }) => {
+    let budget = PURGE_BATCH;
+    const spent = () => budget <= 0;
+
+    // Reviews stay, their photos go (photos can show the person).
+    for await (const review of ctx.db
+      .query("collegeReviews")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))) {
+      if (spent()) break;
+      if (!review.imageIds?.length) continue;
+      for (const imageId of review.imageIds) {
+        if (await ctx.db.system.get("_storage", imageId)) {
+          await ctx.storage.delete(imageId);
+        }
+      }
+      await ctx.db.patch(review._id, { imageIds: undefined });
+      budget--;
+    }
+
+    // Uploaded blobs (the review photos above, menu PDFs) and their bookkeeping.
+    for await (const file of ctx.db
+      .query("uploadedFiles")
+      .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", userId))) {
+      if (spent()) break;
+      if (await ctx.db.system.get("_storage", file.storageId)) {
+        await ctx.storage.delete(file.storageId);
+      }
+      await ctx.db.delete(file._id);
+      budget--;
+    }
+
+    // Votes: undo their effect on the review's score, then delete.
+    for await (const vote of ctx.db
+      .query("collegeReviewVotes")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))) {
+      if (spent()) break;
+      const review = await ctx.db.get(vote.reviewId);
+      if (review) {
+        await ctx.db.patch(review._id, {
+          voteScore: (review.voteScore ?? 0) - vote.value,
+        });
+      }
+      await ctx.db.delete(vote._id);
+      budget--;
+    }
+
+    const deleteAll = async (
+      rows: AsyncIterable<{ _id: Id<TableWithRows> }>,
+    ) => {
+      for await (const row of rows) {
+        if (spent()) return;
+        await ctx.db.delete(row._id);
+        budget--;
+      }
+    };
+    await deleteAll(
+      ctx.db
+        .query("feedComments")
+        .withIndex("by_userId", (q) => q.eq("userId", userId)),
+    );
+    await deleteAll(
+      ctx.db
+        .query("bioReports")
+        .withIndex("by_reportedUserId_and_reporterUserId", (q) =>
+          q.eq("reportedUserId", userId),
+        ),
+    );
+    await deleteAll(
+      ctx.db
+        .query("bioReports")
+        .withIndex("by_reporterUserId", (q) => q.eq("reporterUserId", userId)),
+    );
+    await deleteAll(
+      ctx.db
+        .query("collegeTips")
+        .withIndex("by_userId", (q) => q.eq("userId", userId)),
+    );
+    await deleteAll(
+      ctx.db
+        .query("collegeReviewReports")
+        .withIndex("by_reporterUserId", (q) => q.eq("reporterUserId", userId)),
+    );
+    await deleteAll(
+      ctx.db
+        .query("partyInvites")
+        .withIndex("by_userId", (q) => q.eq("userId", userId)),
+    );
+    await deleteAll(
+      ctx.db
+        .query("creditAccounts")
+        .withIndex("by_userId", (q) => q.eq("userId", userId)),
+    );
+
+    // Free text they wrote on requests other people still see.
+    for await (const r of ctx.db
+      .query("requests")
+      .withIndex("by_fromUserId", (q) => q.eq("fromUserId", userId))) {
+      if (spent()) break;
+      if (r.message === "") continue;
+      await ctx.db.patch(r._id, { message: "" });
+      budget--;
+    }
+    for await (const row of ctx.db
+      .query("formalAttendanceConfirmations")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))) {
+      if (spent()) break;
+      if (row.reasonOther === undefined) continue;
+      await ctx.db.patch(row._id, { reasonOther: undefined });
+      budget--;
+    }
+    // One guide per college, so this table is small.
+    for (const guide of await ctx.db.query("collegeGuides").take(MAX_ROWS)) {
+      if (spent()) break;
+      if (guide.updatedBy !== userId) continue;
+      await ctx.db.patch(guide._id, { updatedBy: undefined });
+      budget--;
+    }
+
+    if (spent()) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.accountDeletion.purgeUserContent,
+        { userId },
+      );
+    }
+    return null;
+  },
+});
+
+type TableWithRows =
+  | "feedComments"
+  | "bioReports"
+  | "collegeTips"
+  | "collegeReviewReports"
+  | "partyInvites"
+  | "creditAccounts";

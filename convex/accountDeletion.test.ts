@@ -185,9 +185,9 @@ describe("deleteMyAccount", () => {
       ] as const) {
         expect(await ctx.db.query(table).collect()).toHaveLength(0);
       }
-      const scheduled = await ctx.db.system
-        .query("_scheduled_functions")
-        .collect();
+      const scheduled = (
+        await ctx.db.system.query("_scheduled_functions").collect()
+      ).filter((f) => f.name.includes("sendAccountDeletionNotices"));
       expect(scheduled).toHaveLength(1);
       expect(scheduled[0].args[0]).toEqual({
         notices: expect.arrayContaining([
@@ -237,4 +237,269 @@ test("notice copy", () => {
   ).toContain(
     "A guest has left your Keble · Sun 3 Nov · 7pm formal, so a seat is free again.",
   );
+});
+
+describe("deleteMyAccount purges user content", () => {
+  async function seedContent(t: ReturnType<typeof convexTest>) {
+    return await t.run(async (ctx) => {
+      const me = await ctx.db.insert("users", {
+        name: "Me",
+        email: "me@ox.ac.uk",
+        bio: "I like formals",
+      });
+      const other = await ctx.db.insert("users", {
+        name: "Other",
+        email: "other@ox.ac.uk",
+        bio: "Other bio",
+      });
+      await ctx.db.insert("authAccounts", {
+        userId: me,
+        provider: "resend-otp",
+        providerAccountId: "me@ox.ac.uk",
+      });
+      const base = { groupSize: 2 as const, year: "2", role: "UG", message: "" };
+      const past = await ctx.db.insert("listings", {
+        ...base,
+        ownerUserId: other,
+        college: "Exeter",
+        dateTime: PAST,
+        seatsAvailable: 0,
+        members: [other, me],
+        status: "expired",
+      });
+      const request = await ctx.db.insert("requests", {
+        fromUserId: me,
+        toUserId: other,
+        targetListingId: past,
+        message: "Hi, I'm Me from Keble",
+        status: "accepted",
+      });
+
+      const photo = await ctx.storage.store(new Blob(["photo"]));
+      const menu = await ctx.storage.store(new Blob(["menu"]));
+      for (const storageId of [photo, menu]) {
+        await ctx.db.insert("uploadedFiles", {
+          storageId,
+          ownerUserId: me,
+          createdAt: 1,
+        });
+      }
+      const myReview = await ctx.db.insert("collegeReviews", {
+        userId: me,
+        listingId: past,
+        college: "Exeter",
+        ratings: { food: 4, atmosphere: 4, value: 4, overall: 4 },
+        comment: "Lovely",
+        imageIds: [photo],
+        isAnonymous: false,
+        updatedAt: 1,
+      });
+      const theirReview = await ctx.db.insert("collegeReviews", {
+        userId: other,
+        listingId: past,
+        college: "Exeter",
+        ratings: { food: 3, atmosphere: 3, value: 3, overall: 3 },
+        isAnonymous: false,
+        updatedAt: 1,
+        voteScore: 1,
+      });
+      await ctx.db.insert("collegeReviewVotes", {
+        reviewId: theirReview,
+        userId: me,
+        value: 1,
+        updatedAt: 1,
+      });
+      await ctx.db.insert("collegeReviewReports", {
+        reviewId: theirReview,
+        reporterUserId: me,
+        reason: "spam",
+        createdAt: 1,
+      });
+      await ctx.db.insert("formalAttendanceConfirmations", {
+        listingId: past,
+        userId: me,
+        confirmedAt: 1,
+        attended: false,
+        reasonPreset: "other",
+        reasonOther: "I was ill with flu",
+      });
+      await ctx.db.insert("feedComments", {
+        targetKey: "review:x",
+        userId: me,
+        text: "Mine",
+      });
+      await ctx.db.insert("feedComments", {
+        targetKey: "review:x",
+        userId: other,
+        text: "Theirs",
+      });
+      await ctx.db.insert("bioReports", {
+        reportedUserId: me,
+        reporterUserId: other,
+        bioText: "I like formals",
+      });
+      await ctx.db.insert("bioReports", {
+        reportedUserId: other,
+        reporterUserId: me,
+        bioText: "Other bio",
+      });
+      await ctx.db.insert("collegeTips", {
+        college: "Keble",
+        userId: me,
+        text: "Sit near the window",
+        createdAt: 1,
+      });
+      const guide = await ctx.db.insert("collegeGuides", {
+        college: "Keble",
+        formalNights: ["Friday"],
+        updatedBy: me,
+        updatedAt: 1,
+      });
+      await ctx.db.insert("partyInvites", { requestId: request, userId: me });
+      await ctx.db.insert("creditAccounts", { userId: me, balance: 3 });
+      const hold = await ctx.db.insert("creditHolds", {
+        requestId: request,
+        listingId: past,
+        payerId: me,
+        hostId: other,
+        seatHolderId: me,
+        isGuest: false,
+        status: "paid",
+        releaseAt: 1,
+      });
+      await ctx.db.insert("authRateLimits", {
+        identifier: "me@ox.ac.uk",
+        lastAttemptTime: 1,
+        attemptsLeft: 5,
+      });
+      const conversation = await ctx.db.insert("conversations", {
+        kind: "dm",
+        lastMessageAt: 1,
+      });
+      const message = await ctx.db.insert("messages", {
+        conversationId: conversation,
+        senderUserId: me,
+        body: "See you there",
+      });
+      const swapBreak = await ctx.db.insert("swapBreaks", {
+        requestId: request,
+        brokenByUserId: me,
+        wrongedUserId: other,
+        listingId: past,
+        createdAt: 1,
+      });
+      return {
+        me,
+        other,
+        request,
+        photo,
+        menu,
+        myReview,
+        theirReview,
+        guide,
+        hold,
+        message,
+        swapBreak,
+      };
+    });
+  }
+
+  test("removes or blanks every personal row, keeps documented records", async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const s = await seedContent(t);
+    await t
+      .withIdentity({ subject: `${s.me}|session` })
+      .mutation(api.accountDeletion.deleteMyAccount, {
+        confirmEmail: "me@ox.ac.uk",
+      });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    await t.run(async (ctx) => {
+      const all = async <T extends Parameters<typeof ctx.db.query>[0]>(
+        table: T,
+      ) => await ctx.db.query(table).collect();
+
+      // Deleted outright.
+      expect((await all("feedComments")).map((c) => c.userId)).toEqual([
+        s.other,
+      ]);
+      expect(await all("bioReports")).toHaveLength(0);
+      expect(await all("collegeTips")).toHaveLength(0);
+      expect(await all("collegeReviewVotes")).toHaveLength(0);
+      expect(await all("collegeReviewReports")).toHaveLength(0);
+      expect(await all("partyInvites")).toHaveLength(0);
+      expect(await all("creditAccounts")).toHaveLength(0);
+      expect(await all("authRateLimits")).toHaveLength(0);
+      expect(await all("uploadedFiles")).toHaveLength(0);
+      expect(await ctx.db.system.get("_storage", s.photo)).toBeNull();
+      expect(await ctx.db.system.get("_storage", s.menu)).toBeNull();
+
+      // Kept but scrubbed.
+      const myReview = await ctx.db.get(s.myReview);
+      expect(myReview?.comment).toBe("Lovely");
+      expect(myReview?.imageIds).toBeUndefined();
+      expect((await ctx.db.get(s.theirReview))?.voteScore).toBe(0);
+      const [attendance] = await all("formalAttendanceConfirmations");
+      expect(attendance.reasonOther).toBeUndefined();
+      expect(attendance.reasonPreset).toBe("other");
+      expect((await ctx.db.get(s.request))?.message).toBe("");
+      expect((await ctx.db.get(s.guide))?.updatedBy).toBeUndefined();
+
+      // Documented retention.
+      expect(await ctx.db.get(s.hold)).not.toBeNull();
+      expect(await ctx.db.get(s.message)).not.toBeNull();
+      expect(await ctx.db.get(s.swapBreak)).not.toBeNull();
+    });
+    vi.useRealTimers();
+  });
+
+  test("the review of a deleted user reads as Deleted user", async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const s = await seedContent(t);
+    await t
+      .withIdentity({ subject: `${s.me}|session` })
+      .mutation(api.accountDeletion.deleteMyAccount, {
+        confirmEmail: "me@ox.ac.uk",
+      });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    const card = await t.query(api.share.getReviewShareCard, {
+      reviewId: s.myReview,
+    });
+    expect(card).toMatchObject({
+      authorFirstName: "Deleted user",
+      photoUrl: null,
+    });
+    vi.useRealTimers();
+  });
+
+  test("large volumes are purged across several batches", async () => {
+    vi.useFakeTimers();
+    const t = convexTest(schema, modules);
+    const me = await t.run(async (ctx) => {
+      const me = await ctx.db.insert("users", {
+        name: "Me",
+        email: "me@ox.ac.uk",
+      });
+      for (let i = 0; i < 450; i++) {
+        await ctx.db.insert("feedComments", {
+          targetKey: `review:${i}`,
+          userId: me,
+          text: `c${i}`,
+        });
+      }
+      return me;
+    });
+    await t
+      .withIdentity({ subject: `${me}|session` })
+      .mutation(api.accountDeletion.deleteMyAccount, {
+        confirmEmail: "me@ox.ac.uk",
+      });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await t.run(async (ctx) => {
+      expect(await ctx.db.query("feedComments").collect()).toHaveLength(0);
+    });
+    vi.useRealTimers();
+  });
 });
