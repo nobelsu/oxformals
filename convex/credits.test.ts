@@ -151,4 +151,34 @@ describe("seat credits", () => {
       await as(s.t, s.guest).query(api.credits.getMyHoldsForListing, { listingId: s.listing }),
     ).toEqual({ held: 0, disputed: 1 });
   });
+
+  test("'didn't happen' can't be reported before the formal", async () => {
+    const s = await setup();
+    const requestId = await requestWithCredit(s.t, s.guest, s.listing);
+    await as(s.t, s.host).mutation(api.listings.acceptRequest, { requestId });
+    await expect(
+      as(s.t, s.guest).mutation(api.credits.reportFormalDidntHappen, {
+        listingId: s.listing,
+      }),
+    ).rejects.toThrow(/hasn't happened yet/);
+    expect(
+      await as(s.t, s.guest).query(api.credits.getMyHoldsForListing, { listingId: s.listing }),
+    ).toEqual({ held: 1, disputed: 0 });
+  });
+
+  test("leaving before the formal refunds a disputed credit too", async () => {
+    const s = await setup();
+    const requestId = await requestWithCredit(s.t, s.guest, s.listing);
+    await as(s.t, s.host).mutation(api.listings.acceptRequest, { requestId });
+    // A dispute raised before the formal (as the old rules allowed).
+    await s.t.run(async (ctx) => {
+      const [hold] = await ctx.db.query("creditHolds").collect();
+      await ctx.db.patch(hold._id, { status: "disputed" });
+    });
+    await as(s.t, s.guest).mutation(api.listings.leaveGroup, { listingId: s.listing });
+    expect(await credits(s.t, s.guest)).toEqual({ balance: 1, spending: 0, earning: 0 });
+    expect(
+      await as(s.t, s.guest).query(api.credits.getMyHoldsForListing, { listingId: s.listing }),
+    ).toEqual({ held: 0, disputed: 0 });
+  });
 });

@@ -114,8 +114,9 @@ async function refundHold(ctx: MutationCtx, hold: Doc<"creditHolds">) {
 
 /**
  * A member's seat was taken back before the formal: refund the credits held
- * for it (and for any unnamed guests they brought). After the formal nothing
- * is refunded here — that's what "didn't happen" is for.
+ * for it (and for any unnamed guests they brought), including any already
+ * reported as disputed. After the formal nothing is refunded here — that's
+ * what "didn't happen" is for, and a dispute waits for the team.
  */
 export async function refundSeatHolderCredits(
   ctx: MutationCtx,
@@ -132,7 +133,7 @@ export async function refundSeatHolderCredits(
     .take(50);
   let refunded = 0;
   for (const hold of holds) {
-    if (hold.status !== "held") continue;
+    if (hold.status !== "held" && hold.status !== "disputed") continue;
     if (opts.guestsOnly && !hold.isGuest) continue;
     if (opts.limit !== undefined && refunded >= opts.limit) break;
     await refundHold(ctx, hold);
@@ -212,6 +213,12 @@ export const reportFormalDidntHappen = mutation({
   returns: v.null(),
   handler: async (ctx, { listingId }) => {
     const { userId } = await requireActiveUser(ctx);
+    const listing = await ctx.db.get(listingId);
+    if (listing && !listingIsPast(listing.dateTime, Date.now())) {
+      throw new Error(
+        "This formal hasn't happened yet. If you can't go, leave the group and your credit comes back.",
+      );
+    }
     const holds = await ctx.db
       .query("creditHolds")
       .withIndex("by_listingId", (q) => q.eq("listingId", listingId))
