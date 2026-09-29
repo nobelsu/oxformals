@@ -705,7 +705,7 @@ export function LoginForm() {
               />
             </label>
 
-            <label className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
               <span className="text-sm text-[var(--ink-muted)]">College</span>
               <div ref={collegePickerRef} className="relative">
                 <button
@@ -778,7 +778,7 @@ export function LoginForm() {
                   </div>
                 ) : null}
               </div>
-            </label>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <label className="flex flex-col gap-2">
@@ -797,7 +797,7 @@ export function LoginForm() {
                 />
               </label>
 
-              <label className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2">
                 <span className="text-sm text-[var(--ink-muted)]">Role</span>
                 <div ref={rolePickerRef} className="relative">
                   <button
@@ -853,7 +853,7 @@ export function LoginForm() {
                     </div>
                   ) : null}
                 </div>
-              </label>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">

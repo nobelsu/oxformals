@@ -537,7 +537,7 @@ function JoinRequestModal({
       ) : null}
 
       {swapSeats > 0 && swapListings.length > 0 ? (
-        <label className="mb-4 flex flex-col gap-2">
+        <div className="mb-4 flex flex-col gap-2">
           <span className="text-sm text-[var(--ink-muted)]">Your formal to offer</span>
           <OutlineCombobox
             open={offeringPickerOpen}
@@ -554,7 +554,7 @@ function JoinRequestModal({
             }}
             placeholder="Choose a listing"
           />
-        </label>
+        </div>
       ) : null}
 
       <label className="mb-6 flex flex-col gap-2">

@@ -254,7 +254,7 @@ export function ListFormalForm({
           ) : null}
         </label>
 
-        <label className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <span className="text-sm text-[var(--ink-muted)]">Listing type</span>
           <OutlineCombobox
             open={listingTypePickerOpen}
@@ -269,7 +269,7 @@ export function ListFormalForm({
             }}
             placeholder="Choose listing type"
           />
-        </label>
+        </div>
       </div>
 
       <div

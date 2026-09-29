@@ -146,7 +146,10 @@ export function OutlineCombobox({
         aria-expanded={open}
         aria-controls={listboxId}
         {...(ariaLabelledBy ? { "aria-labelledby": ariaLabelledBy } : {})}
-        onClick={() => setOpen(!open)}
+        onClick={(e) => {
+          e.preventDefault();
+          setOpen(!open);
+        }}
         className={triggerCls}
       >
         <span className={selectedLabel ? "" : "text-[var(--ink-soft)]"}>
@@ -199,7 +202,11 @@ export function OutlineCombobox({
                       type="button"
                       role="option"
                       aria-selected={selected}
-                      onClick={() => {
+                      onClick={(e) => {
+                        // Inside a <label>, the click would otherwise also
+                        // "activate" the label's first button (our trigger)
+                        // and reopen the list.
+                        e.preventDefault();
                         onChange(opt.value);
                         setOpen(false);
                       }}
