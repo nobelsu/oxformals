@@ -349,3 +349,25 @@ export const listMyFriends = query({
     return await publicUsers(ctx, friends);
   },
 });
+
+/**
+ * Both follow each other, whatever their privacy settings: used when both
+ * sides chose it (an invite link or a seat link). Pending rows are approved.
+ */
+export async function makeFriends(
+  ctx: MutationCtx,
+  a: Id<"users">,
+  b: Id<"users">,
+): Promise<void> {
+  for (const [followerId, followeeId] of [
+    [a, b],
+    [b, a],
+  ] as const) {
+    const row = await followRow(ctx, followerId, followeeId);
+    if (!row) {
+      await ctx.db.insert("follows", { followerId, followeeId, status: "active" });
+    } else if (row.status !== "active") {
+      await ctx.db.patch(row._id, { status: "active" });
+    }
+  }
+}
