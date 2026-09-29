@@ -39,6 +39,7 @@ import {
   type FormalNotice,
 } from "./swapLinks";
 import { normalizeCollegeName } from "../lib/data/colleges";
+import { roleNeedsYear } from "./roles";
 import {
   declinePendingRequestsForListing,
   deleteMenuPdfIfPresent,
@@ -354,9 +355,9 @@ export const createListing = mutation({
     if (!user) throw new Error("User profile not found");
 
     const college = user.college?.trim() ?? "";
-    const year = user.year?.trim() ?? "";
     const role = user.role?.trim() ?? "";
-    if (!college || !year || !role) {
+    const year = roleNeedsYear(role) ? (user.year?.trim() ?? "") : "";
+    if (!college || !role || (roleNeedsYear(role) && !year)) {
       throw new Error("Set college, year, and role in your profile before posting.");
     }
 

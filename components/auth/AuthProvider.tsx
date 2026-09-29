@@ -18,6 +18,7 @@ import type {
   User,
 } from "@/lib/auth/types";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
+import { roleNeedsYear } from "@/convex/roles";
 
 type Status = "hydrating" | "ready";
 const ADMIN_EMAIL = "admin@ox.ac.uk";
@@ -27,8 +28,8 @@ function profileComplete(doc: Doc<"users"> | null | undefined): boolean {
   return !!(
     doc.name?.trim() &&
     doc.college?.trim() &&
-    doc.year?.trim() &&
-    doc.role?.trim()
+    doc.role?.trim() &&
+    (doc.year?.trim() || !roleNeedsYear(doc.role))
   );
 }
 

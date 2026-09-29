@@ -12,7 +12,11 @@ import { useAuth } from "@/components/auth/useAuth";
 import { BIO_ERRORS, BioTextarea } from "@/components/ui/BioTextarea";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
-import { ROLE_OPTIONS } from "@/lib/data/roles";
+import {
+  roleAfterCollegeChange,
+  roleChoices,
+  roleNeedsYear,
+} from "@/lib/data/roles";
 import { Squiggle } from "@/components/ui/Squiggle";
 import { FieldError } from "@/components/ui/FieldError";
 
@@ -222,16 +226,20 @@ export function LoginForm() {
     );
   }, [collegeSearch, collegeSelectOptions]);
 
-  const roleSelectOptions = useMemo(() => {
-    const trimmedRole = role.trim();
-    if (
-      trimmedRole &&
-      !ROLE_OPTIONS.includes(trimmedRole as (typeof ROLE_OPTIONS)[number])
-    ) {
-      return [trimmedRole, ...ROLE_OPTIONS];
+  const roleSelectOptions = useMemo(
+    () => roleChoices(college, role),
+    [college, role],
+  );
+  const needsYear = roleNeedsYear(role);
+
+  function chooseCollege(next: string) {
+    setCollege(next);
+    const nextRole = roleAfterCollegeChange(next, role);
+    if (nextRole !== role) {
+      setRole(nextRole);
+      if (!roleNeedsYear(nextRole)) setYear("");
     }
-    return [...ROLE_OPTIONS];
-  }, [role]);
+  }
 
   async function onEmailSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -350,8 +358,12 @@ export function LoginForm() {
   async function onProfileSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    if (!name.trim() || !college.trim() || !year.trim() || !role.trim()) {
-      setError("Add your name, college, year and role.");
+    if (!name.trim() || !college.trim() || !role.trim() || (needsYear && !year.trim())) {
+      setError(
+        needsYear
+          ? "Add your name, college, year and role."
+          : "Add your name, college and role.",
+      );
       return;
     }
     const phoneDigits = whatsappPhone.replace(/\D/g, "").length;
@@ -359,8 +371,8 @@ export function LoginForm() {
       setError("That phone number doesn't look right — check it or leave it blank.");
       return;
     }
-    const normalizedYear = year.trim();
-    if (!/^\d+$/.test(normalizedYear)) {
+    const normalizedYear = needsYear ? year.trim() : "";
+    if (needsYear && !/^\d+$/.test(normalizedYear)) {
       setError("Year must be a number, e.g. 2.");
       return;
     }
@@ -759,7 +771,7 @@ export function LoginForm() {
                                 key={collegeOption}
                                 type="button"
                                 onClick={() => {
-                                  setCollege(collegeOption);
+                                  chooseCollege(collegeOption);
                                   setCollegeSearch(collegeOption);
                                   setCollegePickerOpen(false);
                                 }}
@@ -785,22 +797,24 @@ export function LoginForm() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <label className="flex flex-col gap-2">
-                <span className="text-sm text-[var(--ink-muted)]">Year</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="\d+"
-                  required
-                  value={year}
-                  onChange={(e) =>
-                    setYear(e.target.value.replace(/\D/g, "").slice(0, 2))
-                  }
-                  placeholder="2"
-                  className={inputCls}
-                />
-              </label>
+            <div className={needsYear ? "grid grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
+              {needsYear ? (
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm text-[var(--ink-muted)]">Year</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="\d+"
+                    required
+                    value={year}
+                    onChange={(e) =>
+                      setYear(e.target.value.replace(/\D/g, "").slice(0, 2))
+                    }
+                    placeholder="2"
+                    className={inputCls}
+                  />
+                </label>
+              ) : null}
 
               <div className="flex flex-col gap-2">
                 <span className="text-sm text-[var(--ink-muted)]">Role</span>
@@ -842,6 +856,7 @@ export function LoginForm() {
                               type="button"
                               onClick={() => {
                                 setRole(option);
+                                if (!roleNeedsYear(option)) setYear("");
                                 setRolePickerOpen(false);
                               }}
                               className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${

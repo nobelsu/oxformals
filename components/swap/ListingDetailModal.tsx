@@ -1,5 +1,6 @@
 "use client";
 
+import { formatYearRole } from "@/lib/data/roles";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -27,7 +28,6 @@ import { useAuth } from "@/components/auth/useAuth";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
   formatListingMetaLine,
-  formatYearLabel,
 } from "@/lib/data/format";
 import { listingRequestCta } from "@/lib/data/listingType";
 import type { User } from "@/lib/auth/types";
@@ -85,8 +85,7 @@ export function ListingDetailModal({
 
   const profileLine = [
     owner.college,
-    formatYearLabel(owner.year) || owner.year,
-    owner.role || listing.role,
+    formatYearRole(owner.year, owner.role || listing.role),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -150,9 +149,7 @@ export function ListingDetailModal({
             <FormalTypeTag formalType={listing.formalType} className="align-[-2px]" />
           </p>
           <p className="mt-0.5 text-sm text-[var(--ink-soft)]">
-            {[formatYearLabel(listing.year) || listing.year, listing.role]
-              .filter(Boolean)
-              .join(" · ")}
+            {formatYearRole(listing.year, listing.role)}
           </p>
           {canConfirmAttendance && isPast ? (
             <div className="mt-2 flex justify-end">

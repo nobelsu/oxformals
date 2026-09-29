@@ -1,5 +1,6 @@
 "use client";
 
+import { roleNeedsYear } from "@/lib/data/roles";
 import { useMutation } from "convex/react";
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { Chip } from "@/components/ui/Chip";
@@ -180,9 +181,11 @@ export function ListFormalForm({
 
     const year = profile.year.trim();
     const role = profile.role.trim();
-    if (!resolvedCollege || !year || !role) {
+    if (!resolvedCollege || !role || (roleNeedsYear(role) && !year)) {
       setError(
-        "Add your college, year and role to your profile first.",
+        roleNeedsYear(role)
+          ? "Add your college, year and role to your profile first."
+          : "Add your college and role to your profile first.",
       );
       return;
     }

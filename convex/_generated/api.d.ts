@@ -62,6 +62,7 @@ import type * as pushNotifications from "../pushNotifications.js";
 import type * as randomCode from "../randomCode.js";
 import type * as referrals from "../referrals.js";
 import type * as retention from "../retention.js";
+import type * as roles from "../roles.js";
 import type * as seatLinks from "../seatLinks.js";
 import type * as seats from "../seats.js";
 import type * as share from "../share.js";
@@ -135,6 +136,7 @@ declare const fullApi: ApiFromModules<{
   randomCode: typeof randomCode;
   referrals: typeof referrals;
   retention: typeof retention;
+  roles: typeof roles;
   seatLinks: typeof seatLinks;
   seats: typeof seats;
   share: typeof share;

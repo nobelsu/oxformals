@@ -15,6 +15,7 @@ import {
 } from "./guards";
 import { canSeeActivity, FOLLOW_LIST_LIMIT } from "./follows";
 import { visibleAvatar } from "./userVisibility";
+import { roleNeedsYear } from "./roles";
 
 const avatarValue = v.union(
   v.object({ kind: v.literal("preset"), id: v.string() }),
@@ -264,9 +265,10 @@ export const completeOnboarding = mutation({
 
     const name = args.name.trim();
     const college = args.college.trim();
-    const year = args.year.trim();
     const role = args.role.trim();
-    if (!name || !college || !year || !role) {
+    // Fellows have no year of study; store it empty.
+    const year = roleNeedsYear(role) ? args.year.trim() : "";
+    if (!name || !college || !role || (roleNeedsYear(role) && !year)) {
       throw new Error("Missing required profile fields.");
     }
 
@@ -352,6 +354,8 @@ export const patchProfile = mutation({
     }
     if (args.role !== undefined) {
       patch.role = args.role.trim() || undefined;
+      // Becoming a fellow clears the year of study.
+      if (patch.role && !roleNeedsYear(patch.role)) patch.year = undefined;
     }
     if (args.interests !== undefined) {
       patch.interests = args.interests;

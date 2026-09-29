@@ -1,5 +1,6 @@
 "use client";
 
+import { formatYearRole } from "@/lib/data/roles";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import type { User } from "@/lib/auth/types";
@@ -8,7 +9,6 @@ import {
   formatRowTail,
   formatListingTime,
   formatShortDate,
-  formatYearLabel,
 } from "@/lib/data/format";
 import type { Listing } from "@/lib/data/types";
 import { listingIsPast } from "@/lib/data/collegeReviewEligibility";
@@ -79,8 +79,7 @@ export function ListingRow({
   });
 
   const yearRoleLine = [
-    formatYearLabel(owner.year) || formatYearLabel(listing.year),
-    owner.role || listing.role,
+    formatYearRole(owner.year || listing.year, owner.role || listing.role),
     owner.subject,
   ]
     .filter(Boolean)
@@ -88,7 +87,9 @@ export function ListingRow({
   // A host with neither a year nor a role still gets an identifying line.
   const profileLine =
     yearRoleLine ||
-    [owner.college, formatYearLabel(owner.year)].filter(Boolean).join(" · ");
+    [owner.college, formatYearRole(owner.year, owner.role)]
+      .filter(Boolean)
+      .join(" · ");
 
   const showStatusInsteadOfCta =
     listing.status === "expired" ||

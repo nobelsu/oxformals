@@ -1,5 +1,6 @@
 "use client";
 
+import { formatYearRole } from "@/lib/data/roles";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
@@ -26,7 +27,6 @@ import type { Id } from "@/convex/_generated/dataModel";
 import {
   formatListingDate,
   formatListingMetaLine,
-  formatYearLabel,
 } from "@/lib/data/format";
 import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import {
@@ -272,9 +272,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
               })}
             </p>
             <p className="mt-1 text-sm text-[var(--ink-soft)]">
-              {[formatYearLabel(listing.year) || listing.year, listing.role]
-                .filter(Boolean)
-                .join(" · ")}
+              {formatYearRole(listing.year, listing.role)}
             </p>
             {listing.message ? (
               <p className="mt-4 text-sm italic text-[var(--ink-soft)]">&ldquo;{listing.message}&rdquo;</p>

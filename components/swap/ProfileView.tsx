@@ -1,5 +1,6 @@
 "use client";
 
+import { formatYearRole } from "@/lib/data/roles";
 import { BioText } from "@/components/profile/BioText";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -31,7 +32,6 @@ import {
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
 import type { GroupSize, Listing } from "@/lib/data/types";
-import { formatYearLabel } from "@/lib/data/format";
 import { TOTAL_BADGE_COUNT, badgeById } from "@/lib/data/badges";
 import type { ProfileActivityItem } from "@/lib/data/groupActivityByDay";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -257,8 +257,7 @@ export function ProfileView({
 
   const profileLine = [
     college,
-    formatYearLabel(year) || year,
-    role,
+    formatYearRole(year, role),
     subject,
   ]
     .filter(Boolean)

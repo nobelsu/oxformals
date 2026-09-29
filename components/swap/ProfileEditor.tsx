@@ -18,7 +18,11 @@ import {
 import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
 import type { AvatarSource } from "@/lib/auth/types";
 import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
-import { ROLE_OPTIONS } from "@/lib/data/roles";
+import {
+  roleAfterCollegeChange,
+  roleChoices,
+  roleNeedsYear,
+} from "@/lib/data/roles";
 import { FieldError } from "@/components/ui/FieldError";
 
 const TARGET_SIZE = 256;
@@ -224,13 +228,11 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     [collegeSelectOptions],
   );
 
-  const roleSelectOptions = useMemo(() => {
-    const role = roleDraft.trim();
-    if (role && !ROLE_OPTIONS.includes(role as (typeof ROLE_OPTIONS)[number])) {
-      return [role, ...ROLE_OPTIONS];
-    }
-    return [...ROLE_OPTIONS];
-  }, [roleDraft]);
+  const roleSelectOptions = useMemo(
+    () => roleChoices(collegeDraft, roleDraft),
+    [collegeDraft, roleDraft],
+  );
+  const needsYear = roleNeedsYear(roleDraft);
 
   const normalizedName = nameDraft.trim();
   const normalizedCollege = normalizeCollegeName(collegeDraft);
@@ -308,8 +310,8 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
         setError("Name cannot be empty.");
         return false;
       }
-      const normalizedYear = yearDraft.trim();
-      if (!/^\d+$/.test(normalizedYear)) {
+      const normalizedYear = roleNeedsYear(roleDraft) ? yearDraft.trim() : "";
+      if (roleNeedsYear(roleDraft) && !/^\d+$/.test(normalizedYear)) {
         setError("Year must be a number, e.g. 2.");
         return false;
       }
@@ -538,25 +540,32 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
                 options={collegeComboboxOptions}
                 onChange={(v) => {
                   setCollegeDraft(v);
+                  const nextRole = roleAfterCollegeChange(v, roleDraft);
+                  if (nextRole !== roleDraft) {
+                    setRoleDraft(nextRole);
+                    if (!roleNeedsYear(nextRole)) setYearDraft("");
+                  }
                   setCollegePickerOpen(false);
                 }}
                 placeholder="Choose college"
               />
             </Field>
-            <Field label="Year" htmlFor="profile-year">
-              <input
-                id="profile-year"
-                type="text"
-                inputMode="numeric"
-                pattern="\d+"
-                value={yearDraft}
-                onChange={(e) =>
-                  setYearDraft(e.target.value.replace(/\D/g, "").slice(0, 2))
-                }
-                placeholder="2"
-                className={UNDERLINE_INPUT}
-              />
-            </Field>
+            {needsYear ? (
+              <Field label="Year" htmlFor="profile-year">
+                <input
+                  id="profile-year"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d+"
+                  value={yearDraft}
+                  onChange={(e) =>
+                    setYearDraft(e.target.value.replace(/\D/g, "").slice(0, 2))
+                  }
+                  placeholder="2"
+                  className={UNDERLINE_INPUT}
+                />
+              </Field>
+            ) : null}
             <Field label="Role">
               <div ref={rolePickerRef} className="relative">
                 <button
@@ -600,6 +609,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
                             type="button"
                             onClick={() => {
                               setRoleDraft(option);
+                              if (!roleNeedsYear(option)) setYearDraft("");
                               setRolePickerOpen(false);
                             }}
                             className={`rounded-xl px-3 py-2 text-left text-sm transition-colors ${
@@ -617,7 +627,11 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
                 ) : null}
               </div>
             </Field>
-            <Field label="Subject" htmlFor="profile-subject">
+            <Field
+              label="Subject"
+              htmlFor="profile-subject"
+              className={needsYear ? "" : "col-span-2"}
+            >
               <input
                 id="profile-subject"
                 type="text"

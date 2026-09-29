@@ -1,5 +1,6 @@
 "use client";
 
+import { roleNeedsYear } from "@/lib/data/roles";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
@@ -95,7 +96,13 @@ function NextUpCard({
   cta: { label: string; onClick: () => void } | null;
 }) {
   const hostLine = host
-    ? [host.name.split(" ")[0], formatYearLabel(host.year) || formatYearLabel(listing.year)]
+    ? [
+        host.name.split(" ")[0],
+        // Students show their year here; a fellow shows "Fellow".
+        roleNeedsYear(host.role || listing.role)
+          ? formatYearLabel(host.year) || formatYearLabel(listing.year)
+          : host.role || listing.role,
+      ]
         .filter(Boolean)
         .join(" · ")
     : null;

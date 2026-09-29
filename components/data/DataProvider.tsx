@@ -1,5 +1,6 @@
 "use client";
 
+import { roleNeedsYear } from "@/lib/data/roles";
 import {
   createContext,
   useCallback,
@@ -210,7 +211,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const college = normalizeCollegeName(user.college);
       const year = user.year.trim();
       const role = user.role.trim();
-      if (!college || !year || !role) return null;
+      if (!college || !role || (roleNeedsYear(role) && !year)) return null;
       void college;
       void year;
       void role;
