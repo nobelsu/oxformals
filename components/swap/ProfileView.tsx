@@ -21,8 +21,9 @@ import { BadgeCaseModal } from "./BadgeCaseModal";
 import { BadgeArt } from "@/components/badges/BadgeArt";
 import {
   FollowButton,
-  FollowCounts,
+  FollowTags,
   PrivateActivityNotice,
+  ProfileCounts,
 } from "@/components/follows/FollowControls";
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
@@ -272,7 +273,7 @@ export function ProfileView({
   };
 
   const editProfileClass =
-    "shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]";
+    "flex-1 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-center text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]";
 
   const stats = activity?.stats;
   // The query returns raw enriched listing docs; ListingRow needs the
@@ -366,45 +367,8 @@ export function ProfileView({
           {profileLine ? (
             <p className="mt-0.5 text-sm text-[var(--ink-soft)]">{profileLine}</p>
           ) : null}
-          {followState ? (
-            <div className="mt-1">
-              <FollowCounts userId={userId} state={followState} />
-            </div>
-          ) : null}
+          {followState ? <FollowTags state={followState} /> : null}
         </div>
-        {isOwnProfile ? (
-          onEditProfile ? (
-            <button type="button" onClick={onEditProfile} className={editProfileClass}>
-              Edit
-            </button>
-          ) : (
-            <Link href="/?tab=mine&edit=1" className={editProfileClass}>
-              Edit
-            </Link>
-          )
-        ) : isAuthenticated ? (
-          <div className="flex shrink-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-            {followState ? (
-              <FollowButton userId={userId} name={name} state={followState} />
-            ) : null}
-            <MessageUserButton
-              otherUserId={userId as Id<"users">}
-              className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
-            />
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() =>
-              router.push(
-                `/login?next=${encodeURIComponent(`/profile/${userId}`)}`,
-              )
-            }
-            className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-          >
-            Message
-          </button>
-        )}
       </div>
 
       <BioText
@@ -413,6 +377,52 @@ export function ProfileView({
         canReport={isAuthenticated && !isOwnProfile}
         className="-mt-3"
       />
+
+      <div className="-mt-2 flex flex-col gap-3">
+        {followState ? (
+          <ProfileCounts
+            userId={userId}
+            state={followState}
+            formals={stats && !activity?.hidden ? stats.attendedCount : null}
+            reviews={stats && !activity?.hidden ? stats.reviewCount : null}
+          />
+        ) : null}
+        <div className="flex gap-2">
+          {isOwnProfile ? (
+            onEditProfile ? (
+              <button type="button" onClick={onEditProfile} className={editProfileClass}>
+                Edit profile
+              </button>
+            ) : (
+              <Link href="/?tab=mine&edit=1" className={editProfileClass}>
+                Edit profile
+              </Link>
+            )
+          ) : isAuthenticated ? (
+            <>
+              {followState ? (
+                <FollowButton userId={userId} name={name} state={followState} />
+              ) : null}
+              <MessageUserButton
+                otherUserId={userId as Id<"users">}
+                className="flex-1 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
+              />
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                router.push(
+                  `/login?next=${encodeURIComponent(`/profile/${userId}`)}`,
+                )
+              }
+              className="flex-1 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+            >
+              Message
+            </button>
+          )}
+        </div>
+      </div>
 
       {(instagramHandle || whatsappPhone) && (
         <div className="flex flex-wrap gap-2">
@@ -465,30 +475,6 @@ export function ProfileView({
           ) : null}
         </div>
       )}
-
-      {/* Stat strip */}
-      <div className="flex items-baseline gap-6">
-        <span className="text-[1.05rem]">
-          <span className="font-extrabold text-[var(--accent)]">
-            {stats ? stats.activeCount : "–"}
-          </span>{" "}
-          <span className="text-[0.75rem] uppercase tracking-[0.05em] text-[var(--ink-muted)]">
-            active
-          </span>
-        </span>
-        <span className="text-[1.05rem]">
-          <span className="font-extrabold">{stats && !activity?.hidden ? stats.reviewCount : "–"}</span>{" "}
-          <span className="text-[0.75rem] uppercase tracking-[0.05em] text-[var(--ink-muted)]">
-            reviews
-          </span>
-        </span>
-        <span className="text-[1.05rem]">
-          <span className="font-extrabold">{stats && !activity?.hidden ? stats.attendedCount : "–"}</span>{" "}
-          <span className="text-[0.75rem] uppercase tracking-[0.05em] text-[var(--ink-muted)]">
-            formals
-          </span>
-        </span>
-      </div>
 
       {/* Activity stream */}
       <section aria-label="Activity">

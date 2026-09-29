@@ -15,7 +15,7 @@ type FollowState = NonNullable<
 >;
 
 const pill =
-  "shrink-0 cursor-pointer rounded-full border-[2px] px-5 py-2 text-sm transition-colors disabled:opacity-50";
+  "flex-1 shrink-0 cursor-pointer rounded-full border-[2px] px-5 py-2 text-sm transition-colors disabled:opacity-50";
 
 /** Follow / Requested / Following for someone else's profile. */
 export function FollowButton({
@@ -85,62 +85,57 @@ export function FollowButton({
   );
 }
 
-/** "12 followers · 8 following · Follows you", each count opening its list. */
-export function FollowCounts({
+/**
+ * The profile's one counts row — formals, reviews, followers, following —
+ * with the follower lists behind the last two.
+ */
+export function ProfileCounts({
   userId,
   state,
+  formals,
+  reviews,
 }: {
   userId: string;
   state: FollowState;
+  /** null while loading or hidden (private account). */
+  formals: number | null;
+  reviews: number | null;
 }) {
-  const [list, setList] = useState<"followers" | "following" | "requests" | null>(null);
-  const fmt = (n: number) => (n > 500 ? "500+" : String(n));
-  const countCls =
-    "cursor-pointer text-sm text-[var(--ink-muted)] hover:text-[var(--ink)] disabled:cursor-default disabled:hover:text-[var(--ink-muted)]";
+  const [list, setList] = useState<"followers" | "following" | null>(null);
+  const fmt = (n: number | null) => (n === null ? "–" : n > 500 ? "500+" : String(n));
+  const cells: { value: string; label: string; open?: "followers" | "following" }[] = [
+    { value: fmt(formals), label: formals === 1 ? "formal" : "formals" },
+    { value: fmt(reviews), label: reviews === 1 ? "review" : "reviews" },
+    {
+      value: fmt(state.followers),
+      label: state.followers === 1 ? "follower" : "followers",
+      open: "followers",
+    },
+    { value: fmt(state.followingCount), label: "following", open: "following" },
+  ];
   return (
     <>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <button
-          type="button"
-          className={countCls}
-          disabled={!state.canSeeActivity}
-          onClick={() => setList("followers")}
-        >
-          <span className="font-bold text-[var(--ink)]">{fmt(state.followers)}</span>{" "}
-          follower{state.followers === 1 ? "" : "s"}
-        </button>
-        <button
-          type="button"
-          className={countCls}
-          disabled={!state.canSeeActivity}
-          onClick={() => setList("following")}
-        >
-          <span className="font-bold text-[var(--ink)]">{fmt(state.followingCount)}</span>{" "}
-          following
-        </button>
-        {state.followsYou ? (
-          <span className="rounded-full bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] px-2 py-0.5 text-[0.72rem] text-[var(--ink-muted)]">
-            Follows you
-          </span>
-        ) : null}
-        {state.isSelf && state.isPrivate ? (
-          <span className="inline-flex items-center gap-1 text-[0.72rem] text-[var(--ink-muted)]">
-            <LockIcon /> Private
-          </span>
-        ) : null}
-        {state.isSelf && state.requests > 0 ? (
-          <button
-            type="button"
-            onClick={() => setList("requests")}
-            className="cursor-pointer rounded-full bg-[var(--accent)] px-2.5 py-0.5 text-[0.75rem] font-bold text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]"
-          >
-            {state.requests} follow request{state.requests === 1 ? "" : "s"}
-          </button>
-        ) : null}
+      <div className="grid grid-cols-4">
+        {cells.map((c) =>
+          c.open && state.canSeeActivity ? (
+            <button
+              key={c.label}
+              type="button"
+              onClick={() => setList(c.open!)}
+              className="flex cursor-pointer flex-col items-center rounded-xl py-1 transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_5%,transparent)]"
+            >
+              <span className="text-[1.2rem] font-bold leading-tight">{c.value}</span>
+              <span className="text-xs text-[var(--ink-muted)]">{c.label}</span>
+            </button>
+          ) : (
+            <div key={c.label} className="flex flex-col items-center py-1">
+              <span className="text-[1.2rem] font-bold leading-tight">{c.value}</span>
+              <span className="text-xs text-[var(--ink-muted)]">{c.label}</span>
+            </div>
+          ),
+        )}
       </div>
-      {list === "requests" ? (
-        <FollowRequestsModal onClose={() => setList(null)} />
-      ) : list ? (
+      {list ? (
         <FollowListModal
           userId={userId}
           direction={list}
@@ -148,6 +143,40 @@ export function FollowCounts({
           onClose={() => setList(null)}
         />
       ) : null}
+    </>
+  );
+}
+
+/** Small tags under the name: "Follows you", "Private", follow requests. */
+export function FollowTags({ state }: { state: FollowState }) {
+  const [requestsOpen, setRequestsOpen] = useState(false);
+  const showPrivate = state.isSelf && state.isPrivate;
+  const showRequests = state.isSelf && state.requests > 0;
+  if (!state.followsYou && !showPrivate && !showRequests) return null;
+  return (
+    <>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        {state.followsYou ? (
+          <span className="rounded-full bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] px-2 py-0.5 text-[0.72rem] text-[var(--ink-muted)]">
+            Follows you
+          </span>
+        ) : null}
+        {showPrivate ? (
+          <span className="inline-flex items-center gap-1 text-[0.72rem] text-[var(--ink-muted)]">
+            <LockIcon /> Private
+          </span>
+        ) : null}
+        {showRequests ? (
+          <button
+            type="button"
+            onClick={() => setRequestsOpen(true)}
+            className="cursor-pointer rounded-full bg-[var(--accent)] px-2.5 py-0.5 text-[0.75rem] font-bold text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]"
+          >
+            {state.requests} follow request{state.requests === 1 ? "" : "s"}
+          </button>
+        ) : null}
+      </div>
+      {requestsOpen ? <FollowRequestsModal onClose={() => setRequestsOpen(false)} /> : null}
     </>
   );
 }
