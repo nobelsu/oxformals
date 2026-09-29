@@ -12,6 +12,8 @@ import { Modal } from "@/components/ui/Modal";
 import { OutlineCombobox } from "@/components/ui/OutlineCombobox";
 import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
 import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
+import { InviteFriendsButton } from "@/components/invites/InviteFriendsButton";
+import { SeatLinksModal } from "@/components/invites/SeatLinksModal";
 import { formatListingDate, formatPrice } from "@/lib/data/format";
 import { listingSupportsSwap } from "@/lib/data/listingType";
 import { findBlockingOutgoingRequestForTarget } from "@/lib/data/requestFilters";
@@ -44,6 +46,7 @@ export function JoinRequestFlow({ target, onClose, onNavigateToRequests }: Props
   const { user } = useAuth();
   const { listings, requests, getListing, getUser } = useData();
   const [confirmed, setConfirmed] = useState<Confirmed | null>(null);
+  const [seatLinks, setSeatLinks] = useState<string[]>([]);
 
   // Snapshot the "already requested" check when the flow opens, so the request
   // we just sent doesn't flip the open modal into the blocking message.
@@ -103,8 +106,9 @@ export function JoinRequestFlow({ target, onClose, onNavigateToRequests }: Props
             onClose();
             goToRequests();
           }}
-          onSent={(requestType, result, offeringListingId) => {
+          onSent={(requestType, result, offeringListingId, links) => {
             onClose();
+            if (links && links.length > 0) setSeatLinks(links);
             if (result === "accepted") {
               setConfirmed({
                 requestType,
@@ -117,6 +121,7 @@ export function JoinRequestFlow({ target, onClose, onNavigateToRequests }: Props
         />
       ) : null}
 
+      <SeatLinksModal tokens={seatLinks} onClose={() => setSeatLinks([])} />
       <SwapConfirmedModal
         open={!!confirmed}
         onClose={() => setConfirmed(null)}
@@ -133,7 +138,7 @@ export function JoinRequestFlow({ target, onClose, onNavigateToRequests }: Props
 type Payer = "you" | "them";
 type PlanSeat = {
   key: string;
-  kind: "you" | "friend" | "guest";
+  kind: "you" | "friend" | "guest" | "link";
   label: string;
   userId?: string;
   payer: Payer;
@@ -157,6 +162,7 @@ function JoinRequestModal({
     requestType: RequestType,
     status: "pending" | "accepted",
     offeringListingId?: string,
+    links?: string[],
   ) => void;
 }) {
   const { sendRequest } = useData();
@@ -166,8 +172,9 @@ function JoinRequestModal({
 
   const [friendIds, setFriendIds] = useState<string[]>([]);
   const [guests, setGuests] = useState(0);
+  const [newPeople, setNewPeople] = useState(0);
   const maxExtra = Math.max(0, Math.min(MAX_GUESTS, target.seatsAvailable - 1));
-  const extra = friendIds.length + guests;
+  const extra = friendIds.length + guests + newPeople;
   const seats = 1 + extra;
 
   const allowsSwap = listingSupportsSwap(target.listingType);
@@ -201,6 +208,13 @@ function JoinRequestModal({
       kind: "friend" as const,
       label: friendName(id),
       userId: id,
+      payer: "them" as const,
+      method: "credit" as const,
+    })),
+    ...Array.from({ length: newPeople }, (_, i) => ({
+      key: `link:${i}`,
+      kind: "link" as const,
+      label: `New person ${i + 1}`,
       payer: "them" as const,
       method: "credit" as const,
     })),
@@ -280,12 +294,20 @@ function JoinRequestModal({
                 })),
             }
           : {}),
+        ...(newPeople > 0
+          ? {
+              links: plan
+                .filter((p) => p.kind === "link")
+                .map((p) => ({ paysOwn: p.payer === "them", method: p.method })),
+            }
+          : {}),
       });
       if (!result) throw new Error("Could not send request.");
       onSent(
         you.method,
         result.status === "accepted" ? "accepted" : "pending",
         swapSeats > 0 ? effectiveOfferingId : undefined,
+        result.links,
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send request.");
@@ -353,14 +375,15 @@ function JoinRequestModal({
               })}
             </div>
           ) : friendsList ? (
-            <p className="mt-2 text-xs text-[var(--ink-muted)]">
+            <p className="mt-2 flex flex-wrap items-baseline gap-x-2 text-xs text-[var(--ink-muted)]">
               Mutual follows show up here.
+              <InviteFriendsButton variant="link" />
             </p>
           ) : null}
 
           <div className="mt-3 flex items-center justify-between gap-3">
             <span className="text-xs text-[var(--ink-muted)]">
-              Others not on Oxformals
+              Unnamed guests
             </span>
             <span className="flex items-center gap-2">
               <StepButton
@@ -375,6 +398,26 @@ function JoinRequestModal({
                 label="One more guest"
                 disabled={extra >= maxExtra}
                 onClick={() => changePeople(() => setGuests((g) => g + 1))}
+              >
+                +
+              </StepButton>
+            </span>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <span className="text-xs text-[var(--ink-muted)]">Someone not on here yet</span>
+            <span className="flex items-center gap-2">
+              <StepButton
+                label="One fewer new person"
+                disabled={newPeople === 0}
+                onClick={() => changePeople(() => setNewPeople((n) => Math.max(0, n - 1)))}
+              >
+                −
+              </StepButton>
+              <span className="w-5 text-center font-bold tabular-nums">{newPeople}</span>
+              <StepButton
+                label="One more new person"
+                disabled={extra >= maxExtra}
+                onClick={() => changePeople(() => setNewPeople((n) => n + 1))}
               >
                 +
               </StepButton>
@@ -454,6 +497,11 @@ function JoinRequestModal({
               {friendIds.length === 1
                 ? `${friendName(friendIds[0])} pays their own credit.`
                 : "Friends pay their own credits."}
+            </p>
+          ) : null}
+          {newPeople > 0 ? (
+            <p className="text-xs text-[var(--ink-muted)]">
+              New people pay with their starter credit. You get a link to send them.
             </p>
           ) : null}
         </fieldset>
@@ -564,7 +612,7 @@ function SeatPlanTable({
   const cash = price !== undefined ? formatPrice(price) : "cash";
   const optionsFor = (seat: PlanSeat) => {
     const opts: { value: string; label: string }[] = [];
-    const friend = seat.kind === "friend";
+    const friend = seat.kind === "friend" || seat.kind === "link";
     if (allowsSwap) {
       opts.push({ value: "you:swap", label: friend ? "You cover: swap a seat" : "Swap a seat" });
     }
@@ -573,6 +621,9 @@ function SeatPlanTable({
     if (seat.kind === "friend") {
       opts.push({ value: "them:credit", label: "They pay: 1 credit" });
       if (allowsPay) opts.push({ value: "them:pay", label: `They pay: ${cash}` });
+    }
+    if (seat.kind === "link") {
+      opts.push({ value: "them:credit", label: "They pay: their 1 credit" });
     }
     return opts;
   };

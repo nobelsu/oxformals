@@ -45,7 +45,9 @@ export type DataContextValue = {
     guests?: number;
     guestMethods?: RequestType[];
     friends?: { userId: string; paysOwn: boolean; method: RequestType }[];
-  }) => Promise<SwapRequest | null>;
+    /** People not on Oxformals yet: each gets a seat link. */
+    links?: { paysOwn: boolean; method: RequestType }[];
+  }) => Promise<(SwapRequest & { links: string[] }) | null>;
   /** @deprecated Use sendRequest */
   requestSwap: (args: {
     targetListingId: string;
@@ -256,7 +258,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       guests?: number;
       guestMethods?: RequestType[];
       friends?: { userId: string; paysOwn: boolean; method: RequestType }[];
-    }): Promise<SwapRequest | null> => {
+      links?: { paysOwn: boolean; method: RequestType }[];
+    }): Promise<(SwapRequest & { links: string[] }) | null> => {
       if (!user) return null;
       const targetFromCache = listings.find((l) => l.id === args.targetListingId);
       const toUserId =
@@ -281,6 +284,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
                 })),
               }
             : {}),
+          ...(args.links && args.links.length > 0 ? { links: args.links } : {}),
         });
       } catch (err) {
         const message =
@@ -312,6 +316,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         message: args.message,
         status: result.autoAccepted ? "accepted" : "pending",
         createdAt: Date.now(),
+        links: ("links" in result ? result.links : undefined) ?? [],
       };
     },
     [user, listings, createRequestMut, getOrCreateConversationMut, sendChatMessageMut],
