@@ -13,9 +13,9 @@ The list below classifies every exported function in `convex/*.ts` (excluding `c
 ### `users.ts`
 
 - `current` (`query`): `PublicAuthed`
-- `listPublic` (`query`): `PublicOpen`
+- `listPublic` (`query`): `PublicAuthed` — signed-out callers get `[]`; private accounts only appear to themselves and active followers.
 - `listForChatPicker` (`query`): `PublicAuthed`
-- `getPublicByIds` (`query`): `PublicOpen`
+- `getPublicByIds` (`query`): `PublicAuthed` — signed-out callers get `[]`; a private account the viewer can't see activity for is limited to name, college, year, role (`sanitizeLimitedUser`).
 - `myWishlist` (`query`): `PublicAuthed`
 - `completeOnboarding` (`mutation`): `PublicAuthed`
 - `agreeToRules` (`mutation`): `PublicAuthed`
@@ -33,7 +33,9 @@ The list below classifies every exported function in `convex/*.ts` (excluding `c
 
 - `listListings` (`query`): `PublicOpen`
 - `listMyListings` (`query`): `PublicAuthed`
+- `listUpcomingPublic` (`query`): `PublicOpen` — private hosts limited.
 - `listActiveListingsForCollege` (`query`): `PublicOpen`
+- `listActiveHostsForCollege` (`query`): `PublicOpen` — hosts of that college's open listings for signed-out visitors; private hosts limited.
 - `listRequestsForMe` (`query`): `PublicAuthed`
 - `listRequestsFromMe` (`query`): `PublicAuthed`
 - `createListing` (`mutation`): `PublicAuthed`
@@ -42,6 +44,7 @@ The list below classifies every exported function in `convex/*.ts` (excluding `c
 - `withdrawRequest` (`mutation`): `PublicAuthed`
 - `acceptRequest` (`mutation`): `PublicAuthed`
 - `leaveGroup` (`mutation`): `PublicAuthed`
+- `releaseGuestSeat` (`mutation`): `PublicAuthed`
 - `removeMember` (`mutation`): `PublicAuthed`
 - `updateListing` (`mutation`): `PublicAuthed`
 - `expirePastListings` (`internalMutation`): `InternalOnly`
@@ -84,7 +87,7 @@ The list below classifies every exported function in `convex/*.ts` (excluding `c
 - `listReviewsForCollege` (`query`): `PublicOpen`
 - `getCollegeAggregates` (`query`): `PublicOpen`
 - `getLeaderboard` (`query`): `PublicOpen`
-- `listPublicReviewsForUser` (`query`): `PublicOpen`
+- `listPublicReviewsForUser` (`query`): `PublicOpen` — empty unless the viewer can see the author's activity (`canSeeActivity`).
 - `getPendingReviewListingIds` (`query`): `PublicAuthed`
 
 ### `formalAttendance.ts`
@@ -107,6 +110,31 @@ The list below classifies every exported function in `convex/*.ts` (excluding `c
 ### `storage.ts`
 
 - `generateUploadUrl` (`mutation`): `PublicAuthed`
+
+### Newer modules
+
+Queries marked `PublicOpen` that read activity (reviews, badges, attended
+formals, feed items, wishlist) gate it with `canSeeActivity` /
+`activityVisibility` from `follows.ts`: private accounts show it only to
+themselves and approved followers. Queries marked `PublicAuthed` below return
+an empty/null result to signed-out callers rather than throwing.
+
+- `follows.ts`: `getFollowState`, `listFollows` `PublicOpen` (activity-gated); `getMyPrivacy`, `listFollowRequests`, `listMyFriends` `PublicAuthed`; `follow`, `unfollow`, `removeFollower`, `approveFollower`, `setPrivate` `PublicAuthed` (mutations).
+- `credits.ts`: `getMyCredits`, `getMyHoldsForListing`, `reportFormalDidntHappen` `PublicAuthed`; `settleDueHolds` (cron), `resolveDispute` `InternalOnly`.
+- `feed.ts`: `getCampusFeed` `PublicOpen` (activity-gated per author); `getWeekFormals` `PublicOpen`.
+- `feedComments.ts`: `listComments` `PublicOpen` (author via `sanitizePublicUser`); `addComment`, `deleteComment` `PublicAuthed` (own comments only).
+- `feedLikes.ts`: `toggleLike` `PublicAuthed`.
+- `feedBookmarks.ts`: `toggleBookmark` `PublicAuthed`.
+- `share.ts`: `getListingShareCard`, `getReviewShareCard`, `getBadgeShareCard` `PublicOpen` — first names only; no name for anonymous reviews or private authors; no badge card for private accounts. Called signed out by `app/api/share/*`.
+- `partyInvites.ts`: `listMyPartyInvites`, `respondToPartyInvite` `PublicAuthed`.
+- `bio.ts`: `saveBio` (`action`) `PublicAuthed` (OpenAI moderation); `reportBio` `PublicAuthed`; `setBio`, `clearBio`, `backfillBioFromInterests` `InternalOnly`.
+- `collegeGuide.ts`: `getGuide` `PublicOpen`; `updateGuide`, `deleteTip` `PublicAuthed` (college members / own tips); `addTip` (`action`) `PublicAuthed` (OpenAI moderation); `insertTip` `InternalOnly`.
+- `collegeDirectory.ts`: `listDirectory`, `getOverview` `PublicOpen` — member previews exclude private accounts.
+- `badges.ts`: `getUserBadges`, `getBadgeProgress` `PublicOpen` (activity-gated); `getMyNewBadges`, `markBadgesSeen` `PublicAuthed`.
+- `profileActivity.ts`: `getProfileActivity` `PublicOpen` (activity-gated).
+- `accountDeletion.ts`: `getDeletionImpact`, `deleteMyAccount` `PublicAuthed` (own account, email confirmation); `purgeUserContent` `InternalOnly` (scheduled, batched).
+- `password.ts`: `hasPassword`, `setPassword` (`action`) `PublicAuthed`; `setPasswordForEmail`, `passwordStateForEmail` `InternalOnly`.
+- `migrations.ts`: all exported functions are `InternalOnly`.
 
 ### Internal-Only Modules
 
