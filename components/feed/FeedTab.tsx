@@ -185,7 +185,7 @@ export function FeedTab() {
 
           <div>
             {user ? (
-              <div className="mb-2 flex gap-5 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_12%,transparent)]">
+              <div data-feed-tabs className="mb-2 flex gap-5 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_12%,transparent)]">
                 <ShallowLink href="/" scroll={false} className={tabCls(scope === "forYou")}>
                   For you
                 </ShallowLink>

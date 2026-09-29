@@ -135,7 +135,10 @@ function NavInner() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const { navRef, inverted, hidden } = useNavTheme();
   const [landingScrolled, setLandingScrolled] = useState(false);
+  // The feed's own For you / Following tabs have scrolled under the nav.
+  const [feedTabsGone, setFeedTabsGone] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -194,19 +197,23 @@ function NavInner() {
   useEffect(() => {
     const onScroll = () => {
       setLandingScrolled(window.scrollY > 56);
+      const tabs = document.querySelector("[data-feed-tabs]");
+      const navBottom = navRef.current?.getBoundingClientRect().bottom ?? 0;
+      setFeedTabsGone(
+        tabs ? tabs.getBoundingClientRect().bottom <= navBottom : true,
+      );
     };
 
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [isLandingPage]);
-
-  const { navRef, inverted, hidden } = useNavTheme();
+  }, [isLandingPage, navRef]);
   // Signed-in slim bar: on the feed, the For you / Following tabs move up
   // into it.
   const collapsed = landingScrolled;
   const onFeed = pathname === "/" && activeTab === "feed";
-  const feedTabsInNav = collapsed && onFeed;
+  // Only once the page's own tabs are out of sight, so they never show twice.
+  const feedTabsInNav = collapsed && onFeed && feedTabsGone;
   const feedFollowing = searchParams?.get("feed") === "following";
 
   if (isLoginPage) {
