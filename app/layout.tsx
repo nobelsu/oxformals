@@ -8,6 +8,7 @@ import { DataProvider } from "@/components/data/DataProvider";
 import { Nav } from "@/components/Nav";
 import { OnboardingOverlay } from "@/components/onboarding/OnboardingOverlay";
 import { BadgeCelebration } from "@/components/badges/BadgeCelebration";
+import { InviteClaimer } from "@/components/invites/InviteClaimer";
 
 // Self-hosted (Latin subset, from Google Fonts, both under the SIL Open Font
 // Licence) so builds never depend on reaching fonts.gstatic.com.
@@ -96,6 +97,7 @@ export default function RootLayout({
                 <div className="flex-1 flex flex-col">{children}</div>
                 <OnboardingOverlay />
                 <BadgeCelebration />
+                <InviteClaimer />
               </DataProvider>
             </AuthProvider>
           </ConvexClientProvider>

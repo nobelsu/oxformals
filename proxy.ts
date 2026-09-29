@@ -18,6 +18,8 @@ const isPublicRoute = createRouteMatcher([
   "/letter",
   "/colleges",
   "/college/:slug",
+  "/i/:code",
+  "/s/:token",
   "/api/auth(.*)",
   "/api/share(.*)",
 ]);
