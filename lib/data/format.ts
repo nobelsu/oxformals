@@ -138,6 +138,16 @@ export function formatListingDate(iso: string): string {
   return `${day} · ${formatListingTime(iso)}`;
 }
 
+/** `Thu 9 Oct` — the day on its own, in Oxford time. */
+export function formatWeekdayDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: OXFORD_TIME_ZONE,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(iso));
+}
+
 export function formatShortDate(iso: string): string {
   const d = new Date(iso);
   return new Intl.DateTimeFormat("en-GB", {

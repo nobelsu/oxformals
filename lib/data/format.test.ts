@@ -8,6 +8,7 @@ import {
   formatListingRowMeta,
   formatListingTime,
   formatRowTail,
+  formatWeekdayDate,
 } from "./format";
 
 describe("formatListingTime", () => {
@@ -158,5 +159,11 @@ describe("existing formatters still behave", () => {
       }),
       "Fri 8 May · 7:15pm · Group of 4 · 2 seats left · £28",
     );
+  });
+});
+
+describe("formatWeekdayDate", () => {
+  it("reads the Oxford day", () => {
+    assert.equal(formatWeekdayDate("2026-10-08T23:30:00.000Z"), "Fri 9 Oct");
   });
 });
