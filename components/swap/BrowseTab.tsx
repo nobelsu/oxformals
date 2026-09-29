@@ -11,15 +11,24 @@ import {
 } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
-import { MY_FORMALS_SENTINEL } from "./CollegeFilter";
 import { ListingDayList } from "./ListingDayList";
 import { ListingDetailModal } from "./ListingDetailModal";
 import { ListingRow } from "./ListingRow";
 import { JoinRequestFlow } from "./JoinRequestFlow";
 import { isoToOxfordDateKey } from "@/lib/data/format";
 import { BrowseFiltersModal } from "./BrowseFiltersModal";
+import {
+  BROWSE_FILTER_PARAMS,
+  activeFilterSections,
+  browseFilterPredicate,
+  parseBrowseFilters,
+  writeBrowseFilters,
+  type BrowseFilters,
+} from "@/lib/data/browseFilters";
+import { MAX_GUESTS } from "@/convex/seats";
 import type { Listing } from "@/lib/data/types";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useNowMs } from "@/lib/hooks/useNowMs";
 
 type Props = {
   onNavigateToMine: () => void;
@@ -83,6 +92,18 @@ function FilterIcon({ className }: { className?: string }) {
   );
 }
 
+function FilterCountBadge({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <span
+      aria-hidden
+      className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--accent-ink)] ring-2 ring-[var(--bg)]"
+    >
+      {count}
+    </span>
+  );
+}
+
 export function BrowseTab({
   onNavigateToRequests,
   onSignInRequired,
@@ -94,11 +115,25 @@ export function BrowseTab({
 
   const { user, isAuthenticated } = useAuth();
   const { listings, wishlist, getUser, getListing } = useData();
+  const nowMs = useNowMs();
 
-  const [collegeFilter, setCollegeFilter] = useState<string | null>(null);
-  const [roleFilter, setRoleFilter] = useState<string | null>(null);
-  const [pickedCalendarDates, setPickedCalendarDates] = useState<string[]>(
-    [],
+  // Filters live in the URL (`?when=week&how=swap…`) so a filtered browse
+  // survives reloads and can be shared.
+  const filters = useMemo(
+    () => parseBrowseFilters(searchParams, MAX_GUESTS),
+    [searchParams],
+  );
+  const setFilters = useCallback(
+    (next: BrowseFilters) => {
+      const params = writeBrowseFilters(
+        new URLSearchParams(searchParams.toString()),
+        next,
+      );
+      params.set("tab", "browse");
+      params.delete("listing");
+      router.replace(`/?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams],
   );
   // Search is a global control living in the nav; the query travels through the
   // `?q=` URL param so the nav field and the mobile in-page field stay in sync.
@@ -156,76 +191,68 @@ export function BrowseTab({
     router.replace(`/?${params.toString()}`, { scroll: false });
   }, [listingParam, getListing, listings, router, searchParams]);
 
-  const wishlistSet = useMemo(() => new Set(wishlist), [wishlist]);
+  const wishlistSet = useMemo(
+    () => new Set(isAuthenticated ? wishlist : []),
+    [isAuthenticated, wishlist],
+  );
 
-  const effectiveCollegeFilter = useMemo(() => {
-    // "My favourites" only applies when the user is signed in with a wishlist;
-    // otherwise any college name (or null) passes straight through.
-    if (
-      collegeFilter === MY_FORMALS_SENTINEL &&
-      (!isAuthenticated || wishlist.length === 0)
-    ) {
-      return null;
-    }
-    return collegeFilter;
-  }, [collegeFilter, isAuthenticated, wishlist.length]);
-
-  const collegeFilteredListings = useMemo(
+  // Open, upcoming and not the viewer's own.
+  const openListings = useMemo(
     () =>
       listings
         .filter((l) => l.status === "active")
-        .filter((l) => Date.parse(l.dateTime) > Date.now())
-        .filter((l) => !user || l.ownerUserId !== user.id)
-        .filter((l) => {
-          if (!effectiveCollegeFilter) return true;
-          if (effectiveCollegeFilter === MY_FORMALS_SENTINEL)
-            return wishlistSet.has(l.college);
-          return l.college === effectiveCollegeFilter;
-        })
-        .filter((l) => !roleFilter || l.role === roleFilter),
-    [listings, user, effectiveCollegeFilter, wishlistSet, roleFilter],
+        .filter((l) => Date.parse(l.dateTime) > nowMs)
+        .filter((l) => !user || l.ownerUserId !== user.id),
+    [listings, user, nowMs],
   );
 
-  const browseListings = useMemo(() => {
+  const searchedListings = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    const dateSet =
-      pickedCalendarDates.length > 0
-        ? new Set(pickedCalendarDates)
-        : null;
-    return collegeFilteredListings
-      .filter((l) => {
-        if (!dateSet) return true;
-        const key = isoToOxfordDateKey(l.dateTime);
-        return dateSet.has(key);
-      })
-      .filter((l) => {
-        if (!q) return true;
-        const owner = getUser(l.ownerUserId);
-        const parts = [
-          l.college,
-          l.menu,
-          l.message,
-          l.year,
-          l.role,
-          owner?.name ?? "",
-        ];
-        return parts.some((p) => (p ?? "").toLowerCase().includes(q));
-      })
-      .sort((a, b) => +new Date(a.dateTime) - +new Date(b.dateTime));
-  }, [collegeFilteredListings, pickedCalendarDates, searchQuery, getUser]);
+    if (!q) return openListings;
+    return openListings.filter((l) => {
+      const owner = getUser(l.ownerUserId);
+      const parts = [
+        l.college,
+        l.menu,
+        l.message,
+        l.year,
+        l.role,
+        owner?.name ?? "",
+      ];
+      return parts.some((p) => (p ?? "").toLowerCase().includes(q));
+    });
+  }, [openListings, searchQuery, getUser]);
 
-  const hasActiveFilters =
-    collegeFilter !== null ||
-    pickedCalendarDates.length > 0 ||
-    roleFilter !== null;
+  // One predicate builder feeds both the list and the sheet's live count.
+  const countFor = useCallback(
+    (f: BrowseFilters) => {
+      const pass = browseFilterPredicate(f, {
+        todayKey: isoToOxfordDateKey(new Date(nowMs).toISOString()),
+        dateKeyOf: (l) => isoToOxfordDateKey(l.dateTime),
+        wishlist: wishlistSet,
+      });
+      return searchedListings.filter(pass);
+    },
+    [searchedListings, wishlistSet, nowMs],
+  );
+
+  const browseListings = useMemo(
+    () =>
+      countFor(filters).sort(
+        (a, b) => +new Date(a.dateTime) - +new Date(b.dateTime),
+      ),
+    [countFor, filters],
+  );
+
+  const activeSections = activeFilterSections(filters);
 
   function clearAllFilters() {
-    setCollegeFilter(null);
-    setPickedCalendarDates([]);
-    setRoleFilter(null);
+    const params = new URLSearchParams(searchParams.toString());
+    for (const key of BROWSE_FILTER_PARAMS) params.delete(key);
+    router.replace(`/?${params.toString()}`, { scroll: false });
   }
 
-  const hasCollegeMatches = collegeFilteredListings.length > 0;
+  const hasCollegeMatches = openListings.length > 0;
 
   function handleRequestClick(listing: Listing) {
     if (!isAuthenticated) {
@@ -296,17 +323,12 @@ export function BrowseTab({
               <button
                 type="button"
                 onClick={() => setFilterOpen(true)}
-                aria-label="Filters"
+                aria-label={activeSections ? `Filters, ${activeSections} on` : "Filters"}
                 aria-expanded={filterOpen}
                 className="relative hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-[var(--ink)]/25 bg-[var(--paper)] text-[var(--ink)] transition-colors hover:border-[var(--ink)]/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30 sm:flex"
               >
                 <FilterIcon className="h-5 w-5" />
-                {hasActiveFilters ? (
-                  <span
-                    className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[var(--accent)] ring-2 ring-[var(--paper)]"
-                    aria-hidden
-                  />
-                ) : null}
+                <FilterCountBadge count={activeSections} />
               </button>
             </div>
           </div>
@@ -346,17 +368,12 @@ export function BrowseTab({
             <button
               type="button"
               onClick={() => setFilterOpen(true)}
-              aria-label="Filters"
+              aria-label={activeSections ? `Filters, ${activeSections} on` : "Filters"}
               aria-expanded={filterOpen}
               className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30"
             >
               <FilterIcon className="h-5 w-5" />
-              {hasActiveFilters ? (
-                <span
-                  className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--accent)] ring-2 ring-[var(--bg)]"
-                  aria-hidden
-                />
-              ) : null}
+              <FilterCountBadge count={activeSections} />
             </button>
           </div>
         </div>
@@ -368,7 +385,12 @@ export function BrowseTab({
               <EmptyState
                 icon="search"
                 title="No matches"
-                body="Try another date or college."
+                body={activeSections > 0 ? "Try fewer filters." : "Try another search."}
+                action={
+                  activeSections > 0
+                    ? { label: "Clear filters", onClick: clearAllFilters }
+                    : undefined
+                }
               />
             ) : (
               <EmptyState
@@ -413,15 +435,11 @@ export function BrowseTab({
         open={filterOpen}
         onClose={() => setFilterOpen(false)}
         colleges={browseColleges}
-        collegeFilter={collegeFilter}
-        onCollegeChange={setCollegeFilter}
-        showFavourites={isAuthenticated && wishlist.length > 0}
-        roleFilter={roleFilter}
-        onRoleChange={setRoleFilter}
-        pickedCalendarDates={pickedCalendarDates}
-        onDatesChange={setPickedCalendarDates}
-        onClearAll={clearAllFilters}
-        hasActiveFilters={hasActiveFilters}
+        value={filters}
+        onApply={setFilters}
+        countFor={(f) => countFor(f).length}
+        showWantToGo={isAuthenticated && wishlist.length > 0}
+        maxGuests={MAX_GUESTS}
       />
 
       <ListingDetailModal
