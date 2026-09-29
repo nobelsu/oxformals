@@ -8,7 +8,7 @@ const FEED = [
   {
     who: "JO",
     line: "Jonah listed a formal at Magdalen",
-    body: "On your wishlist · 3 seats left · 20 Oct",
+    body: "Want to go · 3 seats left · 20 Oct",
     italic: false,
   },
   {

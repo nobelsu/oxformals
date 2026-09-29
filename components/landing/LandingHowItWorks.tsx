@@ -7,7 +7,7 @@ import { HandwrittenItsEasy } from "./HandwrittenItsEasy";
 const STEPS = [
   {
     title: "List your formal",
-    body: "Post a seat at your college — a swap, or a paid guest spot.",
+    body: "Swap it, or sell a guest seat.",
   },
   {
     title: "Request a seat",

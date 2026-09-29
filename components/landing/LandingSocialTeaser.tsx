@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePaintCanvas";
-import type { CollegeReviewPublic } from "@/lib/data/collegeReviews";
 
 /* ------------------------------------------------------------------ */
 /*  Shared mockup primitives (matching the real app components)        */
@@ -233,7 +230,7 @@ function WishlistAlertsMockup({ animate = false }: { animate?: boolean }) {
           <span className="text-[0.95rem] leading-snug">Jonah listed a formal at Magdalen</span>
         </div>
         <p className="mt-1.5 text-[0.9rem] text-[var(--ink-muted)]">
-          On your wishlist &middot; 3 seats left &middot; 20 Oct
+          Want to go &middot; 3 seats left &middot; 20 Oct
         </p>
         <div className="mt-2.5 flex items-center gap-2">
           <span className="inline-flex items-center rounded-full border-[2px] border-[var(--tag)] bg-[var(--tag)] px-4 py-1 text-sm font-medium text-[var(--tag-ink)]">
@@ -258,7 +255,7 @@ function WishlistAlertsMockup({ animate = false }: { animate?: boolean }) {
           <span className="text-[0.95rem] leading-snug">Priya listed a formal at Balliol</span>
         </div>
         <p className="mt-1.5 text-[0.9rem] text-[var(--ink-muted)]">
-          On your wishlist &middot; 1 seat left &middot; 25 Oct
+          Want to go &middot; 1 seat left &middot; 25 Oct
         </p>
       </div>
 
@@ -347,187 +344,6 @@ function ActivityFeedMockup({ animate = false }: { animate?: boolean }) {
   );
 }
 
-type CollegePreview = {
-  imageUrls: string[];
-  quotes: string[];
-};
-
-function previewFromReviews(
-  reviews: CollegeReviewPublic[] | undefined,
-): CollegePreview | null {
-  if (!reviews || reviews.length === 0) return null;
-  const withImages = reviews.filter(
-    (review) => review.imageUrls && review.imageUrls.length > 0,
-  );
-  if (withImages.length === 0) return null;
-
-  const imageUrls = withImages
-    .flatMap((review) => review.imageUrls ?? [])
-    .filter((url): url is string => Boolean(url))
-    .slice(0, 2);
-  if (imageUrls.length === 0) return null;
-
-  const quotes = withImages
-    .map((review) => review.comment?.trim())
-    .filter((comment): comment is string => Boolean(comment))
-    .slice(0, 2);
-
-  return { imageUrls, quotes };
-}
-
-function HallRankingsMockup({ animate = false }: { animate?: boolean }) {
-  const reduced = usePrefersReducedMotion();
-  const [selected, setSelected] = useState<string | null>(null);
-
-  const magdalenReviews = useQuery(api.collegeReviews.listReviewsForCollege, {
-    college: "Magdalen",
-    sort: "recent",
-    limit: 20,
-  });
-  const exeterReviews = useQuery(api.collegeReviews.listReviewsForCollege, {
-    college: "Exeter",
-    sort: "recent",
-    limit: 20,
-  });
-  const worcesterReviews = useQuery(api.collegeReviews.listReviewsForCollege, {
-    college: "Worcester",
-    sort: "recent",
-    limit: 20,
-  });
-  const stJohnsReviews = useQuery(api.collegeReviews.listReviewsForCollege, {
-    college: "St John's",
-    sort: "recent",
-    limit: 20,
-  });
-  const balliolReviews = useQuery(api.collegeReviews.listReviewsForCollege, {
-    college: "Balliol",
-    sort: "recent",
-    limit: 20,
-  });
-
-  const previewsByCollege: Record<string, CollegePreview | null> = {
-    Magdalen: previewFromReviews(magdalenReviews),
-    Exeter: previewFromReviews(exeterReviews),
-    Worcester: previewFromReviews(worcesterReviews),
-    "St John's": previewFromReviews(stJohnsReviews),
-    Balliol: previewFromReviews(balliolReviews),
-  };
-  const selectedPreview = selected ? previewsByCollege[selected] : null;
-  const hasPreview = Boolean(selectedPreview);
-
-  useEffect(() => {
-    if (!animate || reduced) {
-      setSelected(null);
-      return;
-    }
-    setSelected(null);
-    const timer = window.setTimeout(() => setSelected("Exeter"), 560);
-    return () => window.clearTimeout(timer);
-  }, [animate, reduced]);
-
-  const rows = [
-    { rank: 1, name: "Magdalen", score: 4.8, reviews: 24 },
-    { rank: 2, name: "Exeter", score: 4.7, reviews: 31 },
-    { rank: 3, name: "Worcester", score: 4.6, reviews: 18 },
-    { rank: 4, name: "St John's", score: 4.5, reviews: 22 },
-    { rank: 5, name: "Balliol", score: 4.4, reviews: 15 },
-  ] as const;
-
-  return (
-    <div className="relative">
-      <div className="flex flex-col pt-1">
-        {rows.map((c) => {
-          const isSelected = selected === c.name;
-          return (
-            <button
-              key={c.rank}
-              type="button"
-              onClick={() => setSelected(c.name)}
-              className="flex items-center gap-3 border-t border-[var(--ink)]/10 px-3 py-2.5 text-left first:border-t-0"
-              style={{
-                backgroundColor: isSelected
-                  ? "color-mix(in srgb, var(--accent) 10%, transparent)"
-                  : "transparent",
-              }}
-            >
-              <span className="w-6 shrink-0 text-center text-sm text-[var(--ink-soft)]">
-                {c.rank}
-              </span>
-              <div className="min-w-0 flex-1">
-                <span className="block truncate font-display text-sm uppercase tracking-wide">
-                  {c.name}
-                </span>
-                <p className="mt-0.5 truncate text-xs text-[var(--ink-muted)]">
-                  {c.reviews} reviews
-                </p>
-              </div>
-              <span className="inline-flex shrink-0 items-center gap-1">
-                <span className="font-display text-sm text-[var(--accent)]">{c.score.toFixed(1)}</span>
-                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" aria-hidden>
-                  <path
-                    d={STAR_PATH}
-                    fill="var(--accent)"
-                    stroke="var(--ink)"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div
-        aria-hidden={!selected}
-        className="pointer-events-none absolute inset-x-2 top-2 rounded-[12px] border border-[color-mix(in_srgb,var(--ink)_16%,transparent)] bg-[color-mix(in_srgb,var(--bg)_95%,white)] p-2 shadow-[0_12px_26px_color-mix(in_srgb,var(--ink)_20%,transparent)] transition-all duration-300"
-        style={{
-          opacity: selected ? 1 : 0,
-          transform: selected ? "translateY(0) scale(1)" : "translateY(8px) scale(0.98)",
-        }}
-      >
-        <div className="mb-2 flex items-center justify-between">
-          <span className="font-display text-[0.72rem] uppercase tracking-[0.12em] text-[var(--ink-muted)]">
-            {selected ? `${selected} menu highlights` : "Menu highlights"}
-          </span>
-          <span className="text-[0.7rem] text-[var(--accent)]">
-            {rows.find((row) => row.name === selected)?.score.toFixed(1) ?? ""}
-          </span>
-        </div>
-        {hasPreview ? (
-          <>
-            <div className="grid grid-cols-2 gap-1.5">
-              {selectedPreview!.imageUrls.map((imageUrl, index) => (
-                <img
-                  key={`${imageUrl}-${index}`}
-                  src={imageUrl}
-                  alt={`${selected} review food photo ${index + 1}`}
-                  className="h-20 w-full rounded-[8px] object-cover"
-                  loading="lazy"
-                />
-              ))}
-            </div>
-            <div className="mt-2 space-y-1 text-[0.72rem] leading-snug text-[var(--ink-muted)]">
-              {(selectedPreview!.quotes.length > 0
-                ? selectedPreview!.quotes
-                : ["Photos from recent college reviews."]).map((quote, index) => (
-                <p key={`${quote}-${index}`}>
-                  &ldquo;{quote}&rdquo;
-                </p>
-              ))}
-            </div>
-          </>
-        ) : (
-          <p className="text-[0.75rem] leading-relaxed text-[var(--ink-muted)]">
-            No food photos in recent reviews for this college yet.
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /** Matches the HeroFeedSlide / real feed item border style. */
 const feedItemCls =
   "rounded-[12px] border border-[color-mix(in_srgb,var(--ink)_14%,transparent)] p-3";
@@ -546,33 +362,23 @@ interface FeedFeature {
 const FEED_FEATURES: FeedFeature[] = [
   {
     tag: "Reviews",
-    title: "See what people actually thought",
-    description:
-      "Your feed shows reviews from people you follow — honest takes on the food, wine, and vibe at every college.",
+    title: "What people thought",
+    description: "Honest takes on the food, wine and vibe, from people you follow.",
     mockup: <ReviewsMockup />,
   },
   {
-    tag: "Wishlist alerts",
-    title: "Never miss a seat at your dream college",
-    description:
-      "Add colleges to your wishlist and get pinged the moment someone lists a formal there.",
+    tag: "Want to go",
+    title: "Colleges you want to go to",
+    description: "Know when a college you want lists a formal.",
     mockup: (
       <WishlistAlertsMockup />
     ),
   },
   {
     tag: "Activity feed",
-    title: "Follow your friends across Oxford",
-    description:
-      "See who went where, who swapped with whom, and discover colleges you never thought to try.",
+    title: "Follow your friends",
+    description: "See where your friends are going.",
     mockup: <ActivityFeedMockup />,
-  },
-  {
-    tag: "Hall rankings",
-    title: "The ultimate Oxford hall tier list",
-    description:
-      "Community-ranked colleges updated in real time. See which halls are trending this term.",
-    mockup: <HallRankingsMockup />,
   },
 ];
 
@@ -629,9 +435,6 @@ export function LandingSocialTeaser() {
         <h2 className="font-display text-3xl uppercase tracking-wide">
           Follow people, not just formals
         </h2>
-        <p className="mt-3 max-w-[50ch] text-base leading-relaxed text-[var(--ink-muted)]">
-          OxFormals isn&rsquo;t just listings — it&rsquo;s a feed.
-        </p>
         <div className="mt-10 grid gap-8 md:grid-cols-2">
           {FEED_FEATURES.map((f) => (
             <div key={f.tag}>
@@ -718,12 +521,10 @@ export function LandingSocialTeaser() {
                         frameProgress >= REVIEWS_UPVOTE_SCROLL
                       }
                     />
-                  ) : feature.tag === "Wishlist alerts" ? (
+                  ) : feature.tag === "Want to go" ? (
                     <WishlistAlertsMockup animate={active === i} />
                   ) : feature.tag === "Activity feed" ? (
                     <ActivityFeedMockup animate={active === i} />
-                  ) : feature.tag === "Hall rankings" ? (
-                    <HallRankingsMockup animate={active === i} />
                   ) : (
                     feature.mockup
                   )}

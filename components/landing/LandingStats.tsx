@@ -8,7 +8,7 @@ import { Reveal } from "@/components/landing/Reveal";
 const STATS = [
   { value: 100, suffix: "+", label: "formals" },
   { value: 38, suffix: "", label: "colleges & halls" },
-  { value: 600, suffix: "+", label: "students on board" },
+  { value: 600, suffix: "+", label: "students" },
   { value: 0, suffix: "", prefix: "£", label: "to join" },
 ] as const;
 

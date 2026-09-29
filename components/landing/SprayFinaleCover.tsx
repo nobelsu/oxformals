@@ -160,9 +160,9 @@ export function SprayFinaleCover() {
             transition: "opacity 0.5s ease 1.1s, transform 0.5s ease 1.1s",
           }}
         >
-          Sync your contacts in the app to see
+          Sync contacts in the app
           <br />
-          which friends are already swapping.
+          to find friends.
         </p>
       </div>
     </div>

@@ -76,9 +76,9 @@ export function LandingHero({
           </span>
         </h1>
         <p className="mt-3 max-w-[46ch] text-base leading-relaxed text-[var(--ink-muted)]">
-          Swap seats, book a place, and eat
+          Swap or book a seat
           <br />
-          somewhere you&rsquo;ve never been.
+          somewhere new.
         </p>
 
         <div className="mt-7 flex w-full flex-row gap-3 sm:w-auto">
