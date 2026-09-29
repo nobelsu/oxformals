@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { Modal } from "@/components/ui/Modal";
 import { PrivateAccountSetting } from "@/components/follows/PrivateAccountSetting";
+import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 import { UiFontDropdown } from "@/components/ui/UiFontDropdown";
 import type { UiFontId } from "@/convex/uiFont";
 
@@ -20,22 +21,15 @@ export function SettingsModal({ open, onClose, onDeleteAccount }: Props) {
   const [fontPickerOpen, setFontPickerOpen] = useState(false);
   const [fontBusy, setFontBusy] = useState(false);
   const [fontError, setFontError] = useState<string | null>(null);
-  const [notificationsBusy, setNotificationsBusy] = useState(false);
-  const [notificationsError, setNotificationsError] = useState<string | null>(
-    null,
-  );
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSaved, setPasswordSaved] = useState(false);
 
-  const notificationsOn = user?.emailNotifications !== false;
-
   const handleClose = useCallback(() => {
     setFontPickerOpen(false);
     setFontError(null);
-    setNotificationsError(null);
     setPasswordInput("");
     setPasswordConfirm("");
     setPasswordError(null);
@@ -98,20 +92,6 @@ export function SettingsModal({ open, onClose, onDeleteAccount }: Props) {
     [user, updateProfile],
   );
 
-  const onNotificationsToggle = useCallback(async () => {
-    if (!user || notificationsBusy) return;
-    const next = !notificationsOn;
-    setNotificationsError(null);
-    setNotificationsBusy(true);
-    try {
-      await updateProfile({ emailNotifications: next });
-    } catch {
-      setNotificationsError("Couldn't save. Try again.");
-    } finally {
-      setNotificationsBusy(false);
-    }
-  }, [user, notificationsOn, notificationsBusy, updateProfile]);
-
   if (!user) return null;
 
   return (
@@ -149,48 +129,7 @@ export function SettingsModal({ open, onClose, onDeleteAccount }: Props) {
           ) : null}
         </div>
 
-        <div className="min-w-0 border-t border-[var(--ink-soft)] pt-5">
-          <div className="flex items-center justify-between gap-4">
-            <span
-              id="settings-notifications-label"
-              className="text-sm text-[var(--ink-muted)]"
-            >
-              Notifications
-            </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={notificationsOn}
-              aria-labelledby="settings-notifications-label"
-              disabled={notificationsBusy}
-              onClick={() => {
-                void onNotificationsToggle();
-              }}
-              className={`relative h-8 w-14 shrink-0 rounded-full border-[2px] border-[var(--ink)] transition-colors disabled:opacity-60 ${
-                notificationsOn
-                  ? "bg-[var(--accent)]"
-                  : "bg-[var(--paper)]"
-              }`}
-            >
-              <span
-                className={`absolute top-1 left-1 h-5 w-5 rounded-full transition-transform ${
-                  notificationsOn
-                    ? "translate-x-6 bg-[var(--accent-ink)]"
-                    : "translate-x-0 bg-[var(--ink)]"
-                }`}
-              />
-              <span className="sr-only">Toggle notifications</span>
-            </button>
-          </div>
-          {notificationsOn ? (
-            <p className="mt-2 max-w-full text-pretty break-words text-sm text-[var(--ink-muted)]">
-              Emails for new formals at colleges you want, and reminders to rate.
-            </p>
-          ) : null}
-          {notificationsError ? (
-            <p className="mt-2 text-sm text-[var(--danger)]">{notificationsError}</p>
-          ) : null}
-        </div>
+        <NotificationSettings />
 
         <PrivateAccountSetting />
 
