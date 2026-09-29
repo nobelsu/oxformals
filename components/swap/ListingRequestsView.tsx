@@ -127,7 +127,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     (requestId: string) => {
       setConfirmDialog({
         message:
-          "Withdraw this request? It will be removed for you and the other person.",
+          "Withdraw this request?",
         variant: "destructive",
         confirmLabel: "Withdraw",
         onConfirm: () => {
@@ -155,7 +155,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             Listing not found
           </h2>
           <p className="mt-2 text-[var(--ink-muted)]">
-            That listing does not exist or you are not in the group.
+            It&apos;s gone, or you&apos;re not in this group.
           </p>
           <Link
             href="/?tab=requests"

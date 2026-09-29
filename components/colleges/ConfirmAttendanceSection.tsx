@@ -19,12 +19,11 @@ import { useNowMs } from "@/lib/hooks/useNowMs";
 
 type Props = {
   listingId: string;
-  college: string;
 };
 
 type Step = "choice" | "reason" | "remove";
 
-export function ConfirmAttendanceSection({ listingId, college }: Props) {
+export function ConfirmAttendanceSection({ listingId }: Props) {
   const nowMs = useNowMs();
   const confirmAttendance = useMutation(api.formalAttendance.confirmAttendance);
   const declineAttendance = useMutation(api.formalAttendance.declineAttendance);
@@ -107,7 +106,6 @@ export function ConfirmAttendanceSection({ listingId, college }: Props) {
         />
       ) : step === "remove" ? (
         <AttendanceRemoveStep
-          college={college}
           error={error}
           submitting={submitting}
           onRemove={() => void handleDecline(true)}
@@ -119,7 +117,6 @@ export function ConfirmAttendanceSection({ listingId, college }: Props) {
         />
       ) : (
         <AttendanceChoiceStep
-          college={college}
           error={error}
           submitting={submitting}
           onConfirm={() => void handleConfirm()}

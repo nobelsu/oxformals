@@ -10,7 +10,7 @@ type Props = {
 };
 
 export const BROWSE_DATE_CALENDAR_INSTRUCTIONS =
-  "Tap days to filter. Shift+tap two days to include every day between them. With none selected, all dates show.";
+  "Tap days to filter. Shift-tap for a range.";
 
 const WEEK_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 

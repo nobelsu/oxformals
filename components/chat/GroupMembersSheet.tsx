@@ -122,7 +122,7 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
               onChange={(e) => setGroupName(e.target.value)}
               placeholder="e.g. Trinity formal crew"
               maxLength={80}
-              hint="Leave blank to show member names instead."
+              hint="Blank shows member names."
             />
             <OutlineButton
               variant="primary"
@@ -239,7 +239,7 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
 
       <ConfirmDialog
         open={leaveConfirmOpen}
-        message="Leave this group? You won't see new messages unless someone adds you back."
+        message="Leave this group? Someone would have to add you back."
         variant="destructive"
         confirmLabel="Leave group"
         onConfirm={() => void handleLeave()}

@@ -58,12 +58,12 @@ function renderHighlightedMatch(label: string, query: string) {
 function formatVerifyError(message: string): string {
   const lower = message.toLowerCase();
   if (lower.includes("could not verify") || lower.includes("invalid")) {
-    return "That code doesn't match or has expired. Try again or request a new code.";
+    return "Wrong or expired code. Try again or resend.";
   }
   if (lower.includes("expired")) {
     return "That code has expired. Request a new one.";
   }
-  return "Could not verify the code — try again or request a new code.";
+  return "Couldn't verify that code. Try again.";
 }
 
 function PasswordToggle({
@@ -239,7 +239,7 @@ export function LoginForm() {
       return;
     }
     if (!isOxfordEmail(normalized)) {
-      setError("Use your Oxford email address ending in @ox.ac.uk.");
+      setError("Use your @ox.ac.uk email.");
       return;
     }
     setSubmitting(true);
@@ -249,7 +249,7 @@ export function LoginForm() {
       setStep("code");
       setCode("");
     } catch {
-      setError("Could not send the code — check your email and try again.");
+      setError("Couldn't send the code. Check your email.");
     } finally {
       setSubmitting(false);
     }
@@ -268,7 +268,7 @@ export function LoginForm() {
       await verifyCode(email.trim(), trimmedCode);
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : "Could not verify the code.";
+        err instanceof Error ? err.message : "Couldn't verify that code.";
       setError(formatVerifyError(msg));
     } finally {
       setSubmitting(false);
@@ -282,7 +282,7 @@ export function LoginForm() {
       await requestCode(email.trim());
       setCode("");
     } catch {
-      setError("Could not resend the code — try again in a moment.");
+      setError("Couldn't resend. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -293,7 +293,7 @@ export function LoginForm() {
     setError(null);
     const normalized = normalizeEmail(email);
     if (!isOxfordEmail(normalized)) {
-      setError("Use your Oxford email address ending in @ox.ac.uk.");
+      setError("Use your @ox.ac.uk email.");
       return;
     }
     if (!password) {
@@ -306,7 +306,7 @@ export function LoginForm() {
       setEmail(normalized);
       // Redirect handled by the auth effect once the session hydrates.
     } catch {
-      setError("Incorrect email or password. Try again, or use an email code.");
+      setError("Wrong email or password.");
     } finally {
       setSubmitting(false);
     }
@@ -331,7 +331,7 @@ export function LoginForm() {
       setPasswordDone(true);
       router.replace(nextPath);
     } catch {
-      setError("Could not set your password — try again in a moment.");
+      setError("Couldn't set your password. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -348,7 +348,7 @@ export function LoginForm() {
     e.preventDefault();
     setError(null);
     if (!name.trim() || !college.trim() || !year.trim() || !role.trim()) {
-      setError("Add name, college, year and role — it only takes a moment.");
+      setError("Add your name, college, year and role.");
       return;
     }
     const phoneDigits = whatsappPhone.replace(/\D/g, "").length;
@@ -381,7 +381,7 @@ export function LoginForm() {
       });
       router.replace(nextPath);
     } catch {
-      setError("Could not save your profile — try again in a moment.");
+      setError("Couldn't save. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -486,8 +486,7 @@ export function LoginForm() {
             <p className="text-[var(--ink-muted)] leading-relaxed">
               {normalizeEmail(email) === ADMIN_EMAIL ? (
                 <>
-                  Enter the 6-digit admin sign-in code sent to the admin
-                  contact email.
+                  Enter the code sent to the admin email.
                 </>
               ) : (
                 <>
@@ -553,7 +552,7 @@ export function LoginForm() {
             </button>
 
             <p className="text-xs text-[var(--ink-soft)] text-center leading-relaxed">
-              Check promotions or spam. Codes expire after 10 minutes.
+              Check spam. Codes last 10 minutes.
             </p>
           </form>
         ) : step === "password" ? (
@@ -629,7 +628,7 @@ export function LoginForm() {
         ) : step === "set-password" ? (
           <form onSubmit={onSetPassword} className="flex flex-col gap-4">
             <p className="text-[var(--ink-muted)] leading-relaxed">
-              Set a password for faster sign in.
+              Skip the email code next time.
             </p>
 
             <label className="flex flex-col gap-2">
@@ -699,7 +698,7 @@ export function LoginForm() {
         ) : (
           <form onSubmit={onProfileSubmit} className="flex flex-col gap-4">
             <p className="text-sm text-[var(--ink-muted)]">
-              You&apos;re signed in — a few details so we can seat you.
+              A few details and you&apos;re in.
             </p>
 
             <label className="flex flex-col gap-2">

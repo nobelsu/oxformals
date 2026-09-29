@@ -82,7 +82,6 @@ export function CollegePhotosSection({ college }: Props) {
         </span>
         <span className="min-w-0">
           <span className="block text-sm font-bold">No photos yet</span>
-          <span className="block text-xs text-[var(--ink-muted)]">Guests&apos; photos from their reviews show up here.</span>
         </span>
       </div>
     );

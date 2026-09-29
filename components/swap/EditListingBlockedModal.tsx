@@ -25,8 +25,7 @@ export function EditListingBlockedModal({
       panelClassName="max-w-sm"
     >
       <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">
-        You have {pendingCount} pending {label} on this listing. Accept or
-        decline them before editing.
+        Answer {pendingCount} pending {label} before editing.
       </p>
       <button
         type="button"

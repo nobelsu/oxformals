@@ -82,7 +82,7 @@ export function CollegeGuide({ college }: { college: string }) {
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-bold">No guide yet</span>
             <span className="block text-xs text-[var(--ink-muted)]">
-              {canEdit ? "You're at this college. Fill it in for guests." : `${college} students can fill it in.`}
+              {canEdit ? "Fill it in for guests." : `${college} students can fill it in.`}
             </span>
           </span>
           {canEdit ? (
@@ -251,7 +251,7 @@ function TipEditor({ college, onClose }: { college: string; onClose: () => void 
     tooLong: `Keep it under ${MAX_TIP} characters.`,
     empty: "Write a tip first.",
     flagged: "That tip can't be posted. Try rewording it.",
-    unavailable: "Couldn't check that tip right now. Try again in a bit.",
+    unavailable: "Couldn't check that. Try again.",
   };
   return (
     <Modal open onClose={onClose} title="Add a tip">

@@ -292,7 +292,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     try {
       const dataUrl = await fileToSquareDataUrl(file);
       if (!dataUrl) {
-        setError("That image is too big — try a smaller one.");
+        setError("Image too big.");
         return;
       }
       setAvatarDraft({ kind: "image", dataUrl });

@@ -24,8 +24,8 @@ export function BlockingRequestModal({
     >
       <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">
         {hasAccepted
-          ? "You already have an accepted request for this listing. Finish that swap before sending another."
-          : "You already have a request waiting for a reply on this listing. Withdraw it before sending another."}
+          ? "You're already in for this formal."
+          : "You already asked. Withdraw it to send another."}
       </p>
       <button
         type="button"

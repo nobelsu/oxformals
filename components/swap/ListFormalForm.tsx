@@ -189,7 +189,7 @@ export function ListFormalForm({
     const role = profile.role.trim();
     if (!resolvedCollege || !year || !role) {
       setError(
-        "Set college, year, and role in My profile (Me tab), save, then try again.",
+        "Add your college, year and role to your profile first.",
       );
       return;
     }
@@ -201,7 +201,7 @@ export function ListFormalForm({
     if (needsPrice) {
       priceNum = Number.parseInt(price.trim(), 10);
       if (!Number.isFinite(priceNum) || priceNum < 1) {
-        setError("Enter a whole number of pounds (at least £1).");
+        setError("Whole pounds, £1 or more.");
         return;
       }
     }

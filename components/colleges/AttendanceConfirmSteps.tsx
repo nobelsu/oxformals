@@ -48,13 +48,11 @@ export function AttendanceStepError({ message }: { message: string }) {
 }
 
 export function AttendanceChoiceStep({
-  college,
   error,
   submitting,
   onConfirm,
   onDecline,
 }: {
-  college: string;
   error: string | null;
   submitting: boolean;
   onConfirm: () => void;
@@ -64,8 +62,7 @@ export function AttendanceChoiceStep({
     <>
       <AttendanceStepTitle>Confirm attendance</AttendanceStepTitle>
       <AttendanceStepBody>
-        Before you can rate {college}&apos;s formal, let us know if you went.
-        This helps keep college rankings accurate.
+        Did you go? Confirm before you rate it.
       </AttendanceStepBody>
       {error ? <AttendanceStepError message={error} /> : null}
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -74,14 +71,14 @@ export function AttendanceChoiceStep({
           disabled={submitting}
           onClick={onConfirm}
         >
-          {submitting ? "Saving…" : "Yes, I attended this formal"}
+          {submitting ? "Saving…" : "Yes, I went"}
         </OutlineButton>
         <OutlineButton
           variant="outline"
           disabled={submitting}
           onClick={onDecline}
         >
-          No, I didn&apos;t attend
+          No, I didn&apos;t go
         </OutlineButton>
       </div>
     </>
@@ -111,8 +108,7 @@ export function AttendanceReasonStep({
     <>
       <AttendanceStepTitle>Why didn&apos;t you attend?</AttendanceStepTitle>
       <AttendanceStepBody>
-        This helps us understand no-shows. Your answer is not shared with the
-        host.
+        The host won&apos;t see this.
       </AttendanceStepBody>
       <SketchRadioGroup label="Reason you did not attend">
         {ATTENDANCE_DECLINE_PRESETS.map((preset) => (
@@ -152,14 +148,12 @@ export function AttendanceReasonStep({
 }
 
 export function AttendanceRemoveStep({
-  college,
   error,
   submitting,
   onRemove,
   onKeep,
   onBack,
 }: {
-  college: string;
   error: string | null;
   submitting: boolean;
   onRemove: () => void;
@@ -170,8 +164,7 @@ export function AttendanceRemoveStep({
     <>
       <AttendanceStepTitle>Remove from your history?</AttendanceStepTitle>
       <AttendanceStepBody>
-        Remove this {college} formal from &ldquo;Formals I attended&rdquo;? You
-        can keep it listed if you still want a record of the swap.
+        It won&apos;t show in Formals I attended.
       </AttendanceStepBody>
       {error ? <AttendanceStepError message={error} /> : null}
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">

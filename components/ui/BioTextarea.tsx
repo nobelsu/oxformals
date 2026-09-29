@@ -8,8 +8,8 @@ type BioFailure = Extract<SaveBioResult, { ok: false }>["reason"];
 /** What to show when saveBio refuses a bio. */
 export const BIO_ERRORS: Record<BioFailure, string> = {
   tooLong: `Bios can be up to ${MAX_BIO_LENGTH} characters.`,
-  flagged: "That bio can't be posted. Please edit it.",
-  unavailable: "Couldn't check your bio. Try again in a moment.",
+  flagged: "That bio can't be posted.",
+  unavailable: "Couldn't check your bio. Try again.",
 };
 
 type Props = {
@@ -56,7 +56,7 @@ export function BioTextarea({
         onChange={(e) => onChange(e.target.value)}
         rows={3}
         disabled={disabled}
-        placeholder="A line or two about you: what you study, what you're into, why you love formals."
+        placeholder="What you study, what you're into."
         className={`resize-none ${className}`}
       />
       {hideCounter ? null : (

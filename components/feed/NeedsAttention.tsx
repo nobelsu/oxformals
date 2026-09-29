@@ -48,7 +48,7 @@ function buildRows(hub: Hub): AttnRow[] {
       href: `${HUB}&section=overview`,
       icon: "bell",
       title: `${r.pendingCount} ${r.pendingCount === 1 ? "person wants" : "want"} your ${r.listing.college} seat`,
-      sub: `${formatShortDate(r.listing.dateTime)} · swap requests`,
+      sub: formatShortDate(r.listing.dateTime),
       badge: r.pendingCount,
     });
   }

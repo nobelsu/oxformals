@@ -80,7 +80,7 @@ export function DeleteAccountDialog({
       setError(
         e instanceof Error && e.message.includes("doesn't match")
           ? "That email doesn't match your account."
-          : "Could not delete your account — try again in a moment.",
+          : "Couldn't delete. Try again.",
       );
       setBusy(false);
     }
@@ -112,7 +112,7 @@ export function DeleteAccountDialog({
         <LoadingBlock />
       ) : impact === null ? (
         <p className="text-sm text-[var(--ink-muted)]">
-          You need to be signed in to delete your account.
+          Sign in first.
         </p>
       ) : (
         <div className="flex flex-col gap-5">
@@ -136,9 +136,8 @@ export function DeleteAccountDialog({
           ) : null}
 
           <p className="text-sm text-[var(--ink)]">
-            Your profile and personal data are deleted. Messages and reviews
-            stay, shown as &ldquo;Deleted user&rdquo;. This can&rsquo;t be
-            undone.
+            Your profile and data go. Reviews and messages stay as
+            &ldquo;Deleted user&rdquo;. This can&rsquo;t be undone.
           </p>
 
           <label className="flex flex-col gap-2">

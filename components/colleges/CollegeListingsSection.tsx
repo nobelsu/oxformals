@@ -77,11 +77,7 @@ export function CollegeListingsSection({ college }: Props) {
 
   if (openListings.length === 0) {
     return (
-      <EmptyState
-        icon="ticket"
-        title="No open formals"
-        body={`Nothing listed at ${college} right now.`}
-      />
+      <EmptyState icon="ticket" title="No open formals" />
     );
   }
 

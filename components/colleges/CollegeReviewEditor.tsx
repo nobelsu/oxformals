@@ -158,7 +158,7 @@ export function CollegeReviewEditor({ review, onSaved, onCancel }: Props) {
 
   function openSubmitConfirm() {
     if (!ratingsComplete) {
-      setError("Please rate every category.");
+      setError("Rate every category.");
       return;
     }
     setError(null);
@@ -302,8 +302,7 @@ export function CollegeReviewEditor({ review, onSaved, onCancel }: Props) {
         panelClassName="max-w-sm"
       >
         <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">
-          Would you like to post this review anonymously? Anonymous reviews
-          won&apos;t show your name on college pages.
+          Post anonymously? Your name won&apos;t show on college pages.
         </p>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <button

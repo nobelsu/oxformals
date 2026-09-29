@@ -159,7 +159,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
           <Link href="/login" className="underline">
             Sign in
           </Link>{" "}
-          to rate your experience at {college}.
+          to rate {college}.
         </p>
       </SketchCard>
     );
@@ -178,7 +178,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
 
   function openSubmitConfirm() {
     if (!ratingsComplete) {
-      setError("Please rate every category.");
+      setError("Rate every category.");
       return;
     }
     setError(null);
@@ -201,7 +201,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
         imageIds,
         isAnonymous: postAnonymously,
       });
-      setSuccess("Thanks for your review!");
+      setSuccess("Review posted.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -233,7 +233,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
 
   if (needsAttendanceConfirm) {
     return (
-      <ConfirmAttendanceSection listingId={listingId} college={college} />
+      <ConfirmAttendanceSection listingId={listingId} />
     );
   }
 
@@ -413,8 +413,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
         panelClassName="max-w-sm"
       >
         <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">
-          Would you like to post this review anonymously? Anonymous reviews
-          won&apos;t show your name on college pages.
+          Post anonymously? Your name won&apos;t show on college pages.
         </p>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <button

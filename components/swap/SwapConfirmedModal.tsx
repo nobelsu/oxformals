@@ -97,7 +97,7 @@ export function SwapConfirmedModal({
         {otherUser && (
           <div className="mt-5 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--paper)] p-4 text-left">
             <p className="text-sm text-[var(--ink)]">
-              Please reach out to this person to process the rest of your formal.
+              Message them to sort out the details.
             </p>
             <div className="mt-3 flex flex-col gap-2 text-sm">
               <p className="text-[var(--ink-muted)]">

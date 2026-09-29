@@ -73,7 +73,7 @@ export function CreditsInfoModal({
           ) : null}
           {credits.earning > 0 ? (
             <li>
-              {credits.earning} on the way, paid 24 hours after the formal you&apos;re hosting
+              {credits.earning} coming, 24 hours after your formal
             </li>
           ) : null}
         </ul>
@@ -81,9 +81,9 @@ export function CreditsInfoModal({
 
       <ol className="mt-5 flex flex-col gap-3 text-sm">
         {[
-          ["Host a guest", "When a guest pays you with a credit, you earn one, 24 hours after the formal."],
-          ["Spend it anywhere", "One credit is one seat at any formal, at any college, whenever you like."],
-          ["Keep it", "Everyone starts with one, and credits never expire."],
+          ["Host a guest", "You earn their credit 24 hours after the formal."],
+          ["Spend it anywhere", "One credit, one seat, any college."],
+          ["Keep it", "You start with one. They never expire."],
         ].map(([title, body], i) => (
           <li key={title} className="flex gap-3">
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[var(--ink)] text-xs font-bold">

@@ -242,12 +242,12 @@ function JoinRequestModal({
       ? "This listing doesn't take swaps."
       : swapSeats > 0 && swapListings.length === 0
         ? myListings.length === 0
-          ? "Swapping needs an upcoming swap listing of your own."
-          : `Swapping ${swapSeats} seat${swapSeats === 1 ? "" : "s"} needs that many free seats at your formal.`
+          ? "You need an upcoming formal to swap."
+          : "Not enough free seats at your formal."
         : cashSeats > 0 && !allowsPay
           ? "This listing doesn't take cash."
           : yourCredits > balance
-            ? `That needs ${yourCredits} of your credits and you have ${balance}.`
+            ? `Needs ${yourCredits} credits. You have ${balance}.`
             : null;
   const ready = credits !== undefined && problem === null;
 
@@ -319,7 +319,7 @@ function JoinRequestModal({
           <p className="text-xs text-[var(--ink-muted)]">
             {extra === 0
               ? "Just you"
-              : `You + ${extra} · ${seats} seats${extra >= maxExtra ? " (that's all there is)" : ""}`}
+              : `You + ${extra} · ${seats} seats${extra >= maxExtra ? " (max)" : ""}`}
           </p>
 
           {friendsList && friendsList.length > 0 ? (

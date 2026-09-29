@@ -5,27 +5,27 @@ import { useState } from "react";
 export const HOUSE_RULES: ReadonlyArray<{ title: string; body: string }> = [
   {
     title: "Be respectful",
-    body: "Be respectful and courteous to everyone you interact with.",
+    body: "Be kind to everyone.",
   },
   {
     title: "Real Oxford email",
-    body: "Only use your real Oxford email — no impersonation.",
+    body: "No pretending to be someone else.",
   },
   {
     title: "Honour swaps",
-    body: "Honour confirmed swaps. Don't ghost after accepting a request.",
+    body: "Don't ghost after accepting.",
   },
   {
     title: "Honest listings",
-    body: "Don't create fake or duplicate listings.",
+    body: "No fake or duplicate listings.",
   },
   {
     title: "Follow up",
-    body: "Reach out to your swap partner promptly after a match is confirmed.",
+    body: "Message them once it's confirmed.",
   },
   {
     title: "Report issues",
-    body: "Report any issues or inappropriate behaviour to the team.",
+    body: "Tell us if something's wrong.",
   },
 ];
 

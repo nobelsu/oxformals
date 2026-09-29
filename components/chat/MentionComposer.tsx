@@ -368,7 +368,7 @@ export const MentionComposer = forwardRef<MentionComposerHandle, Props>(
               <p className="px-3 py-2 text-sm text-[var(--ink-soft)]">
                 {useRemoteSearch
                   ? "No matches"
-                  : "Type a name to search for someone to mention"}
+                  : "Type a name"}
               </p>
             ) : (
               <ul>

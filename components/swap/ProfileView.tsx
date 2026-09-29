@@ -228,15 +228,12 @@ export function ProfileView({
           <h2 className="font-display text-3xl uppercase tracking-wide">
             User not found
           </h2>
-          <p className="mt-2 text-[var(--ink-muted)]">
-            This profile does not exist.
-          </p>
           {!embedded ? (
             <Link
               href="/"
               className="mt-5 inline-flex rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
             >
-              Back to Browse
+              Back
             </Link>
           ) : null}
         </SketchCard>
@@ -471,11 +468,9 @@ export function ProfileView({
                 <span className="text-xs text-[var(--ink-muted)]">+{wishlist.length - 6}</span>
               ) : null}
             </div>
-          ) : (
-            <p className="text-xs text-[var(--ink-muted)]">
-              {isOwnProfile ? "Add the colleges you want to go to." : "Nothing yet."}
-            </p>
-          )}
+          ) : !isOwnProfile ? (
+            <p className="text-xs text-[var(--ink-muted)]">Nothing yet.</p>
+          ) : null}
           {isOwnProfile ? (
             <Link href="/?tab=mine&edit=1" className="text-xs font-bold text-[var(--accent)] hover:underline">
               {wishlist.length > 0 ? "Edit" : "Add colleges"}

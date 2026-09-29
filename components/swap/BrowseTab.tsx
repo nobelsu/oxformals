@@ -368,7 +368,7 @@ export function BrowseTab({
               <EmptyState
                 icon="search"
                 title="No matches"
-                body="Try another date or college, or clear your search."
+                body="Try another date or college."
               />
             ) : (
               <EmptyState

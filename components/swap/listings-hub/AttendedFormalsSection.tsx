@@ -29,11 +29,7 @@ export function AttendedFormalsSection({
         </h2>
       </div>
       {attendedPastListings.length === 0 ? (
-        <EmptyState
-          icon="calendar"
-          title="No formals yet"
-          body="Formals you go to as a guest show up here."
-        />
+        <EmptyState icon="calendar" title="No formals yet" />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {attendedPastListings.map((listing) => {

@@ -124,9 +124,6 @@ export function MessagesTab() {
           <h1 className="font-display text-4xl uppercase tracking-wide">
             Chats
           </h1>
-          <p className="mt-2 text-sm text-[var(--ink-muted)]">
-            Seat swaps, dress codes, and the inevitable plus-one debate.
-          </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <button
@@ -266,7 +263,7 @@ export function MessagesTab() {
 
       <ConfirmDialog
         open={clearTargetId !== null}
-        message="Clear this chat on your side only? The other person will still see the messages. You cannot undo this from your view."
+        message="Clear this chat for you? They'll still see it. This can't be undone."
         confirmLabel="Clear"
         variant="destructive"
         onConfirm={() => void handleConfirmClear()}

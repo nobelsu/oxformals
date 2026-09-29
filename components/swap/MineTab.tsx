@@ -81,7 +81,7 @@ export function MineTab() {
   const exitEditMode = useCallback(() => {
     if (hasUnsavedChanges) {
       const discard = window.confirm(
-        "Discard unsaved changes and return to your profile?",
+        "Discard changes?",
       );
       if (!discard) return;
       profileCancel?.();

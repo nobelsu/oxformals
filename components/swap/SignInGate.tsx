@@ -25,10 +25,6 @@ export function SignInGate({ message = "Sign in to continue." }: Props) {
           {message}
         </h2>
 
-        <p className="mt-5 max-w-md text-xs text-[var(--ink-soft)] sm:text-sm">
-          Takes under a minute: email + a couple of details.
-        </p>
-
         <div className="mt-9 flex w-full max-w-sm flex-col items-center gap-3">
           <Link
             href={href}

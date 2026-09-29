@@ -61,7 +61,7 @@ export function SettingsModal({ open, onClose, onDeleteAccount }: Props) {
       setPasswordConfirm("");
       setPasswordSaved(true);
     } catch {
-      setPasswordError("Could not set your password — try again.");
+      setPasswordError("Couldn't set your password. Try again.");
     } finally {
       setPasswordBusy(false);
     }
@@ -90,7 +90,7 @@ export function SettingsModal({ open, onClose, onDeleteAccount }: Props) {
       try {
         await updateProfile({ uiFont: next });
       } catch {
-        setFontError("Could not save theme — try again.");
+        setFontError("Couldn't save theme. Try again.");
       } finally {
         setFontBusy(false);
       }
@@ -106,7 +106,7 @@ export function SettingsModal({ open, onClose, onDeleteAccount }: Props) {
     try {
       await updateProfile({ emailNotifications: next });
     } catch {
-      setNotificationsError("Could not save notification preference — try again.");
+      setNotificationsError("Couldn't save. Try again.");
     } finally {
       setNotificationsBusy(false);
     }
@@ -183,23 +183,9 @@ export function SettingsModal({ open, onClose, onDeleteAccount }: Props) {
             </button>
           </div>
           {notificationsOn ? (
-            <div
-              role="status"
-              className="relative mt-4 min-w-0 max-w-full rounded-3xl border-[2px] border-[var(--ink)] bg-[var(--paper)] px-4 py-3 pl-6"
-            >
-              <span
-                className="absolute left-2.5 top-3 bottom-3 w-1.5 rounded-full bg-[var(--accent-wash)]"
-                aria-hidden
-              />
-              <p className="max-w-full break-words font-display text-lg uppercase tracking-[0.12em] text-[var(--ink)]">
-                Email notifications
-              </p>
-              <p className="mt-2 max-w-full text-pretty break-words text-sm leading-relaxed text-[var(--ink-muted)]">
-                We&apos;ll email you when someone posts a formal at a college on
-                your wishlist, and when it&apos;s time to rate a formal you
-                attended as a guest. Turn notifications off to unsubscribe.
-              </p>
-            </div>
+            <p className="mt-2 max-w-full text-pretty break-words text-sm text-[var(--ink-muted)]">
+              Emails for new formals at colleges you want, and reminders to rate.
+            </p>
           ) : null}
           {notificationsError ? (
             <p className="mt-2 text-sm text-[var(--danger)]">{notificationsError}</p>
@@ -213,19 +199,19 @@ export function SettingsModal({ open, onClose, onDeleteAccount }: Props) {
             <span className="text-sm text-[var(--ink-muted)]">Password</span>
             {hasPassword || passwordSaved ? (
               <p className="mt-2 text-sm text-[var(--ink-muted)]">
-                Password is set. You can sign in with your email and password.
+                Password set.
               </p>
             ) : (
               <div className="mt-3 flex flex-col gap-3">
                 <p className="text-sm text-[var(--ink-muted)]">
-                  Set a password to sign in without an email code.
+                  Skip the email code next time.
                 </p>
                 <input
                   type="password"
                   autoComplete="new-password"
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder="New password (min 8 characters)"
+                  placeholder="New password (8+ characters)"
                   disabled={passwordBusy}
                   className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-4 py-2.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none focus:border-[var(--accent-hover)] disabled:opacity-60"
                 />

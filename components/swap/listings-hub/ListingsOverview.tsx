@@ -168,7 +168,7 @@ export function ListingsOverview({
           </div>
         ) : (
           <p className="mt-3 text-[var(--ink-muted)]">
-            You&apos;re all caught up — no pending reviews or incoming requests.
+            All caught up.
           </p>
         )}
       </section>
