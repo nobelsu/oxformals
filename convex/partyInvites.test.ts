@@ -127,6 +127,29 @@ describe("named friends", () => {
     expect((await as(s.t, s.alice).query(api.credits.getMyCredits, {}))?.balance).toBe(1);
   });
 
+  test("'Not me' is final", async () => {
+    const s = await setup();
+    const { requestId } = await as(s.t, s.alice).mutation(api.listings.createRequest, {
+      requestType: "pay",
+      targetListingId: s.worcester,
+      message: "",
+      friends: [{ userId: s.priya, paysOwn: false, method: "pay" }],
+    });
+    await as(s.t, s.priya).mutation(api.partyInvites.respondToPartyInvite, {
+      requestId,
+      response: "out",
+    });
+    await expect(
+      as(s.t, s.priya).mutation(api.partyInvites.respondToPartyInvite, {
+        requestId,
+        response: "in",
+      }),
+    ).rejects.toThrow(/already said/);
+    await as(s.t, s.wes).mutation(api.listings.acceptRequest, { requestId });
+    const l = await s.t.run((ctx) => ctx.db.get(s.worcester));
+    expect(l?.members).toEqual([s.wes, s.alice]);
+  });
+
   test("withdrawing clears the invites", async () => {
     const s = await setup();
     const { requestId } = await as(s.t, s.alice).mutation(api.listings.createRequest, {

@@ -30,6 +30,11 @@ export const respondToPartyInvite = mutation({
       );
     }
     const seat = party[index];
+    // "Not me" gives the seat up for good; the requester has been told the
+    // group is smaller. To come after all, they'd need a new request.
+    if (seat.response === "out") {
+      throw new Error("You already said \"Not me\" to this request.");
+    }
     if (response === "in" && seat.payerId === userId && seat.method === "credit") {
       if ((await creditBalance(ctx, userId)) < 1) {
         throw new Error(
