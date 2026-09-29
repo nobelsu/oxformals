@@ -88,24 +88,27 @@ export function WishlistChips({
   }
 
   return (
-    <section aria-labelledby="wishlist-heading">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <section
+      aria-labelledby="wishlist-heading"
+      className="flex flex-col gap-4 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-4 sm:p-5"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2
           id="wishlist-heading"
-          className="font-display text-[1.75rem] leading-tight text-[var(--ink)]"
+          className="font-display text-xl uppercase leading-none tracking-wide text-[var(--ink)]"
         >
-          Formals I want to go to
+          Colleges you want to go to
         </h2>
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search colleges"
-          className="w-full border-0 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_28%,transparent)] bg-transparent px-0 py-1.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:border-[var(--ink)] focus:outline-none sm:w-56"
+          className="w-full rounded-xl border-[1.5px] border-[color-mix(in_srgb,var(--ink)_16%,transparent)] bg-[var(--bg)] px-3 py-2 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:border-[var(--ink)] focus:outline-none sm:w-56"
           aria-label="Search colleges"
         />
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         {filteredColleges.map((c) => (
           <Chip
             key={c}

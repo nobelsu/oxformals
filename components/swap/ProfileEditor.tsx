@@ -26,10 +26,14 @@ const MAX_DATA_URL_BYTES = 250 * 1024;
 const COLLEGE_LIST = OXFORD_COLLEGES as readonly string[];
 
 const UNDERLINE_INPUT =
-  "w-full border-0 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_28%,transparent)] bg-transparent px-0 py-1.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:border-[var(--ink)] focus:outline-none";
+  "w-full rounded-xl border-[1.5px] border-[color-mix(in_srgb,var(--ink)_16%,transparent)] bg-[var(--bg)] px-3 py-2.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:border-[var(--ink)] focus:outline-none";
 
 const SECTION_HEADING =
-  "font-display text-[1.75rem] leading-tight text-[var(--ink)]";
+  "font-display text-xl uppercase leading-none tracking-wide text-[var(--ink)]";
+
+/** A white rounded card grouping related fields, like the rest of the site. */
+const GROUP =
+  "flex flex-col gap-4 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-4 sm:p-5";
 
 const DROPDOWN_PANEL =
   "absolute left-0 right-0 top-[calc(100%+0.35rem)] z-20 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-2 shadow-[0_2px_14px_-10px_rgba(0,0,0,0.25)]";
@@ -51,10 +55,10 @@ function Field({
   error?: string | null;
   children: ReactNode;
 }) {
-  const cls = `flex min-w-0 flex-col gap-1 ${className}`.trim();
+  const cls = `flex min-w-0 flex-col gap-1.5 ${className}`.trim();
   const labelRow = (
     <span className="flex items-baseline justify-between gap-3">
-      <span className="text-xs tracking-wide text-[var(--ink-muted)]">
+      <span className="text-xs font-semibold text-[var(--ink-muted)]">
         {label}
       </span>
       {aside}
@@ -83,16 +87,16 @@ function Field({
   if (htmlFor) {
     return (
       <label htmlFor={htmlFor} className={cls}>
-        {children}
         {labelRow}
+        {children}
         {errorLine}
       </label>
     );
   }
   return (
     <div className={cls}>
-      {children}
       {labelRow}
+      {children}
       {errorLine}
     </div>
   );
@@ -388,10 +392,8 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     avatarDraft?.kind === "preset" ? avatarDraft.id : null;
 
   return (
-    <div className="flex flex-col">
-      <h1 className={SECTION_HEADING}>Edit my profile</h1>
-      <div className="mt-8 flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-        <div ref={avatarPickerRef} className="relative shrink-0">
+    <div className="flex flex-col gap-4">
+        <div ref={avatarPickerRef} className="relative flex flex-col items-center gap-2">
           <button
             type="button"
             onClick={() => {
@@ -410,6 +412,17 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
               {busy ? "…" : "Change"}
             </span>
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAvatarPickerOpen((open) => !open);
+              setCollegePickerOpen(false);
+              setRolePickerOpen(false);
+            }}
+            className="cursor-pointer text-sm font-bold text-[var(--accent)] hover:underline"
+          >
+            Change photo
+          </button>
           <input
             ref={fileInputRef}
             type="file"
@@ -421,7 +434,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
             <div
               role="dialog"
               aria-label="Choose a profile picture"
-              className="absolute left-0 top-[calc(100%+0.65rem)] z-30 w-44 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-3 shadow-[0_8px_28px_-12px_rgba(0,0,0,0.45)]"
+              className="absolute left-1/2 top-[calc(100%+0.4rem)] z-30 w-44 -translate-x-1/2 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-3 shadow-[0_8px_28px_-12px_rgba(0,0,0,0.45)]"
             >
               <div className="grid grid-cols-4 gap-2">
                 {PRESET_AVATARS.map((p) => (
@@ -462,8 +475,11 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
           ) : null}
         </div>
 
-        <div className="min-w-0 flex-1 space-y-5">
-          <Field label="name" htmlFor="profile-name" className="max-w-[12rem]">
+      <section className={GROUP} aria-labelledby="profile-about-heading">
+        <h2 id="profile-about-heading" className={SECTION_HEADING}>
+          About you
+        </h2>
+          <Field label="Name" htmlFor="profile-name">
             <input
               id="profile-name"
               type="text"
@@ -477,11 +493,33 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
           {error ? (
             <p className="text-sm text-[var(--danger)]">{error}</p>
           ) : null}
+          <Field
+            label="Bio"
+            htmlFor="profile-bio"
+            error={bioError}
+            aside={<BioCounter value={bioDraft} />}
+          >
+            <BioTextarea
+              hideCounter
+              id="profile-bio"
+              value={bioDraft}
+              onChange={(next) => {
+                setBioDraft(next);
+                setBioError(null);
+              }}
+              className={UNDERLINE_INPUT}
+            />
+          </Field>
+      </section>
 
-          <div className="grid grid-cols-2 gap-x-5 gap-y-5 sm:grid-cols-4">
-            <Field label="college">
+      <section className={GROUP} aria-labelledby="profile-oxford-heading">
+        <h2 id="profile-oxford-heading" className={SECTION_HEADING}>
+          Oxford
+        </h2>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-4">
+            <Field label="College">
               <OutlineCombobox
-                variant="underline"
+                variant="filled"
                 open={collegePickerOpen}
                 onOpenChange={(next) => {
                   setCollegePickerOpen(next);
@@ -496,8 +534,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
                 placeholder="Choose college"
               />
             </Field>
-
-            <Field label="year" htmlFor="profile-year">
+            <Field label="Year" htmlFor="profile-year">
               <input
                 id="profile-year"
                 type="text"
@@ -511,8 +548,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
                 className={UNDERLINE_INPUT}
               />
             </Field>
-
-            <Field label="role">
+            <Field label="Role">
               <div ref={rolePickerRef} className="relative">
                 <button
                   type="button"
@@ -520,15 +556,15 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
                     setRolePickerOpen((open) => !open);
                     setCollegePickerOpen(false);
                   }}
-                  className={`w-full rounded-none border-0 border-b-[1.5px] bg-transparent py-1.5 pr-7 text-left text-base focus:outline-none ${
+                  className={`w-full rounded-xl border-[1.5px] bg-[var(--bg)] px-3 py-2.5 pr-9 text-left text-base focus:outline-none ${
                     rolePickerOpen
                       ? "border-[var(--ink)]"
-                      : "border-[color-mix(in_srgb,var(--ink)_28%,transparent)] focus:border-[var(--ink)]"
+                      : "border-[color-mix(in_srgb,var(--ink)_16%,transparent)] focus:border-[var(--ink)]"
                   } ${roleDraft ? "text-[var(--ink)]" : "text-[var(--ink-soft)]"}`}
                 >
                   {roleDraft || "Choose role"}
                 </button>
-                <span className="pointer-events-none absolute right-0 top-2.5 text-[var(--ink-muted)]">
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[var(--ink-muted)]">
                   <svg
                     aria-hidden="true"
                     viewBox="0 0 12 8"
@@ -572,8 +608,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
                 ) : null}
               </div>
             </Field>
-
-            <Field label="subject" htmlFor="profile-subject">
+            <Field label="Subject" htmlFor="profile-subject">
               <input
                 id="profile-subject"
                 type="text"
@@ -583,16 +618,31 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
                 className={UNDERLINE_INPUT}
               />
             </Field>
-          </div>
         </div>
-      </div>
+      </section>
 
-      <section className="mt-10" aria-labelledby="profile-socials-heading">
-        <h2 id="profile-socials-heading" className={SECTION_HEADING}>
-          Socials
+      <section className={GROUP} aria-labelledby="profile-formal-heading">
+        <h2 id="profile-formal-heading" className={SECTION_HEADING}>
+          Formals
         </h2>
-        <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-          <Field label="instagram" htmlFor="profile-instagram">
+          <Field label="Allergens or diet" htmlFor="profile-allergens">
+            <input
+              id="profile-allergens"
+              type="text"
+              value={dietaryRequirementsDraft}
+              onChange={(e) => setDietaryRequirementsDraft(e.target.value)}
+              placeholder="e.g. Vegetarian, nut allergy"
+              className={UNDERLINE_INPUT}
+            />
+          </Field>
+      </section>
+
+      <section className={GROUP} aria-labelledby="profile-socials-heading">
+        <h2 id="profile-socials-heading" className={SECTION_HEADING}>
+          Contact
+        </h2>
+        <div className="grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2">
+          <Field label="Instagram" htmlFor="profile-instagram">
             <input
               id="profile-instagram"
               type="text"
@@ -602,7 +652,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
               className={UNDERLINE_INPUT}
             />
           </Field>
-          <Field label="whatsapp phone #" htmlFor="profile-whatsapp">
+          <Field label="WhatsApp" htmlFor="profile-whatsapp">
             <input
               id="profile-whatsapp"
               type="tel"
@@ -614,47 +664,13 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
             />
           </Field>
         </div>
-      </section>
-
-      <section className="mt-10" aria-labelledby="profile-formal-heading">
-        <h2 id="profile-formal-heading" className={SECTION_HEADING}>
-          Formal-stuff
-        </h2>
-        <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-          <Field label="allergens?" htmlFor="profile-allergens">
-            <input
-              id="profile-allergens"
-              type="text"
-              value={dietaryRequirementsDraft}
-              onChange={(e) => setDietaryRequirementsDraft(e.target.value)}
-              placeholder="e.g. Vegetarian, nut allergy"
-              className={UNDERLINE_INPUT}
-            />
-          </Field>
-
-          <Field
-            label="bio"
-            htmlFor="profile-bio"
-            className="sm:col-span-2"
-            error={bioError}
-            aside={<BioCounter value={bioDraft} />}
-          >
-            <BioTextarea
-              hideCounter
-              id="profile-bio"
-              value={bioDraft}
-              onChange={(next) => {
-                setBioDraft(next);
-                setBioError(null);
-              }}
-              className={UNDERLINE_INPUT}
-            />
-          </Field>
-        </div>
+        <p className="text-xs text-[var(--ink-muted)]">
+          Only shown to people you&apos;re going to a formal with.
+        </p>
       </section>
 
       {saved ? (
-        <p className="mt-6 text-sm text-[var(--ink-muted)]">Saved</p>
+        <p className="text-sm text-[var(--ink-muted)]">Saved</p>
       ) : null}
     </div>
   );

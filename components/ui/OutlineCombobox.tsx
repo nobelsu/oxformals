@@ -46,7 +46,7 @@ export type OutlineComboboxProps = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   /** `underline` matches the edit-profile hairline fields. */
-  variant?: "outline" | "underline";
+  variant?: "outline" | "underline" | "filled";
 };
 
 /**
@@ -111,17 +111,26 @@ export function OutlineCombobox({
 
   const display = selectedLabel || placeholder;
   const underline = variant === "underline";
-  const triggerCls = underline
+  const filled = variant === "filled";
+  const triggerCls = filled
+    ? `w-full rounded-xl border-[1.5px] bg-[var(--bg)] px-3 py-2.5 pr-9 text-left text-base text-[var(--ink)] focus:outline-none ${
+        open
+          ? "border-[var(--ink)]"
+          : "border-[color-mix(in_srgb,var(--ink)_16%,transparent)] focus:border-[var(--ink)]"
+      }`
+    : underline
     ? `w-full rounded-none border-0 border-b-[1.5px] bg-transparent px-0 py-1.5 pr-7 text-left text-base text-[var(--ink)] focus:outline-none ${
         open
           ? "border-[var(--ink)]"
           : "border-[color-mix(in_srgb,var(--ink)_28%,transparent)] focus:border-[var(--ink)]"
       }`
     : "w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-4 py-2 pr-12 text-left text-base text-[var(--ink)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30";
-  const chevronCls = underline
+  const chevronCls = filled
+    ? "pointer-events-none absolute inset-y-0 right-3 flex items-center text-[var(--ink-muted)]"
+    : underline
     ? "pointer-events-none absolute right-0 top-2.5 text-[var(--ink-muted)]"
     : "pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--ink-muted)]";
-  const listCls = underline
+  const listCls = underline || filled
     ? "absolute left-0 right-0 top-[calc(100%+0.35rem)] z-30 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-2 shadow-[0_2px_14px_-10px_rgba(0,0,0,0.25)]"
     : "absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--bg)] p-2 shadow-sm";
 

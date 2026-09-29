@@ -102,8 +102,8 @@ export function MineTab() {
   }
 
   return (
-    <div className="flex flex-col gap-8 pb-28">
-      <div className="flex items-center">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 pb-16">
+      <div className="sticky top-[4.25rem] z-30 -mx-2 flex items-center justify-between gap-3 rounded-full bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] px-2 py-2 backdrop-blur-md">
         <button
           type="button"
           onClick={exitEditMode}
@@ -111,8 +111,26 @@ export function MineTab() {
         >
           Back
         </button>
+        <div className="flex items-center gap-2">
+          {profileDirty && !saving ? (
+            <button
+              type="button"
+              onClick={() => profileCancel?.()}
+              className="cursor-pointer rounded-full px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]"
+            >
+              Cancel
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => void handleSaveAll()}
+            disabled={saving || !hasUnsavedChanges}
+            className="inline-flex min-w-[5.5rem] cursor-pointer items-center justify-center rounded-full bg-[var(--accent)] px-5 py-1.5 text-sm font-semibold text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saving ? <LoadingDots /> : saved ? "Saved" : "Save"}
+          </button>
+        </div>
       </div>
-
       <ProfileEditor
         onDirtyChange={setProfileDirty}
         registerSave={registerProfileSave}
@@ -125,26 +143,6 @@ export function MineTab() {
         onDirtyChange={setWishlistDirty}
         registerSave={registerWishlistSave}
       />
-      {hasUnsavedChanges || saving || saved ? (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={() => profileCancel?.()}
-            disabled={saving || !profileDirty}
-            className="cursor-pointer rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-6 py-3.5 text-base font-semibold text-[var(--ink)] shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-200 hover:bg-[var(--paper)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSaveAll()}
-            disabled={saving || !hasUnsavedChanges}
-            className="cursor-pointer rounded-full bg-[var(--accent)] px-8 py-4 text-base font-semibold text-[var(--accent-ink)] ring-1 ring-[color-mix(in_srgb,var(--ink)_12%,transparent)] shadow-[0_6px_16px_rgba(0,0,0,0.18)] transition-all duration-200 hover:bg-[var(--accent-hover)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.22)] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saving ? <LoadingDots /> : saved ? "Saved" : "Save"}
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }
