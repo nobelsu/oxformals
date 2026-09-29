@@ -91,6 +91,9 @@
 
 html {
   scrollbar-gutter: stable;
+  /* No grey/blue flash over tapped cards and buttons on phones; pressed
+     states come from each component instead. */
+  -webkit-tap-highlight-color: transparent;
   /*
    * Body face for the default theme (and bare `html` — see the fallback
    * comment on the :root block above: logged-out visitors never get

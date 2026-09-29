@@ -120,7 +120,7 @@ function NextUpCard({
           onOpen();
         }
       }}
-      className="cursor-pointer overflow-hidden rounded-[20px] border-2 border-[var(--ink)] bg-[var(--paper)] text-[var(--ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_3%,var(--paper))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30"
+      className="cursor-pointer overflow-hidden rounded-[20px] border-2 border-[var(--ink)] bg-[var(--paper)] text-[var(--ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_3%,var(--paper))] active:translate-y-px focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]"
     >
       <div
         aria-hidden
