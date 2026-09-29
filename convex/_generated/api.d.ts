@@ -56,6 +56,7 @@ import type * as notifications from "../notifications.js";
 import type * as notify from "../notify.js";
 import type * as partyInvites from "../partyInvites.js";
 import type * as password from "../password.js";
+import type * as peopleYouMayKnow from "../peopleYouMayKnow.js";
 import type * as profileActivity from "../profileActivity.js";
 import type * as pushNotifications from "../pushNotifications.js";
 import type * as randomCode from "../randomCode.js";
@@ -128,6 +129,7 @@ declare const fullApi: ApiFromModules<{
   notify: typeof notify;
   partyInvites: typeof partyInvites;
   password: typeof password;
+  peopleYouMayKnow: typeof peopleYouMayKnow;
   profileActivity: typeof profileActivity;
   pushNotifications: typeof pushNotifications;
   randomCode: typeof randomCode;
