@@ -11,7 +11,6 @@ import {
 } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
-import { SketchCard } from "@/components/ui/SketchCard";
 import { MY_FORMALS_SENTINEL } from "./CollegeFilter";
 import { ListingDayList } from "./ListingDayList";
 import { ListingDetailModal } from "./ListingDetailModal";
@@ -20,6 +19,7 @@ import { JoinRequestFlow } from "./JoinRequestFlow";
 import { isoToLocalDateKey } from "@/lib/data/format";
 import { BrowseFiltersModal } from "./BrowseFiltersModal";
 import type { Listing } from "@/lib/data/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Props = {
   onNavigateToMine: () => void;
@@ -364,19 +364,19 @@ export function BrowseTab({
 
         {browseListings.length === 0 ? (
           <div className="mx-auto w-full max-w-3xl">
-            <SketchCard className="p-8 text-center text-[var(--ink-muted)] text-[0.875rem] sm:text-[1rem] leading-snug">
-              {hasCollegeMatches ? (
-                <>
-                  Nothing matches your filters. Try another college, adjust the
-                  date or role, or clear your search.
-                </>
-              ) : (
-                <>
-                  No open swaps here yet. Try another college or list your own
-                  formal.
-                </>
-              )}
-            </SketchCard>
+            {hasCollegeMatches ? (
+              <EmptyState
+                icon="search"
+                title="No matches"
+                body="Try another date or college, or clear your search."
+              />
+            ) : (
+              <EmptyState
+                icon="ticket"
+                title="No open formals here"
+                action={{ label: "List yours", href: "/?tab=requests&openList=1" }}
+              />
+            )}
           </div>
         ) : (
           <div data-browse-listings>

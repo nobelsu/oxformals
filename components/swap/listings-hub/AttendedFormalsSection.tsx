@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { MyListingCard } from "@/components/swap/MyListingCard";
 import type { User } from "@/lib/auth/types";
 import type { Listing } from "@/lib/data/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Props = {
   attendedPastListings: Listing[];
@@ -28,10 +29,11 @@ export function AttendedFormalsSection({
         </h2>
       </div>
       {attendedPastListings.length === 0 ? (
-        <p className="text-[var(--ink-muted)]">
-          When you join someone else&apos;s formal, past formals will show up
-          here.
-        </p>
+        <EmptyState
+          icon="calendar"
+          title="No formals yet"
+          body="Formals you go to as a guest show up here."
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {attendedPastListings.map((listing) => {

@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { formatListingDate } from "@/lib/data/format";
 import type { CollegeReviewPublic } from "@/lib/data/collegeReviews";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Props = {
   college: string;
@@ -66,9 +67,11 @@ export function CollegePhotosSection({ college }: Props) {
 
   if (photos.length === 0) {
     return (
-      <p className="text-[var(--ink-muted)]">
-        No photos yet. They appear here when guests add images to their reviews.
-      </p>
+      <EmptyState
+        icon="camera"
+        title="No photos yet"
+        body="Photos from guests' reviews show up here."
+      />
     );
   }
 

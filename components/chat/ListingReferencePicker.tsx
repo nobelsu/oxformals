@@ -6,6 +6,7 @@ import { ListingReferenceCard } from "@/components/chat/ListingReferenceCard";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { ListingSummary } from "@/lib/chat/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Props = {
   open: boolean;
@@ -37,7 +38,7 @@ export function ListingReferencePicker({
         {listings === undefined ? (
           <p className="text-sm text-[var(--ink-soft)]">Loading…</p>
         ) : listings.length === 0 ? (
-          <p className="text-sm text-[var(--ink-soft)]">No listings available.</p>
+          <EmptyState compact icon="ticket" title="No listings to share" />
         ) : (
           listings.map((listing) => (
             <ListingReferenceCard

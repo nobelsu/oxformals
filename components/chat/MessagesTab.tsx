@@ -19,6 +19,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { formatRelativeTime } from "@/lib/data/format";
 import { chatsTabUrl } from "@/lib/chat/navigation";
 import { isDmConversation, isGroupConversation } from "@/lib/chat/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export function MessagesTab() {
   const router = useRouter();
@@ -148,9 +149,12 @@ export function MessagesTab() {
         {conversations === undefined ? (
           <p className="text-sm text-[var(--ink-soft)]">Loading…</p>
         ) : conversations.length === 0 ? (
-          <p className="text-sm text-[var(--ink-soft)]">
-            No conversations yet. Start a new message or create a group.
-          </p>
+          <EmptyState
+            icon="chat"
+            title="No chats yet"
+            body="Message a host or start a group."
+            action={{ label: "New message", onClick: () => setStartChatOpen(true) }}
+          />
         ) : (
           conversations.map((convo) => {
             const hasUnread = convo.unreadCount > 0;

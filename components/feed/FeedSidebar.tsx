@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { CreditsChip } from "@/components/credits/CreditsChip";
 import { formatListingTime } from "@/lib/data/format";
 import type { useListingsHubData } from "@/components/swap/listings-hub/useListingsHubData";
 import type { Listing } from "@/lib/data/types";
@@ -80,7 +79,7 @@ export function NextFormalCard({
 }
 
 /**
- * The feed's desktop sidebar: your next formal, what needs you, and credits.
+ * The feed's desktop sidebar: your next formal and what needs you.
  */
 export function FeedSidebar({
   hub,
@@ -93,9 +92,6 @@ export function FeedSidebar({
     <div className="flex flex-col gap-3">
       {nextFormal ? <NextFormalCard nextFormal={nextFormal} /> : null}
       {hub.hasNeedsAttention ? <NeedsAttention hub={hub} /> : null}
-      <div>
-        <CreditsChip />
-      </div>
     </div>
   );
 }

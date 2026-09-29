@@ -31,6 +31,7 @@ import type { GroupSize, Listing } from "@/lib/data/types";
 import { formatYearLabel } from "@/lib/data/format";
 import { TOTAL_BADGE_COUNT, badgeById } from "@/lib/data/badges";
 import type { ProfileActivityItem } from "@/lib/data/groupActivityByDay";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 function mapProfileListing(doc: {
   _id: string;
@@ -486,11 +487,14 @@ export function ProfileView({
         ) : activity.hidden && streamItems.length === 0 ? (
           <PrivateActivityNotice pending={followState?.following === "pending"} />
         ) : streamItems.length === 0 ? (
-          <div className="mt-3 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_25%,transparent)] px-5 py-8 text-center text-[var(--ink-muted)]">
-            {isOwnProfile
-              ? "No activity yet — list a formal to get started."
-              : `${name.split(" ")[0]} hasn\u2019t been active yet.`}
-          </div>
+          <EmptyState
+            className="mt-3"
+            icon="calendar"
+            title={isOwnProfile ? "No activity yet" : "Nothing here yet"}
+            {...(isOwnProfile
+              ? { action: { label: "List a formal", href: "/?tab=requests&openList=1" } }
+              : {})}
+          />
         ) : (
           <ProfileActivityStream
             className="mt-3"

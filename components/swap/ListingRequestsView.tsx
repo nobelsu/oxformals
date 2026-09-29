@@ -39,6 +39,7 @@ import { placeholderUser } from "@/lib/data/users";
 import type { Listing, RequestType } from "@/lib/data/types";
 import { listingIsPast } from "@/lib/data/collegeReviewEligibility";
 import { useNowMs } from "@/lib/hooks/useNowMs";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export function ListingRequestsView({ listingId }: { listingId: string }) {
   const router = useRouter();
@@ -361,7 +362,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             <p className="mt-2 text-sm text-[var(--danger)]">{acceptError}</p>
           ) : null}
           {incoming.length === 0 ? (
-            <p className="mt-2 text-[var(--ink-muted)]">No requests for this listing yet.</p>
+            <EmptyState className="mt-4" icon="inbox" title="No requests yet" />
           ) : (
             <div className="mt-4 flex flex-col gap-3">
               {incoming.map((r) => {
@@ -452,9 +453,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             Requests I&apos;ve sent
           </h2>
           {sent.length === 0 ? (
-            <p className="mt-2 text-[var(--ink-muted)]">
-              No outgoing requests from this listing yet.
-            </p>
+            <EmptyState className="mt-4" icon="inbox" title="No requests sent" />
           ) : (
             <div className="mt-4 flex flex-col gap-3">
               {sent.map((r) => {

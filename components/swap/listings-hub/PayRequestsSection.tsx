@@ -4,6 +4,7 @@ import { SentRequestRow } from "@/components/swap/SentRequestRow";
 import { placeholderUser } from "@/lib/data/users";
 import type { User } from "@/lib/auth/types";
 import type { Listing, SwapRequest } from "@/lib/data/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Props = {
   myPayRequests: SwapRequest[];
@@ -24,9 +25,11 @@ export function PayRequestsSection({
         Requests you sent
       </h2>
       {myPayRequests.length === 0 ? (
-        <p className="text-[var(--ink-muted)]">
-          You haven&apos;t paid for a seat with cash or a credit yet.
-        </p>
+        <EmptyState
+          icon="inbox"
+          title="No requests sent"
+          action={{ label: "Browse formals", href: "/?tab=browse" }}
+        />
       ) : (
         <div className="flex flex-col gap-3">
           {myPayRequests.map((r) => {

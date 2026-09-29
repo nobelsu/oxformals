@@ -5,6 +5,7 @@ import { useState } from "react";
 import { MyListingCard } from "@/components/swap/MyListingCard";
 import type { User } from "@/lib/auth/types";
 import type { Listing } from "@/lib/data/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Props = {
   user: User;
@@ -92,10 +93,12 @@ export function MyListingsSection({
 
         {listingsTab === "active" ? (
           myActiveListings.length === 0 ? (
-            <p className="mt-4 text-[var(--ink-muted)]">
-              You don&apos;t have any active listings yet. Tap + to list a
-              formal.
-            </p>
+            <EmptyState
+              className="mt-4"
+              icon="ticket"
+              title="No listings yet"
+              action={{ label: "List a formal", href: "/?tab=requests&openList=1" }}
+            />
           ) : (
             <div className="mt-4 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
               {myActiveListings.map((listing) => {
@@ -121,9 +124,7 @@ export function MyListingsSection({
             </div>
           )
         ) : myBookedListings.length === 0 ? (
-          <p className="mt-4 text-[var(--ink-muted)]">
-            You don&apos;t have any past listings yet.
-          </p>
+          <EmptyState className="mt-4" icon="ticket" title="No past listings" />
         ) : (
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {myBookedListings.map((listing) => {

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { CreditsChip } from "@/components/credits/CreditsChip";
 
 function greetingWord(): string {
   const h = new Date().getHours();
@@ -16,7 +15,7 @@ const PlusIcon = () => (
   </svg>
 );
 
-/** Greeting, plus "List a formal" (and credits on phones, where there's no sidebar). */
+/** Greeting, plus "List a formal". */
 export function FeedHeader({ firstName }: { firstName: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -24,9 +23,6 @@ export function FeedHeader({ firstName }: { firstName: string }) {
         <span className="font-display font-normal">{greetingWord()},</span> {firstName}
       </h1>
       <div className="flex shrink-0 items-center gap-2">
-        <span className="lg:hidden">
-          <CreditsChip compact />
-        </span>
         <Link
           href="/?tab=requests&openList=1"
           data-onboarding="list"

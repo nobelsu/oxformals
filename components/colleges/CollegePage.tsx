@@ -21,6 +21,7 @@ import {
   COLLEGE_REVIEW_CATEGORIES,
   type CollegeReviewSort,
 } from "@/lib/data/collegeReviews";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Props = {
   college: string;
@@ -152,9 +153,11 @@ export function CollegePage({ college }: Props) {
                   </div>
                 </SketchCard>
               ) : aggregates !== undefined ? (
-                <SketchCard className="p-6 text-[var(--ink-muted)]">
-                  No reviews yet. Be the first after attending a formal here.
-                </SketchCard>
+                <EmptyState
+                  icon="star"
+                  title="No reviews yet"
+                  body="Be the first after a formal here."
+                />
               ) : null}
 
               <section>
@@ -183,7 +186,7 @@ export function CollegePage({ college }: Props) {
                 {reviewsToShow === undefined ? (
                   <p className="mt-4 text-[var(--ink-muted)]">Loading reviews…</p>
                 ) : reviewsToShow.length === 0 ? (
-                  <p className="mt-4 text-[var(--ink-muted)]">No reviews yet.</p>
+                  <EmptyState className="mt-4" icon="star" title="No reviews yet" />
                 ) : (
                   <div className="mt-4 flex flex-col gap-4">
                     {reviewsToShow.map((review) => (

@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import type { AvatarSource } from "@/lib/auth/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type FollowState = NonNullable<
   ReturnType<typeof useQuery<typeof api.follows.getFollowState>>
@@ -242,9 +243,11 @@ function FollowListModal({
       ) : people === null ? (
         <p className="text-sm text-[var(--ink-muted)]">This account is private.</p>
       ) : people.length === 0 ? (
-        <p className="text-sm text-[var(--ink-muted)]">
-          {direction === "followers" ? "No followers yet." : "Not following anyone yet."}
-        </p>
+        <EmptyState
+          compact
+          icon="users"
+          title={direction === "followers" ? "No followers yet" : "Not following anyone yet"}
+        />
       ) : (
         <ul className="divide-y divide-[color-mix(in_srgb,var(--ink)_10%,transparent)]">
           {people.map((p) => (
@@ -280,7 +283,7 @@ function FollowRequestsModal({ onClose }: { onClose: () => void }) {
       {people === undefined ? (
         <p className="text-sm text-[var(--ink-muted)]">Loading…</p>
       ) : people.length === 0 ? (
-        <p className="text-sm text-[var(--ink-muted)]">No one&apos;s waiting.</p>
+        <EmptyState compact icon="users" title="No one's waiting" />
       ) : (
         <ul className="divide-y divide-[color-mix(in_srgb,var(--ink)_10%,transparent)]">
           {people.map((p) => (

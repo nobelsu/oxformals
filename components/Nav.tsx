@@ -9,6 +9,7 @@ import { DeleteAccountModal } from "@/components/DeleteAccountModal";
 import { SettingsModal } from "@/components/SettingsModal";
 import { Avatar } from "@/components/ui/Avatar";
 import { Drawer } from "@/components/ui/Drawer";
+import { CreditsChip } from "@/components/credits/CreditsChip";
 import { api } from "@/convex/_generated/api";
 import type { AvatarSource } from "@/lib/auth/types";
 import { BROWSE_ROUTE } from "@/lib/ui/routes";
@@ -175,12 +176,8 @@ function NavInner() {
     setDrawerOpen(false);
   }, [pathname, searchParams]);
 
+  // Landing page and signed-in app alike collapse once you scroll.
   useEffect(() => {
-    if (!isLandingPage) {
-      setLandingScrolled(false);
-      return;
-    }
-
     const onScroll = () => {
       setLandingScrolled(window.scrollY > 56);
     };
@@ -191,6 +188,12 @@ function NavInner() {
   }, [isLandingPage]);
 
   const { navRef, inverted, hidden } = useNavTheme();
+  // Signed-in slim bar: on the feed, the For you / Following tabs move up
+  // into it.
+  const collapsed = landingScrolled;
+  const onFeed = pathname === "/" && activeTab === "feed";
+  const feedTabsInNav = collapsed && onFeed;
+  const feedFollowing = searchParams?.get("feed") === "following";
 
   if (isLoginPage) {
     return (
@@ -409,12 +412,12 @@ function NavInner() {
     // The signed-in app nav always keeps its background: the "inverted" state
     // is for the landing page's dark sections, and on dark app pages it would
     // leave the nav transparent over scrolling content.
-    <nav ref={navRef} className={`sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${hidden ? "pointer-events-none opacity-0" : "backdrop-blur-md bg-[var(--nav-bg)]/80"}`}>
-      <div className="pointer-events-auto mx-auto grid w-full max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-5 sm:grid-cols-[1fr_auto_1fr] sm:gap-4 sm:px-6">
+    <nav ref={navRef} className={`sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${hidden ? "pointer-events-none opacity-0" : "backdrop-blur-md bg-[var(--nav-bg)]/80"} ${collapsed ? "border-b-[1.5px] border-[color-mix(in_srgb,var(--nav-ink)_10%,transparent)]" : ""}`}>
+      <div className={`pointer-events-auto mx-auto grid w-full max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 transition-[padding] duration-300 sm:grid-cols-[1fr_auto_1fr] sm:gap-4 sm:px-6 ${collapsed ? "py-2.5" : "py-5"}`}>
         <div className="flex items-center justify-start">
           <Link
             href="/"
-            className="hidden font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)] sm:block"
+            className={`hidden font-display uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)] transition-[font-size] duration-300 sm:block ${collapsed ? "text-base" : "text-xl"}`}
           >
             Oxformals
           </Link>
@@ -442,6 +445,10 @@ function NavInner() {
         </div>
 
         <div className="flex min-w-0 items-center justify-center sm:col-start-2">
+          {feedTabsInNav ? (
+            <FeedScopeTabs following={feedFollowing} />
+          ) : (
+          <>
           <p className="min-w-0 truncate text-center font-display text-lg uppercase tracking-[0.2em] text-[var(--nav-ink)] sm:hidden">
             {isCollegeDetail
               ? "Rankings"
@@ -464,9 +471,12 @@ function NavInner() {
               />
             ))}
           </ul>
+          </>
+          )}
         </div>
 
         <div className="flex min-w-0 items-center justify-end gap-2 text-sm whitespace-nowrap sm:gap-3">
+          {status === "ready" && isAuthenticated && user ? <CreditsChip compact /> : null}
           {status !== "ready" ? null : isAuthenticated && user ? (
             <AccountMenu
               name={user.name}
@@ -763,5 +773,25 @@ function NavTabLink({
         <UnreadBadge count={totalUnread} className="translate-y-px" />
       ) : null}
     </Link>
+  );
+}
+
+/** For you / Following, shown in the slim nav once the feed scrolls. */
+function FeedScopeTabs({ following }: { following: boolean }) {
+  const cls = (on: boolean) =>
+    `border-b-2 pb-0.5 text-sm transition-colors ${
+      on
+        ? "border-[var(--nav-ink)] font-bold text-[var(--nav-ink)]"
+        : "border-transparent text-[var(--nav-ink-muted)] hover:text-[var(--nav-ink)]"
+    }`;
+  return (
+    <div className="flex items-center gap-6">
+      <Link href="/" scroll={false} className={cls(!following)}>
+        For you
+      </Link>
+      <Link href="/?feed=following" scroll={false} className={cls(following)}>
+        Following
+      </Link>
+    </div>
   );
 }

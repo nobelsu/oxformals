@@ -13,6 +13,7 @@ import { JoinRequestFlow } from "@/components/swap/JoinRequestFlow";
 import { collegeToSlug } from "@/lib/data/collegeSlug";
 import { mapListing } from "@/lib/data/mapConvex";
 import type { Listing } from "@/lib/data/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Props = {
   college: string;
@@ -61,9 +62,11 @@ export function CollegeListingsSection({ college }: Props) {
 
   if (openListings.length === 0) {
     return (
-      <p className="text-[var(--ink-muted)]">
-        No open listings for {college} right now.
-      </p>
+      <EmptyState
+        icon="ticket"
+        title="No open formals"
+        body={`Nothing listed at ${college} right now.`}
+      />
     );
   }
 

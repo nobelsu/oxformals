@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
@@ -23,9 +23,12 @@ import { FeedSidebar, NextFormalCard, whenLabel, type NextFormal } from "./FeedS
 import { NeedsAttention } from "./NeedsAttention";
 import { WeekFormals } from "./WeekFormals";
 import { BackToTop } from "@/components/ui/BackToTop";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export function FeedTab() {
-  const [scope, setScope] = useState<"forYou" | "following">("forYou");
+  const searchParams = useSearchParams();
+  const scope: "forYou" | "following" =
+    searchParams.get("feed") === "following" ? "following" : "forYou";
   const raw = useQuery(api.feed.getCampusFeed, { scope });
   const { user } = useAuth();
   const { listings, getUser, getListing } = useData();
@@ -107,22 +110,14 @@ export function FeedTab() {
     items === undefined ? (
       <p className="text-[var(--ink-muted)]">Loading your feed…</p>
     ) : items.length === 0 && scope === "following" ? (
-      <div className="rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] px-5 py-8 text-center">
-        <p className="text-[var(--ink-muted)]">Nothing from people you follow yet.</p>
-      </div>
+      <EmptyState className="mt-3" icon="users" title="Nothing from people you follow yet" />
     ) : items.length === 0 ? (
-      <div className="rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] px-5 py-8 text-center">
-        <p className="text-[var(--ink-muted)]">
-          Nothing here yet. As people list formals and review their nights out,
-          it&rsquo;ll show up here.
-        </p>
-        <Link
-          href={BROWSE_ROUTE}
-          className="mt-4 inline-flex items-center justify-center rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm font-semibold text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-        >
-          Browse formals
-        </Link>
-      </div>
+      <EmptyState
+        className="mt-3"
+        icon="calendar"
+        title="Nothing here yet"
+        action={{ label: "Browse formals", href: BROWSE_ROUTE }}
+      />
     ) : (
       <ul className="flex flex-col">
         {items.map((item) => (
@@ -181,12 +176,12 @@ export function FeedTab() {
           <div>
             {user ? (
               <div className="mb-2 flex gap-5 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_12%,transparent)]">
-                <button type="button" className={tabCls(scope === "forYou")} onClick={() => setScope("forYou")}>
+                <Link href="/" scroll={false} className={tabCls(scope === "forYou")}>
                   For you
-                </button>
-                <button type="button" className={tabCls(scope === "following")} onClick={() => setScope("following")}>
+                </Link>
+                <Link href="/?feed=following" scroll={false} className={tabCls(scope === "following")}>
                   Following
-                </button>
+                </Link>
               </div>
             ) : null}
             {scope === "forYou" && raw?.wishlistEmpty ? (
