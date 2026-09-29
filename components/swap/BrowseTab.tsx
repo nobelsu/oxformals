@@ -36,9 +36,6 @@ type Props = {
   onSignInRequired: () => void;
 };
 
-const FILTER_FIELD_CLS =
-  "min-w-0 origin-center rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base transition-colors focus:outline-none focus:bg-[var(--paper)]";
-
 function ClearInputIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -276,107 +273,57 @@ export function BrowseTab({
   return (
     <>
       <div className="browse-tab-root flex flex-col gap-6">
-        {/* Search + filters bar — sticky below nav on sm+ (scrolls away on
-            mobile so the day-rail's sticky day headers never collide with it) */}
-        <div className="bg-[var(--bg)] pb-3 pt-3 sm:sticky sm:top-[var(--app-nav-height)] sm:z-10">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 border-b border-[color-mix(in_srgb,var(--ink)_18%,transparent)] pb-3">
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--ink)] sm:text-3xl">
-              Upcoming formals
-            </h1>
-            <div className="flex shrink-0 items-center gap-2">
-              {/* Desktop search — expands on focus. Mobile uses the full-width
-                  field below. */}
-              <label
-                className={`group hidden h-10 items-center overflow-hidden rounded-full border-2 bg-[var(--paper)] transition-[width,border-color] duration-300 ease-out sm:flex ${
-                  searchQuery
-                    ? "w-60 border-[var(--accent)]"
-                    : "w-10 border-[var(--ink)]/25 focus-within:w-60 focus-within:border-[var(--accent)]"
-                }`}
-              >
-                <span className="grid h-full w-9 shrink-0 place-items-center text-[var(--ink-muted)]">
-                  <SearchIcon className="h-4 w-4" />
-                </span>
-                <input
-                  type="text"
-                  inputMode="search"
-                  enterKeyHint="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search college, host..."
-                  aria-label="Search for college, menu, role, host"
-                  autoComplete="off"
-                  className="min-w-0 flex-1 bg-transparent pr-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
-                />
-                {searchQuery ? (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    aria-label="Clear search"
-                    className="mr-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
-                  >
-                    <ClearInputIcon className="h-3.5 w-3.5" />
-                  </button>
-                ) : null}
-              </label>
-              {/* Filters — everything (college, dates, role) lives in here. */}
-              <button
-                type="button"
-                onClick={() => setFilterOpen(true)}
-                aria-label={activeSections ? `Filters, ${activeSections} on` : "Filters"}
-                aria-expanded={filterOpen}
-                className="relative hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-[var(--ink)]/25 bg-[var(--paper)] text-[var(--ink)] transition-colors hover:border-[var(--ink)]/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30 sm:flex"
-              >
-                <FilterIcon className="h-5 w-5" />
-                <FilterCountBadge count={activeSections} />
-              </button>
-            </div>
-          </div>
-          {/* Mobile: full-width search + filter button (desktop has both above). */}
-          <div className="flex items-center gap-2 sm:hidden">
+        {/* Header: same shape as the Colleges tab — hand-drawn title, then
+            one search pill with the filter button beside it. */}
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+          <h1 className="font-display text-4xl uppercase tracking-wide">Formals</h1>
+          <div className="flex items-center gap-2">
             <form
-              className="flex min-w-0 flex-1 items-center"
+              className="relative min-w-0 flex-1"
               onSubmit={handleBrowseSearchSubmit}
             >
-              <div className="relative min-w-0 flex-1">
-                <input
-                  id="browse-hero-search"
-                  type="text"
-                  inputMode="search"
-                  enterKeyHint="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search college, menu, host..."
-                  aria-label="Search for college, menu, role, host"
-                  autoComplete="off"
-                  className={`w-full min-w-0 ${FILTER_FIELD_CLS} ${
-                    searchQuery !== "" ? "pr-11" : ""
-                  }`}
-                />
-                {searchQuery !== "" ? (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:bg-[var(--ink)]/10 hover:text-[var(--ink)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30"
-                    aria-label="Clear search"
-                  >
-                    <ClearInputIcon className="h-4 w-4" />
-                  </button>
-                ) : null}
-              </div>
+              <span
+                aria-hidden
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ink-soft)]"
+              >
+                <SearchIcon className="h-4 w-4" />
+              </span>
+              <input
+                id="browse-hero-search"
+                type="text"
+                inputMode="search"
+                enterKeyHint="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search college, menu, host"
+                aria-label="Search for college, menu, role, host"
+                autoComplete="off"
+                className={`w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] py-2.5 pl-11 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none ${
+                  searchQuery !== "" ? "pr-11" : "pr-4"
+                }`}
+              />
+              {searchQuery !== "" ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
+                  aria-label="Clear search"
+                >
+                  <ClearInputIcon className="h-4 w-4" />
+                </button>
+              ) : null}
             </form>
             <button
               type="button"
               onClick={() => setFilterOpen(true)}
               aria-label={activeSections ? `Filters, ${activeSections} on` : "Filters"}
               aria-expanded={filterOpen}
-              className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)]/30"
+              className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] text-[var(--ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_6%,var(--paper))] focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]"
             >
               <FilterIcon className="h-5 w-5" />
               <FilterCountBadge count={activeSections} />
             </button>
           </div>
-        </div>
         </div>
 
         {browseListings.length === 0 ? (
