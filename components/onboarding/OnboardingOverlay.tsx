@@ -182,6 +182,10 @@ export function OnboardingOverlay() {
   const [rulesAgreed, setRulesAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [target, setTarget] = useState<Target | null>(null);
+  // The feed's "List a formal" button only appears once the feed loads, so
+  // wait for every step's target (or a short cap) before showing step one;
+  // otherwise the tour opens on "Find a seat" and then jumps.
+  const [settled, setSettled] = useState(false);
 
   const coachSteps = useMemo(
     () => COACH_STEPS.filter((step) => availableIds.includes(step.id)),
@@ -204,13 +208,16 @@ export function OnboardingOverlay() {
           ? prev
           : found,
       );
+      if (found.length === COACH_STEPS.length) setSettled(true);
     }
     const observer = new MutationObserver(scanTargets);
     observer.observe(document.body, { childList: true, subtree: true });
     const timeout = window.setTimeout(scanTargets, 0);
+    const cap = window.setTimeout(() => setSettled(true), 1500);
     return () => {
       observer.disconnect();
       window.clearTimeout(timeout);
+      window.clearTimeout(cap);
     };
   }, [needsRulesAgreement, stepIndex]);
 
@@ -275,7 +282,7 @@ export function OnboardingOverlay() {
     return () => window.removeEventListener("keydown", onKey);
   }, [currentIndex, goTo, handleBack, isRules, needsRulesAgreement]);
 
-  if (!needsRulesAgreement) return null;
+  if (!needsRulesAgreement || !settled) return null;
 
   const pad = 10;
   const spotlight = target
