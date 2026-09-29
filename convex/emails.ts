@@ -15,6 +15,8 @@ import {
   renderEmailText,
   type EmailContent,
 } from "./emailTemplate";
+import { notificationEmail } from "./notificationCopy";
+import { loadView } from "./notifications";
 
 function resolveRequestType(req: Doc<"requests">): "swap" | "pay" | "credit" {
   return (
@@ -901,3 +903,70 @@ export function creditDisputeEmail(p: {
     note: `Settle each hold: npx convex run --prod credits:resolveDispute '{"holdId":"…","outcome":"refund"}' (or "payHost"). Listing ${p.listingId}.`,
   };
 }
+
+// ── Bell notifications that email (see EMAIL_NOTICE_KINDS) ─────────────────
+
+const linkValidator = v.object({ label: v.string(), path: v.string() });
+
+const notificationEmailValidator = v.object({
+  to: v.string(),
+  subject: v.string(),
+  eyebrow: v.string(),
+  heading: v.string(),
+  body: v.optional(v.string()),
+  ticket: v.optional(
+    v.object({ college: v.string(), when: v.string(), tag: v.optional(v.string()) }),
+  ),
+  cta: linkValidator,
+  secondary: v.optional(linkValidator),
+});
+
+type NotificationEmail = {
+  to: string;
+  subject: string;
+  eyebrow: string;
+  heading: string;
+  body?: string;
+  ticket?: { college: string; when: string; tag?: string };
+  cta: { label: string; path: string };
+  secondary?: { label: string; path: string };
+};
+
+export const getNotificationEmail = internalQuery({
+  args: { notificationId: v.id("notifications") },
+  returns: v.union(v.null(), notificationEmailValidator),
+  handler: async (ctx, { notificationId }) => {
+    const n = await ctx.db.get(notificationId);
+    if (!n) return null;
+    const user = await ctx.db.get(n.userId);
+    if (!user || user.deletedAt !== undefined || !user.email?.trim()) return null;
+    const copy = notificationEmail(await loadView(ctx, n));
+    if (!copy) return null;
+    return { to: user.email.trim().toLowerCase(), ...copy };
+  },
+});
+
+/** Sent by `deliver` only when the recipient's email pref allows it. */
+export const sendNotificationEmail = internalAction({
+  args: { notificationId: v.id("notifications") },
+  returns: v.null(),
+  handler: async (ctx, { notificationId }) => {
+    const email: NotificationEmail | null = await ctx.runQuery(
+      internal.emails.getNotificationEmail,
+      { notificationId },
+    );
+    if (!email) return null;
+    await sendEmail("sendNotificationEmail", email.to, email.subject, {
+      title: email.subject,
+      eyebrow: email.eyebrow,
+      heading: email.heading,
+      ...(email.body ? { body: email.body } : {}),
+      ...(email.ticket ? { ticket: email.ticket } : {}),
+      cta: { href: `${siteUrl()}${email.cta.path}`, label: email.cta.label },
+      ...(email.secondary
+        ? { secondary: { href: `${siteUrl()}${email.secondary.path}`, label: email.secondary.label } }
+        : {}),
+    });
+    return null;
+  },
+});

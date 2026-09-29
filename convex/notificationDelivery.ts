@@ -63,6 +63,22 @@ export const deliver = internalAction({
     });
     if (!plan) return null;
 
+    // Email first: a push failure must not cost someone their email.
+    if (plan.email?.type === "request") {
+      await ctx.scheduler.runAfter(0, internal.emails.sendNewRequestEmail, {
+        requestId: plan.email.requestId,
+      });
+    } else if (plan.email?.type === "wishlist") {
+      await ctx.scheduler.runAfter(0, internal.emails.sendNewListingAlertEmail, {
+        listingId: plan.email.listingId,
+        userId: plan.email.userId,
+      });
+    } else if (plan.email?.type === "notice") {
+      await ctx.scheduler.runAfter(0, internal.emails.sendNotificationEmail, {
+        notificationId,
+      });
+    }
+
     if (plan.push) {
       const { title, body, url, tag } = plan.push;
       try {
