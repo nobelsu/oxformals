@@ -2,13 +2,20 @@
 
 import { forwardRef, useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { useMutation, usePaginatedQuery } from "convex/react";
+import { useMutation, type UsePaginatedQueryReturnType } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SkeletonRows } from "@/components/ui/Loading";
 import { AlertsPrompt } from "./AlertsPrompt";
 import { NotificationRow, type BellItem } from "./NotificationRow";
 
-const PAGE = 30;
+export const NOTIFICATION_PAGE = 30;
+const PAGE = NOTIFICATION_PAGE;
+
+/** The bell's list, loaded by NotificationBell so it is ready before the panel opens. */
+export type NotificationFeed = UsePaginatedQueryReturnType<
+  typeof api.notifications.listMyNotifications
+>;
 
 const sectionLabel =
   "px-4 pb-1 pt-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]";
@@ -24,13 +31,14 @@ export type PanelAnchor = { top: number; right: number };
  */
 export const NotificationPanel = forwardRef<
   HTMLDivElement,
-  { alertsEligible: boolean; anchor: PanelAnchor; onClose: () => void }
->(function NotificationPanel({ alertsEligible, anchor, onClose }, ref) {
-  const { results, status, loadMore } = usePaginatedQuery(
-    api.notifications.listMyNotifications,
-    {},
-    { initialNumItems: PAGE },
-  );
+  {
+    alertsEligible: boolean;
+    anchor: PanelAnchor;
+    feed: NotificationFeed;
+    onClose: () => void;
+  }
+>(function NotificationPanel({ alertsEligible, anchor, feed, onClose }, ref) {
+  const { results, status, loadMore } = feed;
   const markAllRead = useMutation(api.notifications.markAllRead);
   const [nowMs] = useState(() => Date.now());
   const [newIds, setNewIds] = useState<Set<string> | null>(null);
@@ -71,6 +79,7 @@ export const NotificationPanel = forwardRef<
       <div className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-3.5">
         <h2 className="font-display text-2xl leading-none">Notifications</h2>
         <div className="flex items-baseline gap-4">
+          {fresh.length > 0 ? (
           <button
             type="button"
             onClick={() => {
@@ -81,6 +90,7 @@ export const NotificationPanel = forwardRef<
           >
             Mark all read
           </button>
+          ) : null}
           <button
             type="button"
             onClick={onClose}
@@ -93,7 +103,10 @@ export const NotificationPanel = forwardRef<
 
       <div className="min-h-0 flex-1 overflow-y-auto pb-2">
         <AlertsPrompt eligible={alertsEligible} />
-        {status === "LoadingFirstPage" ? null : results.length === 0 ? (
+        {status === "LoadingFirstPage" ? (
+          // Same height as a few rows, so the panel doesn't jump when they land.
+          <SkeletonRows count={3} className="px-4 py-3" />
+        ) : results.length === 0 ? (
           <EmptyState compact icon="bell" title="No notifications yet" />
         ) : (
           <>

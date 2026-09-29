@@ -2,16 +2,26 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { ensureWebPushSubscription } from "@/lib/push/webPush";
 import { BellIcon } from "./BellIcon";
-import { NotificationPanel, type PanelAnchor } from "./NotificationPanel";
+import {
+  NOTIFICATION_PAGE,
+  NotificationPanel,
+  type PanelAnchor,
+} from "./NotificationPanel";
 
 const SYNCED_KEY = "oxformals.pushSynced";
 
 export function NotificationBell() {
   const bell = useQuery(api.notifications.getBellState, {});
+  // Loaded up front (not when the panel opens) so the list is already there.
+  const feed = usePaginatedQuery(
+    api.notifications.listMyNotifications,
+    {},
+    { initialNumItems: NOTIFICATION_PAGE },
+  );
   const save = useMutation(api.notifications.saveWebPushSubscription);
   const [anchor, setAnchor] = useState<PanelAnchor | null>(null);
   const open = anchor !== null;
@@ -94,6 +104,7 @@ export function NotificationBell() {
           ref={panelRef}
           alertsEligible={bell.alertsEligible}
           anchor={anchor}
+          feed={feed}
           onClose={close}
         />
       ) : null}
