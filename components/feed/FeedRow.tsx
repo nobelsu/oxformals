@@ -164,7 +164,7 @@ export function FeedRow({ item, onOpenListing }: Props) {
   return (
     <li className="border-t border-[var(--ink)]/10 py-5 first:border-t-0 first:pt-1">
       {/* Header */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         {item.kind === "attended" ? (
           <span className="flex shrink-0 -space-x-2.5">
             {item.actors.slice(0, 3).map((a) => (
@@ -183,7 +183,7 @@ export function FeedRow({ item, onOpenListing }: Props) {
           </Link>
         )}
 
-        <div className="min-w-0 flex-1 pt-0.5">
+        <div className="min-w-0 flex-1">
           <p className="text-[1.05rem] leading-snug">
             {item.kind === "attended" ? (
               <span className="font-semibold">
