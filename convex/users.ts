@@ -294,11 +294,20 @@ export const completeOnboarding = mutation({
   },
 });
 
+/**
+ * Finishing onboarding: accepts the Terms and Privacy policy. Keeps its old
+ * name so older clients (and the mobile app) still work; records when.
+ */
 export const agreeToRules = mutation({
   args: {},
+  returns: v.null(),
   handler: async (ctx) => {
     const userId = await requireUserId(ctx);
-    await ctx.db.patch(userId, { agreedToRules: true });
+    await ctx.db.patch(userId, {
+      agreedToRules: true,
+      agreedToTermsAt: Date.now(),
+    });
+    return null;
   },
 });
 

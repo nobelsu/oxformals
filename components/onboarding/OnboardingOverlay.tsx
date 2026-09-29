@@ -1,57 +1,82 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import { useRouter } from "next/navigation";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/auth/useAuth";
-import { SketchCard } from "@/components/ui/SketchCard";
-import { PencilArrow } from "./PencilArrow";
-import { RulesSlide } from "./RulesSlide";
+import { placeCallout, type Box } from "@/lib/ui/calloutPlacement";
+import { BROWSE_ROUTE } from "@/lib/ui/routes";
+import { COLLEGE_FILTER_HIGHLIGHTS, OXFORD_COLLEGES } from "@/lib/data/colleges";
 
-type CoachId = "list" | "browse" | "me";
+type SlideId = "ways" | "credit" | "friends" | "colleges" | "done";
+type PointerId = "browse" | "list" | "bell";
 
-type CoachStep = {
-  id: CoachId;
-  label: string;
+type PointerStep = {
+  kind: "pointer";
+  id: PointerId;
+  title: string;
+  line: string;
   selector: string;
   fallbackSelector?: string;
-  hintWhenFallback: string;
+  fallbackLine?: string;
 };
+type SlideStep = { kind: "slide"; id: SlideId };
+type Step = PointerStep | SlideStep;
 
-// Every target is always on screen on the feed (the home page); on mobile the
-// Browse tab and the avatar live in the menu, so those steps point at it.
-const COACH_STEPS: readonly CoachStep[] = [
+const POINTERS: readonly PointerStep[] = [
   {
-    id: "list",
-    label: "List yours",
-    selector: '[data-onboarding="list"]',
-    hintWhenFallback: "",
-  },
-  {
+    kind: "pointer",
     id: "browse",
-    label: "Find a seat",
+    title: "Find a seat",
+    line: "Every open formal.",
     selector: '[data-onboarding="browse"]',
     fallbackSelector: '[data-onboarding="menu"]',
-    hintWhenFallback: "in the menu",
+    fallbackLine: "In the menu.",
   },
   {
-    id: "me",
-    label: "Your profile",
-    selector: '[data-onboarding="me"], [aria-label="Your profile"]',
-    fallbackSelector: '[data-onboarding="menu"]',
-    hintWhenFallback: "in the menu",
+    kind: "pointer",
+    id: "list",
+    title: "Host yours",
+    line: "Guests can pay in credits.",
+    selector: '[data-onboarding="list"]',
+  },
+  {
+    kind: "pointer",
+    id: "bell",
+    title: "Your bell",
+    line: "Requests and invites.",
+    selector: '[data-onboarding="bell"]',
   },
 ];
 
-type Target = {
-  rect: DOMRect;
-  usedFallback: boolean;
-};
+const pointer = (id: PointerId) => POINTERS.find((p) => p.id === id)!;
 
-type Hole = {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-};
+// Slides explain the idea; pointers show where things are. One flow.
+const FLOW: readonly Step[] = [
+  { kind: "slide", id: "ways" },
+  { kind: "slide", id: "credit" },
+  pointer("browse"),
+  pointer("list"),
+  { kind: "slide", id: "friends" },
+  pointer("bell"),
+  { kind: "slide", id: "colleges" },
+  { kind: "slide", id: "done" },
+];
+
+const CALLOUT_WIDTH = 264;
+const HOLE_PAD = 8;
+
+type Target = { rect: DOMRect; usedFallback: boolean };
 
 function isLaidOut(el: Element): boolean {
   const rect = el.getBoundingClientRect();
@@ -59,177 +84,580 @@ function isLaidOut(el: Element): boolean {
 }
 
 function queryLaidOut(selector: string): HTMLElement | null {
-  const nodes = document.querySelectorAll<HTMLElement>(selector);
-  for (const node of nodes) {
+  for (const node of document.querySelectorAll<HTMLElement>(selector)) {
     if (isLaidOut(node)) return node;
   }
   return null;
 }
 
-function readTarget(step: CoachStep): Target | null {
+function findTarget(step: PointerStep): { el: HTMLElement; usedFallback: boolean } | null {
   const primary = queryLaidOut(step.selector);
-  if (primary) {
-    return { rect: primary.getBoundingClientRect(), usedFallback: false };
-  }
-  if (step.fallbackSelector) {
-    const fallback = queryLaidOut(step.fallbackSelector);
-    if (fallback) {
-      return { rect: fallback.getBoundingClientRect(), usedFallback: true };
+  if (primary) return { el: primary, usedFallback: false };
+  const fallback = step.fallbackSelector ? queryLaidOut(step.fallbackSelector) : null;
+  return fallback ? { el: fallback, usedFallback: true } : null;
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function isTextField(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+}
+
+/** Enter already activates a focused button or link; don't do it twice. */
+function activatesOnEnter(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && ["BUTTON", "A"].includes(target.tagName);
+}
+
+export function OnboardingOverlay() {
+  const { needsRulesAgreement } = useAuth();
+  if (!needsRulesAgreement) return null;
+  return <OnboardingFlow />;
+}
+
+function OnboardingFlow() {
+  const { user, agreeToRules } = useAuth();
+  const router = useRouter();
+  // Pointers whose target is on screen; fixed once the user moves past step one.
+  const [foundPointers, setFoundPointers] = useState<readonly PointerId[]>([]);
+  const [stepIndex, setStepIndex] = useState(0);
+  // Targets (the feed's "List a formal", the bell) appear once their data
+  // loads, so wait for all of them (or a short cap) before showing step one;
+  // otherwise the progress dots change under the user.
+  const [settled, setSettled] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const steps = useMemo(
+    () =>
+      FLOW.filter((step) => step.kind === "slide" || foundPointers.includes(step.id)),
+    [foundPointers],
+  );
+  const index = Math.min(stepIndex, steps.length - 1);
+  const step = steps[index];
+
+  useEffect(() => {
+    if (stepIndex > 0) return;
+    function scan() {
+      const found = POINTERS.filter((p) => findTarget(p) !== null).map((p) => p.id);
+      setFoundPointers((prev) =>
+        prev.length === found.length && prev.every((id, i) => id === found[i])
+          ? prev
+          : found,
+      );
+      if (found.length === POINTERS.length) setSettled(true);
     }
-  }
-  return null;
-}
-
-function scrollTargetIntoView(step: CoachStep) {
-  const el =
-    queryLaidOut(step.selector) ??
-    (step.fallbackSelector ? queryLaidOut(step.fallbackSelector) : null);
-  el?.scrollIntoView({
-    block: "center",
-    inline: "nearest",
-    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? "auto"
-      : "smooth",
-  });
-}
-
-function closestEdge(rect: DOMRect, from: { x: number; y: number }): { x: number; y: number } {
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  const pad = 4;
-  if (Math.abs(from.x - cx) > Math.abs(from.y - cy)) {
-    return {
-      x: from.x < cx ? rect.left - pad : rect.right + pad,
-      y: cy,
+    const observer = new MutationObserver(scan);
+    observer.observe(document.body, { childList: true, subtree: true });
+    const first = window.setTimeout(scan, 0);
+    const cap = window.setTimeout(() => setSettled(true), 1500);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(first);
+      window.clearTimeout(cap);
     };
-  }
-  return {
-    x: cx,
-    y: from.y < cy ? rect.top - pad : rect.bottom + pad,
-  };
+  }, [stepIndex]);
+
+  const goTo = useCallback(
+    (next: number) => {
+      setError(null);
+      setStepIndex(Math.max(0, Math.min(steps.length - 1, next)));
+    },
+    [steps.length],
+  );
+  const next = useCallback(() => goTo(index + 1), [goTo, index]);
+  const back = useCallback(() => goTo(index - 1), [goTo, index]);
+
+  const finish = useCallback(async () => {
+    setFinishing(true);
+    setError(null);
+    try {
+      await agreeToRules();
+      router.push(BROWSE_ROUTE);
+    } catch {
+      setError("Couldn't save that. Try again.");
+      setFinishing(false);
+    }
+  }, [agreeToRules, router]);
+
+  // The colleges slide saves before moving on; it registers its handler here.
+  const advanceRef = useRef<(() => void) | null>(null);
+  const primary = useCallback(() => {
+    if (step?.kind === "slide" && step.id === "done") {
+      if (!finishing) void finish();
+    } else if (advanceRef.current) {
+      advanceRef.current();
+    } else {
+      next();
+    }
+  }, [finish, finishing, next, step]);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        // The tour has to be finished.
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (isTextField(event.target)) return;
+      if (event.key === "Enter" && activatesOnEnter(event.target)) return;
+      if (event.key === "ArrowRight" || event.key === "Enter") {
+        event.preventDefault();
+        primary();
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        back();
+      }
+    }
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [back, primary]);
+
+  // Keep keyboard focus inside the tour: move it to the primary button.
+  const primaryRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!settled) return;
+    primaryRef.current?.focus({ preventScroll: true });
+  }, [settled, index]);
+
+  if (!settled || !step) return null;
+
+  const dots = <Dots index={index} total={steps.length} />;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60]"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboarding-title"
+    >
+      {step.kind === "pointer" ? (
+        <PointerView
+          key={step.id}
+          step={step}
+          dots={dots}
+          canGoBack={index > 0}
+          onBack={back}
+          onNext={next}
+          primaryRef={primaryRef}
+        />
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-[color-mix(in_srgb,#0f0e0a_58%,transparent)]" />
+          <SlideCard>
+            {dots}
+            {step.id === "ways" ? (
+              <WaysSlide onNext={next} primaryRef={primaryRef} />
+            ) : step.id === "credit" ? (
+              <TextSlide
+                coin
+                title="You've got a credit"
+                line="1 credit = 1 seat. Host to earn more."
+                onBack={back}
+                onNext={next}
+                primaryRef={primaryRef}
+              />
+            ) : step.id === "friends" ? (
+              <TextSlide
+                title="Go with friends"
+                line="Follow each other, then book together."
+                onBack={back}
+                onNext={next}
+                primaryRef={primaryRef}
+              />
+            ) : step.id === "colleges" ? (
+              <CollegesSlide
+                ownCollege={user?.college}
+                onNext={next}
+                advanceRef={advanceRef}
+                primaryRef={primaryRef}
+              />
+            ) : (
+              <DoneSlide
+                finishing={finishing}
+                error={error}
+                onFinish={() => void finish()}
+                primaryRef={primaryRef}
+              />
+            )}
+          </SlideCard>
+        </>
+      )}
+    </div>
+  );
 }
 
-function labelAnchor(rect: DOMRect): { x: number; y: number } {
-  const below = rect.top < 120;
-  if (below) {
-    return {
-      x: Math.min(Math.max(rect.left + rect.width / 2, 96), window.innerWidth - 96),
-      y: Math.min(rect.bottom + 88, window.innerHeight - 140),
+function Dots({ index, total }: { index: number; total: number }) {
+  return (
+    <div
+      className="flex justify-center gap-[5px]"
+      role="img"
+      aria-label={`Step ${index + 1} of ${total}`}
+    >
+      {Array.from({ length: total }, (_, i) => (
+        <i
+          key={i}
+          className={`block h-1.5 rounded-full transition-[width,background-color] duration-300 motion-reduce:transition-none ${
+            i === index
+              ? "w-[18px] bg-[var(--accent)]"
+              : "w-1.5 bg-[color-mix(in_srgb,var(--ink)_25%,transparent)]"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function SlideCard({ children }: { children: ReactNode }) {
+  return (
+    <div className="absolute inset-0 flex items-end justify-center p-3 sm:items-center sm:p-6">
+      <div className="onboarding-card-in w-full max-w-[420px] max-h-[calc(100dvh-24px)] overflow-y-auto rounded-[22px] border-2 border-[var(--ink)] bg-[var(--paper)] px-4 pb-3.5 pt-[18px] text-[var(--ink)] sm:px-6 sm:pb-5 sm:pt-6">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SlideTitle({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <h2
+      id="onboarding-title"
+      className={`text-center font-display text-[26px] uppercase leading-none ${className}`}
+    >
+      {children}
+    </h2>
+  );
+}
+
+function SlideLine({ children }: { children: ReactNode }) {
+  return (
+    <p className="mt-2 text-center text-[13px] leading-snug text-[var(--ink-muted)] sm:text-sm">
+      {children}
+    </p>
+  );
+}
+
+const btnBase =
+  "rounded-full border-2 px-3 py-2.5 text-[13px] font-bold transition-colors active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--paper)] disabled:cursor-not-allowed disabled:opacity-60";
+const btnPrimary = `${btnBase} flex-[2] border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)] hover:bg-[var(--accent-hover)] hover:border-[var(--accent-hover)]`;
+const btnSecondary = `${btnBase} flex-1 border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--paper)]`;
+
+type PrimaryRef = RefObject<HTMLButtonElement | null>;
+
+function Buttons({
+  backLabel,
+  onBack,
+  nextLabel = "Next",
+  onNext,
+  primaryRef,
+  disabled,
+}: {
+  backLabel?: string;
+  onBack?: () => void;
+  nextLabel?: string;
+  onNext: () => void;
+  primaryRef: PrimaryRef;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="mt-3.5 flex gap-2">
+      {onBack ? (
+        <button type="button" onClick={onBack} className={btnSecondary}>
+          {backLabel ?? "Back"}
+        </button>
+      ) : null}
+      <button
+        ref={primaryRef}
+        type="button"
+        onClick={onNext}
+        disabled={disabled}
+        className={btnPrimary}
+      >
+        {nextLabel}
+      </button>
+    </div>
+  );
+}
+
+const WAYS = [
+  { title: "Swap", line: "Trade seats" },
+  { title: "Pay", line: "Pay the host" },
+  { title: "Credit", line: "Use a credit" },
+] as const;
+
+function WaysSlide({ onNext, primaryRef }: { onNext: () => void; primaryRef: PrimaryRef }) {
+  return (
+    <>
+      <SlideTitle className="mt-3">A seat at any formal</SlideTitle>
+      <div className="mt-3.5 grid grid-cols-3 gap-1.5">
+        {WAYS.map((way) => (
+          <div
+            key={way.title}
+            className="rounded-[14px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] px-1 py-2.5 text-center text-[11px] text-[var(--ink-muted)] sm:text-xs"
+          >
+            <b className="block font-display text-[17px] font-normal uppercase text-[var(--ink)]">
+              {way.title}
+            </b>
+            {way.line}
+          </div>
+        ))}
+      </div>
+      <Buttons onNext={onNext} primaryRef={primaryRef} />
+    </>
+  );
+}
+
+function TextSlide({
+  coin,
+  title,
+  line,
+  onBack,
+  onNext,
+  primaryRef,
+}: {
+  coin?: boolean;
+  title: string;
+  line: string;
+  onBack: () => void;
+  onNext: () => void;
+  primaryRef: PrimaryRef;
+}) {
+  return (
+    <>
+      {coin ? (
+        <div
+          aria-hidden
+          className="mx-auto mt-3 flex h-14 w-14 items-center justify-center rounded-full border-2 border-[var(--ink)] font-display text-[26px] text-[var(--accent)]"
+        >
+          1
+        </div>
+      ) : null}
+      <SlideTitle className={coin ? "mt-2.5" : "mt-3"}>{title}</SlideTitle>
+      <SlideLine>{line}</SlideLine>
+      <Buttons onBack={onBack} onNext={onNext} primaryRef={primaryRef} />
+    </>
+  );
+}
+
+function CollegesSlide({
+  ownCollege,
+  onNext,
+  advanceRef,
+  primaryRef,
+}: {
+  ownCollege?: string;
+  onNext: () => void;
+  advanceRef: RefObject<(() => void) | null>;
+  primaryRef: PrimaryRef;
+}) {
+  const saved = useQuery(api.users.myWishlist, {});
+  const save = useMutation(api.users.saveWishlistColleges);
+  const [picked, setPicked] = useState<readonly string[] | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [search, setSearch] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Preselect what they already want once it loads.
+  const selected = useMemo(() => picked ?? saved ?? [], [picked, saved]);
+
+  const colleges = useMemo(() => {
+    const all = (OXFORD_COLLEGES as readonly string[]).filter((c) => c !== ownCollege);
+    if (expanded) {
+      const q = search.trim().toLowerCase();
+      return q ? all.filter((c) => c.toLowerCase().includes(q)) : all;
+    }
+    const short = COLLEGE_FILTER_HIGHLIGHTS.filter((c) => c !== ownCollege) as string[];
+    const extra = selected.filter((c) => !short.includes(c));
+    return [...short, ...extra];
+  }, [expanded, ownCollege, search, selected]);
+
+  const toggle = (college: string) => {
+    setPicked(
+      selected.includes(college)
+        ? selected.filter((c) => c !== college)
+        : [...selected, college],
+    );
+  };
+
+  const saveAndNext = useCallback(async () => {
+    if (saving) return;
+    const before = saved ?? [];
+    const changed =
+      picked !== null &&
+      (picked.length !== before.length || picked.some((c) => !before.includes(c)));
+    if (!changed) {
+      onNext();
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await save({ colleges: [...picked] });
+      onNext();
+    } catch {
+      setError("Couldn't save. Try again, or skip.");
+    } finally {
+      setSaving(false);
+    }
+  }, [onNext, picked, save, saved, saving]);
+
+  useEffect(() => {
+    advanceRef.current = () => void saveAndNext();
+    return () => {
+      advanceRef.current = null;
     };
-  }
-  return {
-    x: Math.max(96, rect.left - 8),
-    y: Math.max(72, rect.top - 36),
-  };
-}
+  }, [advanceRef, saveAndNext]);
 
-function SpotlightDim({ hole }: { hole: Hole }) {
-  const dim = "pointer-events-none absolute bg-[#1a1810]/82";
-  const radius = Math.min(hole.height / 2, 14);
+  const chip =
+    "rounded-full border-[1.5px] px-2.5 py-1 text-xs transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]";
 
   return (
     <>
+      <SlideTitle className="mt-3">Where do you want to go?</SlideTitle>
+      {expanded ? (
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search colleges"
+          aria-label="Search colleges"
+          autoFocus
+          className="mt-3 w-full rounded-full border-[1.5px] border-[var(--ink)] bg-transparent px-3.5 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+        />
+      ) : null}
       <div
-        className={dim}
-        style={{ top: 0, left: 0, right: 0, height: hole.top }}
-      />
-      <div
-        className={dim}
-        style={{
-          top: hole.top,
-          left: 0,
-          width: hole.left,
-          height: hole.height,
-        }}
-      />
-      <div
-        className={dim}
-        style={{
-          top: hole.top,
-          left: hole.left + hole.width,
-          right: 0,
-          height: hole.height,
-        }}
-      />
-      <div
-        className={dim}
-        style={{
-          top: hole.top + hole.height,
-          left: 0,
-          right: 0,
-          bottom: 0,
-        }}
-      />
-      <div
-        className="pointer-events-none absolute border-[2.5px] border-[var(--accent)]"
-        style={{
-          top: hole.top,
-          left: hole.left,
-          width: hole.width,
-          height: hole.height,
-          borderRadius: radius,
-        }}
+        className={`mt-3 flex flex-wrap justify-center gap-1.5 ${expanded ? "max-h-[38dvh] overflow-y-auto py-0.5" : ""}`}
+        role="group"
+        aria-label="Colleges you want to go to"
+      >
+        {colleges.map((college) => {
+          const on = selected.includes(college);
+          return (
+            <button
+              key={college}
+              type="button"
+              aria-pressed={on}
+              disabled={saved === undefined}
+              onClick={() => toggle(college)}
+              className={`${chip} ${
+                on
+                  ? "border-[var(--ink)] bg-[var(--ink)] font-bold text-[var(--bg)]"
+                  : "border-[color-mix(in_srgb,var(--ink)_14%,transparent)] text-[var(--ink)] hover:border-[var(--ink)]"
+              }`}
+            >
+              {college}
+            </button>
+          );
+        })}
+        {expanded && colleges.length === 0 ? (
+          <p className="text-xs text-[var(--ink-muted)]">No college matches.</p>
+        ) : null}
+        {!expanded ? (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className={`${chip} border-[color-mix(in_srgb,var(--ink)_14%,transparent)] text-[var(--ink-muted)] hover:border-[var(--ink)]`}
+          >
+            + More
+          </button>
+        ) : null}
+      </div>
+      {error ? (
+        <p role="alert" className="mt-2 text-center text-xs text-[var(--danger)]">
+          {error}
+        </p>
+      ) : null}
+      <Buttons
+        backLabel="Skip"
+        onBack={onNext}
+        nextLabel={saving ? "Saving…" : "Next"}
+        onNext={() => void saveAndNext()}
+        primaryRef={primaryRef}
+        disabled={saving}
       />
     </>
   );
 }
 
-export function OnboardingOverlay() {
-  const { needsRulesAgreement, agreeToRules } = useAuth();
-  // Steps whose target is on screen; fixed once the user moves past step one.
-  const [availableIds, setAvailableIds] = useState<readonly CoachId[]>([]);
-  const [stepIndex, setStepIndex] = useState(0);
-  const [rulesAgreed, setRulesAgreed] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [target, setTarget] = useState<Target | null>(null);
-  // The feed's "List a formal" button only appears once the feed loads, so
-  // wait for every step's target (or a short cap) before showing step one;
-  // otherwise the tour opens on "Find a seat" and then jumps.
-  const [settled, setSettled] = useState(false);
-
-  const coachSteps = useMemo(
-    () => COACH_STEPS.filter((step) => availableIds.includes(step.id)),
-    [availableIds],
+function DoneSlide({
+  finishing,
+  error,
+  onFinish,
+  primaryRef,
+}: {
+  finishing: boolean;
+  error: string | null;
+  onFinish: () => void;
+  primaryRef: PrimaryRef;
+}) {
+  const link = "underline underline-offset-2 hover:text-[var(--ink)]";
+  return (
+    <>
+      <SlideTitle className="mt-3">You&apos;re in</SlideTitle>
+      <SlideLine>Show up, or give your seat back early.</SlideLine>
+      {error ? (
+        <p role="alert" className="mt-2 text-center text-xs text-[var(--danger)]">
+          {error}
+        </p>
+      ) : null}
+      <Buttons
+        nextLabel={finishing ? "Saving…" : "Find a seat"}
+        onNext={onFinish}
+        primaryRef={primaryRef}
+        disabled={finishing}
+      />
+      <p className="mt-2.5 text-center text-[11px] text-[var(--ink-muted)]">
+        By continuing you agree to the{" "}
+        <a href="/terms" target="_blank" rel="noopener" className={link}>
+          Terms
+        </a>{" "}
+        and{" "}
+        <a href="/privacy" target="_blank" rel="noopener" className={link}>
+          Privacy policy
+        </a>
+        .
+      </p>
+    </>
   );
-  const totalSteps = coachSteps.length + 1;
-  const currentIndex = Math.min(stepIndex, coachSteps.length);
-  const isRules = currentIndex >= coachSteps.length;
-  const coach = isRules ? null : (coachSteps[currentIndex] ?? null);
+}
+
+function PointerView({
+  step,
+  dots,
+  canGoBack,
+  onBack,
+  onNext,
+  primaryRef,
+}: {
+  step: PointerStep;
+  dots: ReactNode;
+  canGoBack: boolean;
+  onBack: () => void;
+  onNext: () => void;
+  primaryRef: PrimaryRef;
+}) {
+  const [target, setTarget] = useState<Target | null>(null);
+  const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const [calloutHeight, setCalloutHeight] = useState(118);
+  const calloutRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!needsRulesAgreement) return;
-    function scanTargets() {
-      if (stepIndex > 0) return;
-      const found = COACH_STEPS.filter((step) => readTarget(step) !== null).map(
-        (step) => step.id,
-      );
-      setAvailableIds((prev) =>
-        prev.length === found.length && prev.every((id, i) => id === found[i])
-          ? prev
-          : found,
-      );
-      if (found.length === COACH_STEPS.length) setSettled(true);
-    }
-    const observer = new MutationObserver(scanTargets);
-    observer.observe(document.body, { childList: true, subtree: true });
-    const timeout = window.setTimeout(scanTargets, 0);
-    const cap = window.setTimeout(() => setSettled(true), 1500);
-    return () => {
-      observer.disconnect();
-      window.clearTimeout(timeout);
-      window.clearTimeout(cap);
-    };
-  }, [needsRulesAgreement, stepIndex]);
-
-  useEffect(() => {
-    if (!needsRulesAgreement || !coach) return;
-    const step = coach;
-    scrollTargetIntoView(step);
+    const found = findTarget(step);
+    found?.el.scrollIntoView({
+      block: "center",
+      inline: "nearest",
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
     function measure() {
-      setTarget(readTarget(step));
+      const hit = findTarget(step);
+      setTarget(hit ? { rect: hit.el.getBoundingClientRect(), usedFallback: hit.usedFallback } : null);
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
     }
-    const delays = [0, 80, 320, 700];
-    const timers = delays.map((ms) => window.setTimeout(measure, ms));
+    const timers = [0, 80, 320, 700].map((ms) => window.setTimeout(measure, ms));
     const observer = new MutationObserver(measure);
     observer.observe(document.body, { childList: true, subtree: true });
     window.addEventListener("resize", measure);
@@ -240,208 +668,104 @@ export function OnboardingOverlay() {
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
     };
-  }, [needsRulesAgreement, coach]);
+  }, [step]);
 
-  const goTo = useCallback(
-    (next: number) => {
-      setStepIndex(Math.max(0, Math.min(totalSteps - 1, next)));
-    },
-    [totalSteps],
-  );
+  const shown = target !== null && viewport.width > 0;
+  useLayoutEffect(() => {
+    const el = calloutRef.current;
+    if (!shown || !el) return;
+    const read = () => setCalloutHeight(el.offsetHeight);
+    read();
+    const observer = new ResizeObserver(read);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [shown]);
 
-  const handleNext = useCallback(async () => {
-    if (!isRules) {
-      goTo(currentIndex + 1);
-      return;
-    }
-    if (!rulesAgreed) return;
-    setSubmitting(true);
-    try {
-      await agreeToRules();
-    } finally {
-      setSubmitting(false);
-    }
-  }, [agreeToRules, currentIndex, goTo, isRules, rulesAgreed]);
-
-  const handleBack = useCallback(() => {
-    goTo(currentIndex - 1);
-  }, [currentIndex, goTo]);
-
+  // The callout mounts after the target is measured; focus its Next then.
   useEffect(() => {
-    if (!needsRulesAgreement) return;
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        if (!isRules) goTo(currentIndex + 1);
-      } else if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        handleBack();
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [currentIndex, goTo, handleBack, isRules, needsRulesAgreement]);
+    if (shown) primaryRef.current?.focus({ preventScroll: true });
+  }, [shown, primaryRef]);
 
-  if (!needsRulesAgreement || !settled) return null;
+  const scrim = "bg-[color-mix(in_srgb,#0f0e0a_58%,transparent)]";
+  if (!shown) {
+    return <div className={`absolute inset-0 ${scrim}`} />;
+  }
 
-  const pad = 10;
-  const spotlight = target
-    ? {
-        top: Math.max(0, target.rect.top - pad),
-        left: Math.max(0, target.rect.left - pad),
-        width: target.rect.width + pad * 2,
-        height: target.rect.height + pad * 2,
-      }
-    : null;
-  const labelPos = target ? labelAnchor(target.rect) : null;
-  const arrowTo =
-    target && labelPos ? closestEdge(target.rect, labelPos) : null;
-  const hint =
-    coach && target?.usedFallback ? coach.hintWhenFallback : "";
-
-  const stepNames = [
-    ...coachSteps.map((step) => step.label),
-    "House rules",
-  ];
+  const hole: Box = {
+    top: target.rect.top - HOLE_PAD,
+    left: target.rect.left - HOLE_PAD,
+    width: target.rect.width + HOLE_PAD * 2,
+    height: target.rect.height + HOLE_PAD * 2,
+  };
+  const place = placeCallout(
+    hole,
+    { width: CALLOUT_WIDTH, height: calloutHeight },
+    viewport,
+  );
+  const line = target.usedFallback && step.fallbackLine ? step.fallbackLine : step.line;
+  const below = place.side === "below";
+  const motion =
+    "transition-[top,left,width,height] duration-200 ease-out motion-reduce:transition-none";
 
   return (
-    <div className="fixed inset-0 z-[60]">
-      <div className="absolute inset-0" aria-hidden />
-
-      {isRules ? (
-        <div className="absolute inset-0 bg-[#1a1810]/82 backdrop-blur-sm" />
-      ) : spotlight ? (
-        <SpotlightDim hole={spotlight} />
-      ) : (
-        <div className="absolute inset-0 bg-[#1a1810]/82" />
-      )}
-
-      {!isRules && labelPos && arrowTo ? (
-        <PencilArrow
-          from={{ x: labelPos.x, y: labelPos.y + 18 }}
-          to={arrowTo}
-          seed={currentIndex + 3}
+    <>
+      {/* Spotlight: dims everything but a rounded hole around the target. */}
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute rounded-[18px] border-2 border-[var(--accent)] shadow-[0_0_0_9999px_color-mix(in_srgb,#0f0e0a_58%,transparent)] ${motion}`}
+        style={{
+          top: hole.top,
+          left: hole.left,
+          width: hole.width,
+          height: hole.height,
+          borderRadius: Math.min(hole.height / 2, 18),
+        }}
+      />
+      <div
+        ref={calloutRef}
+        className={`onboarding-card-in absolute rounded-2xl border-2 border-[var(--ink)] bg-[var(--paper)] px-3 pb-2.5 pt-2.5 text-[var(--ink)] ${motion}`}
+        style={{ top: place.top, left: place.left, width: place.width }}
+      >
+        <span
+          aria-hidden
+          className="absolute h-3 w-3 border-l-2 border-t-2 border-[var(--ink)] bg-[var(--paper)]"
+          style={{
+            left: place.tailX - 6,
+            ...(below
+              ? { top: -8, transform: "rotate(45deg)" }
+              : { bottom: -8, transform: "rotate(225deg)" }),
+          }}
         />
-      ) : null}
-
-      {!isRules && labelPos ? (
-        <div
-          className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 text-center"
-          style={{ left: labelPos.x, top: labelPos.y }}
+        <h2
+          id="onboarding-title"
+          className="font-display text-lg font-normal uppercase leading-tight"
         >
-          <p className="font-display text-3xl uppercase tracking-wide text-[var(--accent)] drop-shadow-[0_1px_0_var(--bg)]">
-            {coach?.label}
-          </p>
-          {hint ? (
-            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[var(--ink)]">
-              {hint}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {isRules ? (
-        <div className="absolute inset-0 flex items-center justify-center p-4">
-          <SketchCard
-            seed={7}
-            className="relative w-full max-w-md max-h-[90dvh] overflow-y-auto p-5 sm:p-6"
-          >
-            <RulesSlide
-              agreed={rulesAgreed}
-              onToggle={() => setRulesAgreed((v) => !v)}
-            />
-            <TourControls
-              stepIndex={currentIndex}
-              totalSteps={totalSteps}
-              stepNames={stepNames}
-              isRules
-              rulesAgreed={rulesAgreed}
-              submitting={submitting}
-              onBack={handleBack}
-              onNext={() => void handleNext()}
-              onJump={goTo}
-            />
-          </SketchCard>
-        </div>
-      ) : (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-4">
-          <div className="pointer-events-auto w-full max-w-sm rounded-2xl border-[2px] border-[var(--ink)]/20 bg-[var(--paper)]/92 px-4 py-3 backdrop-blur-sm">
-            <TourControls
-              stepIndex={currentIndex}
-              totalSteps={totalSteps}
-              stepNames={stepNames}
-              isRules={false}
-              rulesAgreed={rulesAgreed}
-              submitting={submitting}
-              onBack={handleBack}
-              onNext={() => void handleNext()}
-              onJump={goTo}
-            />
+          {step.title}
+        </h2>
+        <p className="mt-0.5 text-[13px] leading-snug text-[var(--ink-muted)]">{line}</p>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          {dots}
+          <div className="flex items-center gap-1">
+            {canGoBack ? (
+              <button
+                type="button"
+                onClick={onBack}
+                className="rounded-full px-2 py-1 text-xs font-bold text-[var(--ink-muted)] hover:text-[var(--ink)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              >
+                Back
+              </button>
+            ) : null}
+            <button
+              ref={primaryRef}
+              type="button"
+              onClick={onNext}
+              className="rounded-full px-2 py-1 text-[13px] font-bold text-[var(--accent)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            >
+              Next
+            </button>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-function TourControls({
-  stepIndex,
-  totalSteps,
-  stepNames,
-  isRules,
-  rulesAgreed,
-  submitting,
-  onBack,
-  onNext,
-  onJump,
-}: {
-  stepIndex: number;
-  totalSteps: number;
-  stepNames: string[];
-  isRules: boolean;
-  rulesAgreed: boolean;
-  submitting: boolean;
-  onBack: () => void;
-  onNext: () => void;
-  onJump: (next: number) => void;
-}) {
-  return (
-    <div className={`flex flex-col gap-3 ${isRules ? "mt-4" : ""}`}>
-      <div className="flex justify-center gap-2" aria-label="Onboarding steps">
-        {Array.from({ length: totalSteps }).map((_, i) => (
-          <button
-            key={stepNames[i] ?? i}
-            type="button"
-            aria-label={stepNames[i]}
-            aria-current={i === stepIndex ? "step" : undefined}
-            onClick={() => onJump(i)}
-            className={`h-2 rounded-full transition-all duration-300 motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
-              i === stepIndex
-                ? "w-6 bg-[var(--accent)]"
-                : "w-2 bg-[var(--ink-soft)]/40 hover:bg-[var(--ink-soft)]/70"
-            }`}
-          />
-        ))}
       </div>
-      <div className="flex gap-3">
-        {stepIndex > 0 ? (
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex-1 rounded-full border-[2px] border-[var(--ink)] px-4 py-2.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] active:scale-[0.98] motion-reduce:active:scale-100"
-          >
-            Back
-          </button>
-        ) : null}
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={isRules && (!rulesAgreed || submitting)}
-          className="flex-1 rounded-full bg-[var(--accent)] px-4 py-2.5 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98] motion-reduce:active:scale-100"
-        >
-          {submitting ? "Saving\u2026" : isRules ? "Continue" : "Next"}
-        </button>
-      </div>
-    </div>
+    </>
   );
 }

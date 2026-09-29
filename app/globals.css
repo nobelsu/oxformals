@@ -710,3 +710,14 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
   .loading-dot { animation: none; opacity: 0.7; }
   .fade-in { animation: none; }
 }
+/* First-run tour: cards and callouts ease in. */
+@keyframes onboarding-card-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.onboarding-card-in {
+  animation: onboarding-card-in 180ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-card-in { animation: none; }
+}

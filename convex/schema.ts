@@ -48,6 +48,8 @@ export default defineSchema({
     emailWishlistAlerts: v.optional(v.boolean()),
     pushChatAlerts: v.optional(v.boolean()),
     agreedToRules: v.optional(v.boolean()),
+    /** When the user accepted the Terms and Privacy policy (end of onboarding). */
+    agreedToTermsAt: v.optional(v.number()),
     uiFont: v.optional(uiFontValidator),
     avatar,
     /** Set when the account was deleted; the row is a "Deleted user" placeholder. */

@@ -88,6 +88,7 @@ export function NotificationBell() {
         aria-label={badge ? `Notifications, ${badge} unread` : "Notifications"}
         aria-haspopup="dialog"
         aria-expanded={open}
+        data-onboarding="bell"
         ref={buttonRef}
         onClick={() => setAnchor(open ? null : measure())}
         className="relative inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-[2px] border-[var(--nav-ink)] text-[var(--nav-ink)] transition-colors hover:bg-[var(--nav-ink)] hover:text-[var(--nav-bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)]"

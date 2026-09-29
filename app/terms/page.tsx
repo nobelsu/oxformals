@@ -16,8 +16,9 @@ export default function TermsPage() {
             Acceptance
           </h2>
           <p className="leading-relaxed text-[var(--ink-muted)]">
-            By using Oxformals, you agree to these Terms. If you do not agree,
-            do not use the service.
+            By using Oxformals, you agree to these Terms. You accept them, and
+            our Privacy Policy, when you finish setting up your account; we
+            record when you did. If you do not agree, do not use the service.
           </p>
         </section>
 
