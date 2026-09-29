@@ -163,6 +163,9 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
   const [dietaryRequirementsDraft, setDietaryRequirementsDraft] = useState(
     user?.dietaryRequirements ?? "",
   );
+  const [dietaryConsentDraft, setDietaryConsentDraft] = useState(
+    user?.dietaryConsent ?? false,
+  );
   const [subjectDraft, setSubjectDraft] = useState(user?.subject ?? "");
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
@@ -186,6 +189,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     setInstagramHandleDraft(user.instagramHandle ?? "");
     setWhatsappPhoneDraft(user.whatsappPhone ?? "");
     setDietaryRequirementsDraft(user.dietaryRequirements ?? "");
+    setDietaryConsentDraft(user.dietaryConsent ?? false);
     setSubjectDraft(user.subject ?? "");
     setBioDraft(user.bio ?? "");
     setAvatarDraft(user.avatar);
@@ -259,6 +263,9 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
   const initialInstagramHandle = user?.instagramHandle?.trim() ?? "";
   const initialWhatsappPhone = user?.whatsappPhone?.trim() ?? "";
   const initialDietaryRequirements = user?.dietaryRequirements?.trim() ?? "";
+  const initialDietaryConsent = user?.dietaryConsent ?? false;
+  // Saved before the opt-in existed: kept, but re-confirmed on the next edit.
+  const legacyDietary = !!initialDietaryRequirements && !initialDietaryConsent;
   const initialSubject = user?.subject?.trim() ?? "";
   const initialBio = user?.bio?.trim() ?? "";
   const initialAvatar = user?.avatar;
@@ -271,6 +278,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     instagramHandleDraft.trim() !== initialInstagramHandle ||
     whatsappPhoneDraft.trim() !== initialWhatsappPhone ||
     dietaryRequirementsDraft.trim() !== initialDietaryRequirements ||
+    dietaryConsentDraft !== initialDietaryConsent ||
     subjectDraft.trim() !== initialSubject ||
     bioDraft.trim() !== initialBio ||
     JSON.stringify(avatarDraft ?? null) !== JSON.stringify(initialAvatar ?? null);
@@ -323,6 +331,22 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
         setError("Year must be a number, e.g. 2.");
         return false;
       }
+      // Dietary requirements are only stored with the opt-in ticked. Unticked
+      // and blank (or unticked after opting in) withdraws; an untouched legacy
+      // value is left alone.
+      const dietText = dietaryRequirementsDraft.trim();
+      let dietary: { dietaryRequirements?: string; dietaryConsent?: boolean } =
+        {};
+      if (dietaryConsentDraft) {
+        dietary = { dietaryRequirements: dietText, dietaryConsent: true };
+      } else if (!dietText || initialDietaryConsent) {
+        dietary = { dietaryRequirements: "", dietaryConsent: false };
+      } else if (dietText !== initialDietaryRequirements) {
+        setError(
+          "Tick the box to share your dietary requirements, or leave them blank.",
+        );
+        return false;
+      }
       if (bioDraft.trim() !== initialBio) {
         const result = await saveBio(bioDraft);
         if (!result.ok) {
@@ -337,7 +361,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
         role: roleDraft.trim(),
         instagramHandle: instagramHandleDraft.trim(),
         whatsappPhone: whatsappPhoneDraft.trim(),
-        dietaryRequirements: dietaryRequirementsDraft.trim(),
+        ...dietary,
         subject: subjectDraft.trim(),
         avatar: avatarDraft,
       });
@@ -360,6 +384,9 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
     instagramHandleDraft,
     whatsappPhoneDraft,
     dietaryRequirementsDraft,
+    dietaryConsentDraft,
+    initialDietaryConsent,
+    initialDietaryRequirements,
     subjectDraft,
     avatarDraft,
     bioDraft,
@@ -635,6 +662,23 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
               className={UNDERLINE_INPUT}
             />
           </Field>
+          <p className="text-xs text-[var(--ink-muted)]">
+            Only shared with people you&apos;re matched with for a formal.
+          </p>
+          <label className="flex items-start gap-2.5 text-sm text-[var(--ink)]">
+            <input
+              type="checkbox"
+              checked={dietaryConsentDraft}
+              onChange={(e) => setDietaryConsentDraft(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent)]"
+            />
+            <span>Share my dietary requirements with my formal matches</span>
+          </label>
+          {legacyDietary && !dietaryConsentDraft ? (
+            <p className="text-xs text-[var(--ink-muted)]">
+              Tick the box to confirm you&apos;re happy to keep sharing these.
+            </p>
+          ) : null}
       </section>
 
       <section className={GROUP} aria-labelledby="profile-socials-heading">

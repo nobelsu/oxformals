@@ -54,6 +54,36 @@ async function syncCollegeWishlists(
   }
 }
 
+/**
+ * Dietary requirements can reveal health or religion, so they're only stored
+ * with an explicit opt-in to sharing them with formal matches.
+ *
+ * - `consent: true` stores the text (and when they first agreed).
+ * - `consent: false`, or clearing the text, withdraws: text and consent go.
+ * - No consent given: new text isn't stored. A legacy value saved before the
+ *   opt-in existed stays until they next change it (the editor asks then).
+ */
+function dietaryPatch(
+  user: Doc<"users">,
+  text: string,
+  consent: boolean | undefined,
+): Partial<Pick<Doc<"users">, "dietaryRequirements" | "dietaryConsentAt">> {
+  const trimmed = text.trim();
+  if (consent === false || trimmed === "") {
+    return { dietaryRequirements: "", dietaryConsentAt: undefined };
+  }
+  if (consent === true) {
+    return {
+      dietaryRequirements: trimmed,
+      dietaryConsentAt: user.dietaryConsentAt ?? Date.now(),
+    };
+  }
+  if (user.dietaryConsentAt !== undefined) {
+    return { dietaryRequirements: trimmed };
+  }
+  return {};
+}
+
 function listingIsUpcoming(listing: Doc<"listings">, nowMs: number): boolean {
   const t = Date.parse(listing.dateTime);
   if (Number.isNaN(t)) return false;
@@ -224,9 +254,10 @@ export const completeOnboarding = mutation({
     instagramHandle: v.optional(v.string()),
     whatsappPhone: v.optional(v.string()),
     dietaryRequirements: v.optional(v.string()),
+    dietaryConsent: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireVerifiedUser(ctx);
+    const { userId, user } = await requireVerifiedUser(ctx);
 
     const name = args.name.trim();
     const college = args.college.trim();
@@ -244,7 +275,12 @@ export const completeOnboarding = mutation({
       interests: args.interests ?? [],
       instagramHandle: args.instagramHandle?.trim() || undefined,
       whatsappPhone: args.whatsappPhone?.trim() || undefined,
-      dietaryRequirements: args.dietaryRequirements?.trim() ?? "",
+      dietaryRequirements: "",
+      ...dietaryPatch(
+        user,
+        args.dietaryRequirements ?? "",
+        args.dietaryConsent,
+      ),
       subject: "",
       uiFont: DEFAULT_UI_FONT,
     });
@@ -271,13 +307,15 @@ export const patchProfile = mutation({
     instagramHandle: v.optional(v.string()),
     whatsappPhone: v.optional(v.string()),
     dietaryRequirements: v.optional(v.string()),
+    /** Opt-in to share dietary requirements with formal matches. */
+    dietaryConsent: v.optional(v.boolean()),
     subject: v.optional(v.string()),
     uiFont: v.optional(uiFontValidator),
     avatar: avatarOrClear,
     emailNotifications: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireVerifiedUser(ctx);
+    const { userId, user } = await requireVerifiedUser(ctx);
 
     type UserPatch = Partial<
       Pick<
@@ -290,6 +328,7 @@ export const patchProfile = mutation({
         | "instagramHandle"
         | "whatsappPhone"
         | "dietaryRequirements"
+        | "dietaryConsentAt"
         | "subject"
         | "uiFont"
         | "avatar"
@@ -320,8 +359,18 @@ export const patchProfile = mutation({
     if (args.whatsappPhone !== undefined) {
       patch.whatsappPhone = args.whatsappPhone.trim() || undefined;
     }
-    if (args.dietaryRequirements !== undefined) {
-      patch.dietaryRequirements = args.dietaryRequirements.trim();
+    if (
+      args.dietaryRequirements !== undefined ||
+      args.dietaryConsent !== undefined
+    ) {
+      Object.assign(
+        patch,
+        dietaryPatch(
+          user,
+          args.dietaryRequirements ?? user.dietaryRequirements ?? "",
+          args.dietaryConsent,
+        ),
+      );
     }
     if (args.subject !== undefined) {
       patch.subject = args.subject.trim();
@@ -337,11 +386,16 @@ export const patchProfile = mutation({
       patch.emailNotifications = args.emailNotifications;
     }
 
-    if (Object.keys(patch).length === 0) {
+    // Dietary text without consent is dropped rather than refused, so a
+    // patch can legitimately end up empty.
+    const touchedDietary =
+      args.dietaryRequirements !== undefined ||
+      args.dietaryConsent !== undefined;
+    if (Object.keys(patch).length === 0 && !touchedDietary) {
       throw new Error("No profile fields to update.");
     }
 
-    await ctx.db.patch(userId, patch);
+    if (Object.keys(patch).length > 0) await ctx.db.patch(userId, patch);
 
     const updated = await ctx.db.get(userId);
     if (!updated) {
