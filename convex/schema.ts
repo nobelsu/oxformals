@@ -4,6 +4,12 @@ import { authTables } from "@convex-dev/auth/server";
 import { groupSizeValidator } from "./groupSize";
 import { uiFontValidator } from "./uiFont";
 import { partySeatValidator } from "./seats";
+import {
+  notificationCategoryValidator,
+  notificationDataValidator,
+  notificationKindValidator,
+} from "./notificationKinds";
+import { notificationPrefsValidator } from "./notificationPrefs";
 
 const avatar = v.optional(
   v.union(
@@ -55,6 +61,8 @@ export default defineSchema({
      * attended, badges, feed items) is hidden from non-followers.
      */
     isPrivate: v.optional(v.boolean()),
+    /** Push/email per category. Absent means the defaults (see resolvePrefs). */
+    notificationPrefs: v.optional(notificationPrefsValidator),
   })
     .index("email", ["email"])
     .index("phone", ["phone"]),
@@ -397,4 +405,35 @@ export default defineSchema({
     .index("by_listingId", ["listingId"])
     .index("by_payerId_and_status", ["payerId", "status"])
     .index("by_hostId_and_status", ["hostId", "status"]),
+  /**
+   * The bell. One row per thing that happened to `userId`; `data` snapshots
+   * what the sentence needs. Deleted after 90 days.
+   */
+  notifications: defineTable({
+    userId: v.id("users"),
+    category: notificationCategoryValidator,
+    kind: notificationKindValidator,
+    actorId: v.optional(v.id("users")),
+    listingId: v.optional(v.id("listings")),
+    requestId: v.optional(v.id("requests")),
+    data: v.optional(notificationDataValidator),
+    /** kind + the ids involved: a repeat within 24h is skipped. */
+    dedupeKey: v.string(),
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_userId_and_createdAt", ["userId", "createdAt"])
+    .index("by_userId_and_readAt", ["userId", "readAt"])
+    .index("by_userId_and_dedupeKey", ["userId", "dedupeKey"])
+    .index("by_createdAt", ["createdAt"]),
+  /** Browser push subscriptions (one per browser the user allowed alerts in). */
+  webPushSubscriptions: defineTable({
+    userId: v.id("users"),
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_endpoint", ["endpoint"]),
 });
