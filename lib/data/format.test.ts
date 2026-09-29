@@ -12,22 +12,30 @@ import {
 
 describe("formatListingTime", () => {
   it("drops :00 on the hour", () => {
-    assert.equal(formatListingTime("2026-05-08T19:00:00"), "7pm");
+    assert.equal(formatListingTime("2026-05-08T18:00:00.000Z"), "7pm");
   });
 
   it("keeps minutes otherwise", () => {
-    assert.equal(formatListingTime("2026-05-08T19:15:00"), "7:15pm");
+    assert.equal(formatListingTime("2026-05-08T18:15:00.000Z"), "7:15pm");
+  });
+
+  it("is Oxford time, whatever the viewer's timezone", () => {
+    // Winter: London is UTC. A 19:15 formal must never read "2:15am".
+    assert.equal(formatListingTime("2026-11-20T19:15:00.000Z"), "7:15pm");
+    assert.equal(formatListingDate("2026-11-20T19:15:00.000Z"), "Fri 20 Nov · 7:15pm");
+    // Summer: London is UTC+1.
+    assert.equal(formatListingTime("2026-06-12T18:15:00.000Z"), "7:15pm");
   });
 
   it("renders midnight and noon", () => {
-    assert.equal(formatListingTime("2026-05-08T00:30:00"), "12:30am");
-    assert.equal(formatListingTime("2026-05-08T12:00:00"), "12pm");
+    assert.equal(formatListingTime("2026-05-07T23:30:00.000Z"), "12:30am");
+    assert.equal(formatListingTime("2026-05-08T11:00:00.000Z"), "12pm");
   });
 });
 
 describe("formatDayLabel", () => {
   it("splits day and weekday", () => {
-    assert.deepEqual(formatDayLabel("2026-05-08T19:00:00"), {
+    assert.deepEqual(formatDayLabel("2026-05-08T18:00:00.000Z"), {
       day: "8 May",
       weekday: "Friday",
     });
@@ -136,13 +144,13 @@ describe("formatRowTail composed with clampSeatsAvailable (as ListingRow calls t
 
 describe("existing formatters still behave", () => {
   it("formatListingDate keeps day and time", () => {
-    assert.equal(formatListingDate("2026-05-08T19:15:00"), "Fri 8 May · 7:15pm");
+    assert.equal(formatListingDate("2026-05-08T18:15:00.000Z"), "Fri 8 May · 7:15pm");
   });
 
   it("formatListingMetaLine still leads with the date", () => {
     assert.equal(
       formatListingMetaLine({
-        dateTime: "2026-05-08T19:15:00",
+        dateTime: "2026-05-08T18:15:00.000Z",
         groupSize: 4,
         seatsAvailable: 2,
         isPast: false,

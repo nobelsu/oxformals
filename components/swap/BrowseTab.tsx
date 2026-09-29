@@ -16,7 +16,7 @@ import { ListingDayList } from "./ListingDayList";
 import { ListingDetailModal } from "./ListingDetailModal";
 import { ListingRow } from "./ListingRow";
 import { JoinRequestFlow } from "./JoinRequestFlow";
-import { isoToLocalDateKey } from "@/lib/data/format";
+import { isoToOxfordDateKey } from "@/lib/data/format";
 import { BrowseFiltersModal } from "./BrowseFiltersModal";
 import type { Listing } from "@/lib/data/types";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -195,7 +195,7 @@ export function BrowseTab({
     return collegeFilteredListings
       .filter((l) => {
         if (!dateSet) return true;
-        const key = isoToLocalDateKey(l.dateTime);
+        const key = isoToOxfordDateKey(l.dateTime);
         return dateSet.has(key);
       })
       .filter((l) => {

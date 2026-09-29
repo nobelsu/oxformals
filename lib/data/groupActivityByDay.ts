@@ -1,5 +1,5 @@
 import type { Listing } from "./types";
-import { formatDayLabel, isoToLocalDateKey } from "./format";
+import { formatDayLabel, isoToOxfordDateKey } from "./format";
 
 export type AttendedActivity = {
   kind: "attended";
@@ -52,7 +52,7 @@ export function groupActivityByDay(
 ): ActivityDayGroup[] {
   const groups = new Map<string, ProfileActivityItem[]>();
   for (const item of items) {
-    const key = isoToLocalDateKey(itemIso(item));
+    const key = isoToOxfordDateKey(itemIso(item));
     const bucket = groups.get(key);
     if (bucket) bucket.push(item);
     else groups.set(key, [item]);

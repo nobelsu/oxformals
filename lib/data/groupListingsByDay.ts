@@ -1,4 +1,4 @@
-import { isoToLocalDateKey } from "./format";
+import { isoToOxfordDateKey } from "./format";
 import type { Listing } from "./types";
 
 export type ListingDayGroup = {
@@ -22,7 +22,7 @@ export function groupListingsByDay(listings: Listing[]): ListingDayGroup[] {
   const byKey = new Map<string, ListingDayGroup>();
 
   for (const listing of sorted) {
-    const dateKey = isoToLocalDateKey(listing.dateTime);
+    const dateKey = isoToOxfordDateKey(listing.dateTime);
     const existing = byKey.get(dateKey);
     if (existing) {
       existing.listings.push(listing);

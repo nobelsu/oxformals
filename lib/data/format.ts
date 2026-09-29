@@ -87,11 +87,25 @@ export function formatListingMetaLine(args: {
   return `${formatListingDate(args.dateTime)} · ${formatListingRowMeta(args)}`;
 }
 
+/**
+ * Formals happen in Oxford, so their dates and times are always shown in
+ * Oxford time — never the viewer's timezone (and the server-rendered landing
+ * page matches the browser).
+ */
+const OXFORD_TIME_ZONE = "Europe/London";
+
+const oxfordClock = new Intl.DateTimeFormat("en-GB", {
+  timeZone: OXFORD_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
 /** `7:15pm`, or `7pm` on the hour. */
 export function formatListingTime(iso: string): string {
-  const d = new Date(iso);
-  let hours = d.getHours();
-  const minutes = d.getMinutes().toString().padStart(2, "0");
+  const parts = oxfordClock.formatToParts(new Date(iso));
+  let hours = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  const minutes = parts.find((p) => p.type === "minute")?.value ?? "00";
   const suffix = hours >= 12 ? "pm" : "am";
   hours = hours % 12 || 12;
   return minutes === "00" ? `${hours}${suffix}` : `${hours}:${minutes}${suffix}`;
@@ -102,16 +116,21 @@ export function formatDayLabel(iso: string): { day: string; weekday: string } {
   const d = new Date(iso);
   return {
     day: new Intl.DateTimeFormat("en-GB", {
+      timeZone: OXFORD_TIME_ZONE,
       day: "numeric",
       month: "short",
     }).format(d),
-    weekday: new Intl.DateTimeFormat("en-GB", { weekday: "long" }).format(d),
+    weekday: new Intl.DateTimeFormat("en-GB", {
+      timeZone: OXFORD_TIME_ZONE,
+      weekday: "long",
+    }).format(d),
   };
 }
 
 // "Thu 8 May · 7:15pm"
 export function formatListingDate(iso: string): string {
   const day = new Intl.DateTimeFormat("en-GB", {
+    timeZone: OXFORD_TIME_ZONE,
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -122,18 +141,20 @@ export function formatListingDate(iso: string): string {
 export function formatShortDate(iso: string): string {
   const d = new Date(iso);
   return new Intl.DateTimeFormat("en-GB", {
+    timeZone: OXFORD_TIME_ZONE,
     day: "numeric",
     month: "short",
   }).format(d);
 }
 
-/** `YYYY-MM-DD` in the user's local timezone (for `<input type="date">` comparison). */
-export function isoToLocalDateKey(iso: string): string {
-  const d = new Date(iso);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+/** `YYYY-MM-DD` of the Oxford day (for grouping by day and `<input type="date">` comparison). */
+export function isoToOxfordDateKey(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: OXFORD_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
 }
 
 export function formatRelativeTime(ts: number): string {
