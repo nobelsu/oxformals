@@ -28,6 +28,7 @@ import {
   type LeaderboardEntry,
 } from "@/lib/data/collegeReviews";
 import { collegeToSlug } from "@/lib/data/collegeSlug";
+import { SkeletonRows } from "@/components/ui/Loading";
 
 function formatAttendanceSubtitle(
   attendanceCount: number,
@@ -297,7 +298,7 @@ export function CollegeLeaderboard() {
       </div>
 
       {entries === undefined ? (
-        <p className="text-[var(--ink-muted)]">Loading rankings…</p>
+        <SkeletonRows count={5} avatar={false} />
       ) : (
         <div className="flex flex-col gap-6">
           {topThree.length > 0 ? (

@@ -16,6 +16,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { MAX_GROUP_SIZE } from "@/lib/chat/constants";
 import { chatsTabUrl } from "@/lib/chat/navigation";
 import type { GroupConversationPreview } from "@/lib/chat/types";
+import { SkeletonRows } from "@/components/ui/Loading";
 
 type Props = {
   open: boolean;
@@ -136,7 +137,7 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
 
         <ul className="mt-4 max-h-[40vh] space-y-2 overflow-y-auto">
           {members === undefined ? (
-            <li className="text-sm text-[var(--ink-soft)]">Loading…</li>
+            <li><SkeletonRows count={3} /></li>
           ) : (
             members.map((m) => {
               const isSelf = user?.id === m.id;

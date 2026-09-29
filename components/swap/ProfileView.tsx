@@ -32,6 +32,7 @@ import { formatYearLabel } from "@/lib/data/format";
 import { TOTAL_BADGE_COUNT, badgeById } from "@/lib/data/badges";
 import type { ProfileActivityItem } from "@/lib/data/groupActivityByDay";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton, SkeletonRows } from "@/components/ui/Loading";
 
 function mapProfileListing(doc: {
   _id: string;
@@ -199,13 +200,17 @@ export function ProfileView({
       : "mx-auto flex min-h-[50vh] w-full max-w-5xl items-center justify-center px-4 py-8 sm:px-6";
     return (
       <Outer className={loadingClass}>
-        <span className="inline-flex items-center gap-3 rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-6 py-3 text-base text-[var(--ink)]">
-          <span
-            aria-hidden="true"
-            className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--ink-soft)] border-t-[var(--ink)]"
-          />
-          Loading...
-        </span>
+        <div className="flex w-full flex-col gap-6">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
+            <div className="flex flex-1 flex-col gap-2">
+              <Skeleton className="h-5 w-1/2" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-full rounded-full" />
+          <SkeletonRows count={2} />
+        </div>
       </Outer>
     );
   }
@@ -483,7 +488,7 @@ export function ProfileView({
           Activity
         </h2>
         {activity === undefined ? (
-          <p className="mt-3 text-[var(--ink-muted)]">Loading activity…</p>
+          <SkeletonRows className="mt-3" count={2} />
         ) : activity.hidden && streamItems.length === 0 ? (
           <PrivateActivityNotice pending={followState?.following === "pending"} />
         ) : streamItems.length === 0 ? (

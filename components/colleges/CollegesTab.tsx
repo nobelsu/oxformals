@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { collegeToSlug } from "@/lib/data/collegeSlug";
+import { SkeletonRows } from "@/components/ui/Loading";
 
 type GalleryEntry = {
   college: string;
@@ -95,7 +96,7 @@ export function CollegesTab() {
       </div>
 
       {filtered === undefined ? (
-        <p className="text-[var(--ink-muted)]">Loading colleges…</p>
+        <SkeletonRows count={6} />
       ) : filtered.length === 0 ? (
         <p className="text-[var(--ink-muted)]">
           No colleges match &ldquo;{query.trim()}&rdquo;.

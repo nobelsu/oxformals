@@ -112,7 +112,6 @@ export function ListingRow({
       >
         <span className="flex flex-col items-end gap-1.5">
           <ListingTypeTag listingType={listing.listingType} />
-          <FormalTypeTag formalType={listing.formalType} />
         </span>
         {showStatusInsteadOfCta ? (
           <ListingStatusTag
@@ -181,12 +180,18 @@ export function ListingRow({
                   {rowTail}
                 </span>
               ) : null}
+              <FormalTypeTag formalType={listing.formalType} />
             </span>
-          ) : rowTail ? (
-            <span className="text-[0.95rem] text-[var(--ink-muted)]">
-              {rowTail}
+          ) : (
+            <span className="inline-flex items-center gap-2">
+              {rowTail ? (
+                <span className="text-[0.95rem] text-[var(--ink-muted)]">
+                  {rowTail}
+                </span>
+              ) : null}
+              <FormalTypeTag formalType={listing.formalType} />
             </span>
-          ) : null}
+          )}
 
           {listing.menu ? (
             <p className="line-clamp-1 break-words text-[0.9rem] text-[var(--ink-muted)]">

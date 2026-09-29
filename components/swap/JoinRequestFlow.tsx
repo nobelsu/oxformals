@@ -16,6 +16,7 @@ import { listingSupportsSwap } from "@/lib/data/listingType";
 import { findBlockingOutgoingRequestForTarget } from "@/lib/data/requestFilters";
 import type { AvatarSource } from "@/lib/auth/types";
 import type { Listing, RequestType } from "@/lib/data/types";
+import { LoadingDots } from "@/components/ui/Loading";
 
 type Props = {
   /** The listing being requested; null when the flow is closed. */
@@ -536,9 +537,9 @@ function JoinRequestModal({
           type="button"
           onClick={() => void handleSubmit()}
           disabled={submitting || !ready}
-          className="rounded-full bg-[var(--accent)] px-5 py-1.5 text-sm text-[var(--accent-ink)] hover:bg-[var(--accent-hover)] disabled:opacity-50"
+          className="inline-flex min-w-[8.5rem] items-center justify-center rounded-full bg-[var(--accent)] px-5 py-1.5 text-sm text-[var(--accent-ink)] hover:bg-[var(--accent-hover)] disabled:opacity-50"
         >
-          Send request!
+          {submitting ? <LoadingDots /> : "Send request!"}
         </button>
       </div>
     </Modal>

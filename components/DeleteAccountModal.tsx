@@ -8,6 +8,7 @@ import { useAuth } from "@/components/auth/useAuth";
 import { Modal } from "@/components/ui/Modal";
 import { api } from "@/convex/_generated/api";
 import { formatListingDate } from "@/lib/data/format";
+import { LoadingBlock } from "@/components/ui/Loading";
 
 type Props = {
   open: boolean;
@@ -108,7 +109,7 @@ export function DeleteAccountDialog({
   return (
     <Modal open={open} onClose={handleClose} title="Delete account">
       {impact === undefined ? (
-        <p className="text-sm text-[var(--ink-muted)]">Loading…</p>
+        <LoadingBlock />
       ) : impact === null ? (
         <p className="text-sm text-[var(--ink-muted)]">
           You need to be signed in to delete your account.

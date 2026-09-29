@@ -7,6 +7,7 @@ import { useData } from "@/components/data/useData";
 import { ProfileEditor } from "./ProfileEditor";
 import { ProfileView } from "./ProfileView";
 import { WishlistChips } from "./WishlistChips";
+import { LoadingDots } from "@/components/ui/Loading";
 
 export function MineTab() {
   const { user } = useAuth();
@@ -140,7 +141,7 @@ export function MineTab() {
             disabled={saving || !hasUnsavedChanges}
             className="cursor-pointer rounded-full bg-[var(--accent)] px-8 py-4 text-base font-semibold text-[var(--accent-ink)] ring-1 ring-[color-mix(in_srgb,var(--ink)_12%,transparent)] shadow-[0_6px_16px_rgba(0,0,0,0.18)] transition-all duration-200 hover:bg-[var(--accent-hover)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.22)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? "Saving…" : saved ? "Saved" : "Save"}
+            {saving ? <LoadingDots /> : saved ? "Saved" : "Save"}
           </button>
         </div>
       ) : null}

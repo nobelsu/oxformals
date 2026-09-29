@@ -110,15 +110,12 @@ export function ListingDetailModal({
     >
       <div className="flex flex-col gap-5">
         <header className="shrink-0">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <h2 className="font-display text-3xl uppercase tracking-wide">
+          <div className="flex items-start gap-3">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
+            <h2 className="font-display text-3xl uppercase leading-none tracking-wide">
               {listing.college}
             </h2>
             <ListingTypeTag listingType={listing.listingType} />
-            <FormalTypeTag formalType={listing.formalType} />
-            {!isPast ? (
-              <ShareButton kind="listing" id={listing.id} variant="pill" />
-            ) : null}
             <ListingFormalBadges
               isPast={isPast}
               showCompleted={!isGuestMember}
@@ -133,7 +130,15 @@ export function ListingDetailModal({
               />
             ) : null}
           </div>
-          <p className="mt-1.5 text-sm text-[var(--ink-muted)]">
+          {!isPast ? (
+            <ShareButton
+              kind="listing"
+              id={listing.id}
+              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-[2px] border-[var(--ink)] hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
+            />
+          ) : null}
+          </div>
+          <p className="mt-2 text-sm text-[var(--ink-muted)]">
             {formatListingMetaLine({
               dateTime: listing.dateTime,
               groupSize: listing.groupSize,
@@ -141,6 +146,8 @@ export function ListingDetailModal({
               isPast,
               price: listing.price,
             })}
+            {" · "}
+            <FormalTypeTag formalType={listing.formalType} className="align-[-2px]" />
           </p>
           <p className="mt-0.5 text-sm text-[var(--ink-soft)]">
             {[formatYearLabel(listing.year) || listing.year, listing.role]

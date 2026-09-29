@@ -70,6 +70,11 @@ const CONFIG: Record<
   networking: { label: "Networking", Icon: BowTieIcon },
 };
 
+/** Icon and label for a formal type (used by the listing form's picker). */
+export function formalTypeInfo(formalType: FormalType) {
+  return CONFIG[formalType];
+}
+
 type Props = {
   formalType: FormalType;
   /** Hide the text label and show just the icon (with an accessible label). */
@@ -77,12 +82,13 @@ type Props = {
   className?: string;
 };
 
+/** Quiet icon + label ("Social"), meant to sit in a listing's meta line. */
 export function FormalTypeTag({ formalType, iconOnly = false, className = "" }: Props) {
   const { label, Icon } = CONFIG[formalType];
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border-[1.5px] border-[color-mix(in_srgb,var(--ink)_16%,transparent)] bg-[var(--accent-wash)] px-2 py-0.5 text-[0.72rem] font-medium text-[var(--accent-wash-ink)] ${className}`.trim()}
+      className={`inline-flex items-center gap-1 text-[0.8rem] text-[var(--ink-muted)] ${className}`.trim()}
       title={iconOnly ? label : undefined}
       aria-label={iconOnly ? label : undefined}
     >

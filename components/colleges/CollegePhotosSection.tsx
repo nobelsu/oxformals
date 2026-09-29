@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { formatListingDate } from "@/lib/data/format";
 import type { CollegeReviewPublic } from "@/lib/data/collegeReviews";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/Loading";
 
 type Props = {
   college: string;
@@ -62,7 +63,13 @@ export function CollegePhotosSection({ college }: Props) {
   );
 
   if (photos === undefined) {
-    return <p className="text-[var(--ink-muted)]">Loading photos…</p>;
+    return (
+      <div className="grid grid-cols-3 gap-2">
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="aspect-square w-full rounded-xl" />
+        ))}
+      </div>
+    );
   }
 
   if (photos.length === 0) {

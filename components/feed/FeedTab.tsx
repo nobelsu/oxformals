@@ -24,6 +24,7 @@ import { NeedsAttention } from "./NeedsAttention";
 import { WeekFormals } from "./WeekFormals";
 import { BackToTop } from "@/components/ui/BackToTop";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FeedSkeleton } from "@/components/ui/Loading";
 
 export function FeedTab() {
   const searchParams = useSearchParams();
@@ -108,7 +109,7 @@ export function FeedTab() {
 
   const stream =
     items === undefined ? (
-      <p className="text-[var(--ink-muted)]">Loading your feed…</p>
+      <FeedSkeleton />
     ) : items.length === 0 && scope === "following" ? (
       <EmptyState className="mt-3" icon="users" title="Nothing from people you follow yet" />
     ) : items.length === 0 ? (

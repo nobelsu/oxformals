@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { ListingSummary } from "@/lib/chat/types";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SkeletonRows } from "@/components/ui/Loading";
 
 type Props = {
   open: boolean;
@@ -36,7 +37,7 @@ export function ListingReferencePicker({
       </p>
       <div className="mt-5 flex max-h-[50vh] flex-col gap-2 overflow-y-auto">
         {listings === undefined ? (
-          <p className="text-sm text-[var(--ink-soft)]">Loading…</p>
+          <SkeletonRows count={3} avatar={false} />
         ) : listings.length === 0 ? (
           <EmptyState compact icon="ticket" title="No listings to share" />
         ) : (

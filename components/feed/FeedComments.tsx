@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { mapUser } from "@/lib/data/mapConvex";
 import { formatRelativeTime } from "@/lib/data/format";
 import { MAX_FEED_COMMENT_LENGTH } from "@/lib/data/feed";
+import { LoadingDots } from "@/components/ui/Loading";
 
 /** Inline comment thread for one feed item, keyed by its stable `targetKey`. */
 export function FeedComments({ targetKey }: { targetKey: string }) {
@@ -32,7 +33,7 @@ export function FeedComments({ targetKey }: { targetKey: string }) {
   return (
     <div className="mt-2.5 border-t border-[var(--ink)]/10 pt-2.5">
       {comments === undefined ? (
-        <p className="text-[0.8rem] text-[var(--ink-muted)]">Loading…</p>
+        <LoadingDots className="text-[var(--ink-soft)]" />
       ) : comments.length === 0 ? null : (
         <ul className="flex flex-col gap-2.5">
           {comments.map((comment) => {

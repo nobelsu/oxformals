@@ -10,6 +10,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import type { AvatarSource } from "@/lib/auth/types";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SkeletonRows } from "@/components/ui/Loading";
 
 type FollowState = NonNullable<
   ReturnType<typeof useQuery<typeof api.follows.getFollowState>>
@@ -239,7 +240,7 @@ function FollowListModal({
       panelClassName="max-w-md"
     >
       {people === undefined ? (
-        <p className="text-sm text-[var(--ink-muted)]">Loading…</p>
+        <SkeletonRows count={3} />
       ) : people === null ? (
         <p className="text-sm text-[var(--ink-muted)]">This account is private.</p>
       ) : people.length === 0 ? (
@@ -281,7 +282,7 @@ function FollowRequestsModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal open onClose={onClose} title="Follow requests" panelClassName="max-w-md">
       {people === undefined ? (
-        <p className="text-sm text-[var(--ink-muted)]">Loading…</p>
+        <SkeletonRows count={2} />
       ) : people.length === 0 ? (
         <EmptyState compact icon="users" title="No one's waiting" />
       ) : (

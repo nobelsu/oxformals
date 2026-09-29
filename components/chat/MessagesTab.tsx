@@ -20,6 +20,7 @@ import { formatRelativeTime } from "@/lib/data/format";
 import { chatsTabUrl } from "@/lib/chat/navigation";
 import { isDmConversation, isGroupConversation } from "@/lib/chat/types";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingDots, SkeletonRows } from "@/components/ui/Loading";
 
 export function MessagesTab() {
   const router = useRouter();
@@ -82,7 +83,7 @@ export function MessagesTab() {
     if (activeConversation === undefined) {
       return (
         <div className={`${threadShellClassName} items-center justify-center`}>
-          <p className="text-sm text-[var(--ink-soft)]">Loading…</p>
+          <LoadingDots className="text-[var(--accent)]" />
         </div>
       );
     }
@@ -147,7 +148,7 @@ export function MessagesTab() {
 
       <div className="mt-8 flex flex-col gap-3">
         {conversations === undefined ? (
-          <p className="text-sm text-[var(--ink-soft)]">Loading…</p>
+          <SkeletonRows count={4} />
         ) : conversations.length === 0 ? (
           <EmptyState
             icon="chat"

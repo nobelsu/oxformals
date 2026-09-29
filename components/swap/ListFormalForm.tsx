@@ -15,7 +15,7 @@ import {
   type GroupSize,
   type ListingType,
 } from "@/lib/data/types";
-import { FormalTypeTag } from "@/components/swap/FormalTypeTag";
+import { formalTypeInfo } from "@/components/swap/FormalTypeTag";
 import {
   isMenuImageContentType,
   MENU_FILE_ACCEPT,
@@ -316,21 +316,21 @@ export function ListFormalForm({
           <span className="text-sm text-[var(--ink-muted)]">Formal type</span>
           <div className="flex flex-wrap gap-2">
             {(["matchmaking", "social", "networking"] as FormalType[]).map(
-              (t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setFormalType(t)}
-                  aria-pressed={formalType === t}
-                  className={`cursor-pointer rounded-full transition ${
-                    formalType === t
-                      ? "ring-2 ring-[var(--accent)] ring-offset-1 ring-offset-[var(--paper)]"
-                      : "opacity-55 hover:opacity-100"
-                  }`}
-                >
-                  <FormalTypeTag formalType={t} />
-                </button>
-              ),
+              (t) => {
+                const { label, Icon } = formalTypeInfo(t);
+                return (
+                  <Chip
+                    key={t}
+                    variant={formalType === t ? "filled" : "outline"}
+                    onClick={() => setFormalType(t)}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icon className="h-4 w-4" />
+                      {label}
+                    </span>
+                  </Chip>
+                );
+              },
             )}
           </div>
         </div>

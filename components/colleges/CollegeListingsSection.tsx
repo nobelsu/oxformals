@@ -14,6 +14,7 @@ import { collegeToSlug } from "@/lib/data/collegeSlug";
 import { mapListing } from "@/lib/data/mapConvex";
 import type { Listing } from "@/lib/data/types";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SkeletonRows } from "@/components/ui/Loading";
 
 type Props = {
   college: string;
@@ -57,7 +58,7 @@ export function CollegeListingsSection({ college }: Props) {
   const listingDisabled = !isAuthenticated;
 
   if (openListings === undefined) {
-    return <p className="text-[var(--ink-muted)]">Loading listings…</p>;
+    return <SkeletonRows count={3} />;
   }
 
   if (openListings.length === 0) {

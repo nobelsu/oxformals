@@ -9,6 +9,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { User } from "@/lib/auth/types";
 import { formatListingDate } from "@/lib/data/format";
 import type { Listing, RequestType } from "@/lib/data/types";
+import { LoadingDots } from "@/components/ui/Loading";
 
 type Props = {
   open: boolean;
@@ -102,7 +103,7 @@ export function SwapConfirmedModal({
               <p className="text-[var(--ink-muted)]">
                 <span className="text-[var(--ink)]">Instagram:</span>{" "}
                 {contactLoading ? (
-                  <span className="text-[var(--ink-soft)]">Loading…</span>
+                  <LoadingDots className="text-[var(--ink-soft)]" />
                 ) : normalizedInstagram ? (
                   <a
                     href={`https://instagram.com/${normalizedInstagram}`}
@@ -119,7 +120,7 @@ export function SwapConfirmedModal({
               <p className="text-[var(--ink-muted)]">
                 <span className="text-[var(--ink)]">WhatsApp:</span>{" "}
                 {contactLoading ? (
-                  <span className="text-[var(--ink-soft)]">Loading…</span>
+                  <LoadingDots className="text-[var(--ink-soft)]" />
                 ) : whatsappPhone ? (
                   <a
                     href={`https://wa.me/${whatsappPhone.replace(/[^\d+]/g, "")}`}

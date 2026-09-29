@@ -22,6 +22,7 @@ import {
   type CollegeReviewSort,
 } from "@/lib/data/collegeReviews";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SkeletonRows } from "@/components/ui/Loading";
 
 type Props = {
   college: string;
@@ -184,7 +185,7 @@ export function CollegePage({ college }: Props) {
                 </div>
 
                 {reviewsToShow === undefined ? (
-                  <p className="mt-4 text-[var(--ink-muted)]">Loading reviews…</p>
+                  <SkeletonRows className="mt-4" count={3} />
                 ) : reviewsToShow.length === 0 ? (
                   <EmptyState className="mt-4" icon="star" title="No reviews yet" />
                 ) : (

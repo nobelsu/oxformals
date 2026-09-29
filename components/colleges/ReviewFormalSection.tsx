@@ -23,6 +23,7 @@ import {
   uploadImageFile,
   validateImageFile,
 } from "@/lib/upload/imageFile";
+import { Skeleton } from "@/components/ui/Loading";
 
 const MAX_REVIEW_IMAGES = 3;
 
@@ -166,7 +167,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
 
   if (state === undefined) {
     return (
-      <SketchCard className="p-5 text-sm text-[var(--ink-muted)]">Loading review…</SketchCard>
+      <Skeleton className="h-24 w-full rounded-[18px]" />
     );
   }
 
