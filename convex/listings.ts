@@ -19,6 +19,7 @@ import {
 } from "./credits";
 import { areFriends } from "./follows";
 import { notify } from "./notify";
+import { newSeatToken, SEAT_LINK_TTL_MS } from "./seatLinks";
 import {
   countByMethod,
   guestsBroughtBy,
@@ -26,6 +27,7 @@ import {
   occupiedSeats,
   requestSeats,
   seatMethodValidator,
+  unclaimedLinkSeats,
   withGuestSeats,
   type Seat,
 } from "./seats";
@@ -440,6 +442,13 @@ export const createRequest = mutation({
         }),
       ),
     ),
+    /**
+     * Seats for people not on Oxformals yet. Each gets a link to claim. They
+     * pay with their own credit (`paysOwn`) or the requester covers them.
+     */
+    links: v.optional(
+      v.array(v.object({ paysOwn: v.boolean(), method: seatMethodValidator })),
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
@@ -458,12 +467,18 @@ export const createRequest = mutation({
 
     const guests = args.guests ?? 0;
     const friends = args.friends ?? [];
+    const links = args.links ?? [];
     if (
       !Number.isInteger(guests) ||
       guests < 0 ||
-      guests + friends.length > MAX_GUESTS
+      guests + friends.length + links.length > MAX_GUESTS
     ) {
       throw new Error(`You can bring up to ${MAX_GUESTS} people.`);
+    }
+    for (const l of links) {
+      if (l.paysOwn && l.method !== "credit") {
+        throw new Error("Someone new can only pay for themselves with a credit.");
+      }
     }
     if (args.guestMethods && args.guestMethods.length !== guests) {
       throw new Error("Each guest needs a way to pay.");
@@ -487,6 +502,9 @@ export const createRequest = mutation({
         throw new Error("Friends paying for themselves can use a credit or cash.");
       }
     }
+    const now = Date.now();
+    const linkTokens: string[] = [];
+    for (let i = 0; i < links.length; i++) linkTokens.push(await newSeatToken(ctx));
     const party: NonNullable<Doc<"requests">["party"]> = [
       ...friends.map((f) => ({
         kind: "friend" as const,
@@ -494,6 +512,16 @@ export const createRequest = mutation({
         payerId: f.paysOwn ? f.userId : userId,
         method: f.method,
         response: "pending" as const,
+      })),
+      ...links.map((l, i) => ({
+        kind: "link" as const,
+        token: linkTokens[i],
+        // The requester until someone claims it (then the claimer, if paysOwn).
+        payerId: userId,
+        method: l.method,
+        paysOwn: l.paysOwn,
+        response: "pending" as const,
+        expiresAt: now + SEAT_LINK_TTL_MS,
       })),
       ...Array.from({ length: guests }, (_, i) => ({
         kind: "guest" as const,
@@ -539,9 +567,13 @@ export const createRequest = mutation({
       );
     }
 
-    const myCreditSeats = seats.filter(
-      (s) => s.method === "credit" && s.payerId === userId,
-    ).length;
+    // My own seat plus every party seat I cover. A link seat the new person
+    // pays for isn't mine, even though I'm its placeholder payer.
+    const myCreditSeats =
+      (args.requestType === "credit" ? 1 : 0) +
+      party.filter(
+        (p) => p.method === "credit" && p.payerId === userId && p.paysOwn !== true,
+      ).length;
     if (myCreditSeats > 0) {
       const balance = await creditBalance(ctx, userId);
       if (balance < myCreditSeats) {
@@ -651,8 +683,15 @@ export const createRequest = mutation({
         data: { ...formal, paysOwn: f.paysOwn, method: f.method },
       });
     }
+    for (const token of linkTokens) {
+      await ctx.db.insert("seatLinks", { token, requestId, createdAt: now });
+      await ctx.scheduler.runAfter(SEAT_LINK_TTL_MS, internal.seatLinks.expireSeatLink, {
+        requestId,
+        token,
+      });
+    }
 
-    return { requestId, autoAccepted: false as const };
+    return { requestId, autoAccepted: false as const, links: linkTokens };
   },
 });
 
@@ -698,6 +737,12 @@ export const withdrawRequest = mutation({
       .withIndex("by_requestId", (q) => q.eq("requestId", req._id))
       .take(10)) {
       await ctx.db.delete(invite._id);
+    }
+    for (const link of await ctx.db
+      .query("seatLinks")
+      .withIndex("by_requestId", (q) => q.eq("requestId", req._id))
+      .take(10)) {
+      await ctx.db.delete(link._id);
     }
     await ctx.db.delete(req._id);
     return req._id;
@@ -789,6 +834,14 @@ async function assertCanAcceptRequest(
     if (seat.userId && target.members.includes(seat.userId)) {
       throw new Error("Someone in this request is already in your group.");
     }
+  }
+  const unclaimed = unclaimedLinkSeats(req);
+  if (unclaimed > 0) {
+    throw new Error(
+      unclaimed === 1
+        ? "Waiting for someone in this group to join Oxformals."
+        : `Waiting for ${unclaimed} people in this group to join Oxformals.`,
+    );
   }
   // A friend paying for their own seat has to say "I'm in" first — that's
   // what authorises taking their credit.

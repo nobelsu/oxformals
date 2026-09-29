@@ -320,8 +320,8 @@ export const deleteMyAccount = mutation({
  * Deleted: feed comments, bio reports about or by them (they hold a copy of
  * the bio), college tips, review votes and reports, party invites, the credit
  * balance, browser push subscriptions, their notifications, their invite
- * code, and every uploaded file (review photos, menu PDFs). Pending referrals
- * to or from them are voided.
+ * code and seat links, and every uploaded file (review photos, menu PDFs).
+ * Pending referrals to or from them are voided.
  * Blanked: free text on their requests and attendance "other" reasons; their
  * id on a college guide they last edited.
  * Kept on purpose (documented in the privacy policy): reviews (author shows as
@@ -458,6 +458,18 @@ export const purgeUserContent = internalMutation({
       budget--;
     }
 
+    // Seat links they sent out: the tokens stop working.
+    for await (const r of ctx.db
+      .query("requests")
+      .withIndex("by_fromUserId", (q) => q.eq("fromUserId", userId))) {
+      if (spent()) break;
+      await deleteAll(
+        ctx.db
+          .query("seatLinks")
+          .withIndex("by_requestId", (q) => q.eq("requestId", r._id)),
+      );
+    }
+
     // Free text they wrote on requests other people still see.
     for await (const r of ctx.db
       .query("requests")
@@ -503,4 +515,5 @@ type TableWithRows =
   | "creditAccounts"
   | "webPushSubscriptions"
   | "notifications"
-  | "inviteCodes";
+  | "inviteCodes"
+  | "seatLinks";

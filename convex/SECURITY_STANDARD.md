@@ -137,6 +137,7 @@ an empty/null result to signed-out callers rather than throwing.
 - `notifications.ts`: `getBellState`, `listMyNotifications`, `getMyNotificationPrefs` `PublicAuthed` (own rows only; actors via `visibleAvatar`); `markAllRead`, `setNotificationPref`, `saveWebPushSubscription`, `removeMyWebPushSubscription` `PublicAuthed` (mutations; a subscription endpoint must be `https://`); `getDeliveryPlan`, `removeWebPushSubscriptions`, `sendFormalReminders`, `pruneOldNotifications` `InternalOnly`.
 - `notificationDelivery.ts` (`"use node"`): `deliver`, `sendChatWebPush` `InternalOnly`.
 - `invites.ts`: `getInvitePreview` `PublicOpen` (inviter name; avatar via `visibleAvatar`); `getOrCreateMyInviteCode`, `claimInvite` `PublicAuthed` (acts only for the signed-in user; codes are random, 6 characters).
+- `seatLinks.ts`: `getSeatLinkPreview` `PublicOpen` (formal, first names; avatars via `visibleAvatar`); `claimSeatLink` `PublicAuthed` (token is 12 random characters, single use, 48h); `expireSeatLink` `InternalOnly` (scheduled).
 
 ### Internal-Only Modules
 
