@@ -8,7 +8,7 @@ type BioFailure = Extract<SaveBioResult, { ok: false }>["reason"];
 /** What to show when saveBio refuses a bio. */
 export const BIO_ERRORS: Record<BioFailure, string> = {
   tooLong: `Bios can be up to ${MAX_BIO_LENGTH} characters.`,
-  flagged: "That bio can't be posted.",
+  flagged: "That bio can't be posted. Try rewording it.",
   unavailable: "Couldn't check your bio. Try again.",
 };
 

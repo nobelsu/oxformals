@@ -14,6 +14,7 @@ import { SketchCard } from "@/components/ui/SketchCard";
 import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
 import { ROLE_OPTIONS } from "@/lib/data/roles";
 import { Squiggle } from "@/components/ui/Squiggle";
+import { FieldError } from "@/components/ui/FieldError";
 
 type Step = "email" | "code" | "profile" | "password" | "set-password";
 const COLLEGE_LIST = OXFORD_COLLEGES as readonly string[];
@@ -147,6 +148,7 @@ export function LoginForm() {
   const [role, setRole] = useState("");
   const [collegeSearch, setCollegeSearch] = useState("");
   const [collegePickerOpen, setCollegePickerOpen] = useState(false);
+  const [bioError, setBioError] = useState<string | null>(null);
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [bio, setBio] = useState("");
   const [instagramHandle, setInstagramHandle] = useState("");
@@ -367,7 +369,10 @@ export function LoginForm() {
       if (bio.trim()) {
         const result = await saveBio(bio);
         if (!result.ok) {
-          setError(BIO_ERRORS[result.reason]);
+          setBioError(BIO_ERRORS[result.reason]);
+          document
+            .getElementById("bio-input")
+            ?.scrollIntoView({ block: "center", behavior: "smooth" });
           return;
         }
       }
@@ -860,10 +865,14 @@ export function LoginForm() {
               <label htmlFor="bio-input" className="text-sm text-[var(--ink-muted)]">
                 Bio (optional)
               </label>
+              {bioError ? <FieldError>{bioError}</FieldError> : null}
               <BioTextarea
                 id="bio-input"
                 value={bio}
-                onChange={setBio}
+                onChange={(next) => {
+                  setBio(next);
+                  setBioError(null);
+                }}
                 className={inputCls}
               />
             </div>
