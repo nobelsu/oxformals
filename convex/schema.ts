@@ -300,6 +300,35 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_brokenByUserId", ["brokenByUserId"]),
   /**
+   * The insider guide on a college page. Filled in by members of that
+   * college; one row per college, last edit wins.
+   */
+  collegeGuides: defineTable({
+    college: v.string(),
+    formalNights: v.array(v.string()),
+    gowns: v.optional(v.union(v.literal("yes"), v.literal("no"), v.literal("sometimes"))),
+    guestPrice: v.optional(v.number()),
+    dressCode: v.optional(
+      v.union(
+        v.literal("smart"),
+        v.literal("suit"),
+        v.literal("blackTie"),
+        v.literal("casual"),
+      ),
+    ),
+    updatedBy: v.id("users"),
+    updatedAt: v.number(),
+  }).index("by_college", ["college"]),
+  /** Short moderated tips about a college, from its own members. */
+  collegeTips: defineTable({
+    college: v.string(),
+    userId: v.id("users"),
+    text: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_college", ["college"])
+    .index("by_userId", ["userId"]),
+  /**
    * Lookup for "requests I've been named in". The answer itself lives on the
    * request's `party` entry; this row just lets a friend find the request.
    */

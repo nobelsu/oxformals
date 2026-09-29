@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { stampLabel } from "@/lib/data/badges";
+import { CollegeCrest } from "@/components/colleges/CollegeCrest";
 
 type Bubble = {
   key: string;
@@ -113,8 +113,8 @@ export function WeekFormals({
                       b.onWishlist ? "border-[var(--accent)]" : "border-[var(--ink)]"
                     }`}
                   >
-                    <span className="flex h-full w-full items-center justify-center rounded-full bg-[var(--accent-wash)] font-display text-sm text-[var(--accent-wash-ink)]">
-                      {stampLabel(b.college)}
+                    <span className="flex h-full w-full items-center justify-center rounded-full bg-[var(--paper)]">
+                      <CollegeCrest college={b.college} size={32} />
                     </span>
                   </span>
                   <span className="w-full truncate text-center text-[0.72rem] text-[var(--ink-muted)]">

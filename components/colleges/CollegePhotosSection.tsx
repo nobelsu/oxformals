@@ -5,7 +5,6 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { formatListingDate } from "@/lib/data/format";
 import type { CollegeReviewPublic } from "@/lib/data/collegeReviews";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Loading";
 
 type Props = {
@@ -74,11 +73,18 @@ export function CollegePhotosSection({ college }: Props) {
 
   if (photos.length === 0) {
     return (
-      <EmptyState
-        icon="camera"
-        title="No photos yet"
-        body="Photos from guests' reviews show up here."
-      />
+      <div className="flex items-center gap-3 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-4">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[var(--ink)] bg-[var(--accent-wash)] text-[var(--accent-wash-ink)]">
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
+            <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+            <circle cx="12" cy="13" r="3.5" />
+          </svg>
+        </span>
+        <span className="min-w-0">
+          <span className="block text-sm font-bold">No photos yet</span>
+          <span className="block text-xs text-[var(--ink-muted)]">Guests&apos; photos from their reviews show up here.</span>
+        </span>
+      </div>
     );
   }
 

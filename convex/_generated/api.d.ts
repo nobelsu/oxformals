@@ -19,6 +19,8 @@ import type * as bioLimits from "../bioLimits.js";
 import type * as chat from "../chat.js";
 import type * as chatMentions from "../chatMentions.js";
 import type * as collegeAttendance from "../collegeAttendance.js";
+import type * as collegeDirectory from "../collegeDirectory.js";
+import type * as collegeGuide from "../collegeGuide.js";
 import type * as collegeReviewHelpers from "../collegeReviewHelpers.js";
 import type * as collegeReviews from "../collegeReviews.js";
 import type * as collegeStats from "../collegeStats.js";
@@ -72,6 +74,8 @@ declare const fullApi: ApiFromModules<{
   chat: typeof chat;
   chatMentions: typeof chatMentions;
   collegeAttendance: typeof collegeAttendance;
+  collegeDirectory: typeof collegeDirectory;
+  collegeGuide: typeof collegeGuide;
   collegeReviewHelpers: typeof collegeReviewHelpers;
   collegeReviews: typeof collegeReviews;
   collegeStats: typeof collegeStats;
