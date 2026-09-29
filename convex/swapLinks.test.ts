@@ -125,6 +125,55 @@ describe("linked swaps", () => {
     });
   });
 
+  test("a mirror swap auto-accepts as one linked swap", async () => {
+    const t = convexTest(schema, modules);
+    const alice = await makeUser(t, "Alice", "Keble");
+    const wes = await makeUser(t, "Wes", "Worcester");
+    const keble = await as(t, alice).mutation(api.listings.createListing, {
+      dateTime: inDays(5),
+      groupSize: 3,
+      message: "",
+      listingType: "swap",
+    });
+    const worcester = await as(t, wes).mutation(api.listings.createListing, {
+      dateTime: inDays(3),
+      groupSize: 3,
+      message: "",
+      listingType: "swap",
+    });
+    const first = await as(t, alice).mutation(api.listings.createRequest, {
+      requestType: "swap",
+      targetListingId: worcester,
+      offeringListingId: keble,
+      message: "",
+    });
+    const mirror = await as(t, wes).mutation(api.listings.createRequest, {
+      requestType: "swap",
+      targetListingId: keble,
+      offeringListingId: worcester,
+      message: "",
+    });
+    expect(mirror).toEqual({ requestId: first.requestId, autoAccepted: true });
+    await t.run(async (ctx) => {
+      const accepted = (await ctx.db.query("requests").collect()).filter(
+        (r) => r.status === "accepted",
+      );
+      expect(accepted.map((r) => r._id)).toEqual([first.requestId]);
+      expect((await ctx.db.get(worcester))?.members).toEqual([wes, alice]);
+      expect((await ctx.db.get(keble))?.members).toEqual([alice, wes]);
+    });
+
+    // Alice gives up her half; Wes then cancels his formal. Wes keeps his
+    // seat at Keble, as with any other swap.
+    await as(t, alice).mutation(api.listings.leaveGroup, { listingId: worcester });
+    await as(t, wes).mutation(api.listings.deleteListing, { listingId: worcester });
+    await t.run(async (ctx) => {
+      expect((await ctx.db.get(keble))?.members).toEqual([alice, wes]);
+    });
+    const notices = await scheduledNotices(t);
+    expect(notices.map((n) => n.subject)).not.toContain("Your swap was undone");
+  });
+
   test("a break after the other formal happened is recorded, not undone", async () => {
     const s = await swapped({ wesDays: 1, aliceDays: 5 });
     vi.setSystemTime(Date.now() + 2 * DAY); // Worcester has happened

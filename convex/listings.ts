@@ -511,6 +511,43 @@ export const createRequest = mutation({
       throw new Error("Only swap requests include an offering listing.");
     }
 
+    // Two hosts who each asked for the other's formal: the earlier request
+    // already describes this swap, so accept it rather than recording a second
+    // one. One accepted request per swap keeps the seats linked exactly once.
+    // Only for one-for-one swaps; group swaps always need the host to accept.
+    if (args.requestType === "swap" && party.length === 0 && args.offeringListingId) {
+      const mirrorCandidates = await ctx.db
+        .query("requests")
+        .withIndex("by_targetListingId_and_status", (q) =>
+          q
+            .eq("targetListingId", args.offeringListingId!)
+            .eq("status", "pending"),
+        )
+        .take(200);
+      const mirror = mirrorCandidates.find(
+        (r) =>
+          resolveRequestType(r) === "swap" &&
+          r.fromUserId === target.ownerUserId &&
+          r.offeringListingId === args.targetListingId &&
+          (r.party ?? []).length === 0,
+      );
+
+      if (mirror) {
+        await performAccept(ctx, mirror);
+        const me = await ctx.db.get(userId);
+        const theirs = await ctx.db.get(mirror.targetListingId);
+        await sendFormalNotices(ctx, [
+          {
+            userId: mirror.fromUserId,
+            subject: "Your swap is on",
+            body: `${me?.name?.split(" ")[0] ?? "The host"} asked for your formal too, so your swap into ${theirs?.college ?? "their formal"} has gone through.`,
+            cta: "formals",
+          },
+        ]);
+        return { requestId: mirror._id, autoAccepted: true as const };
+      }
+    }
+
     const requestId = await ctx.db.insert("requests", {
       fromUserId: userId,
       toUserId: target.ownerUserId,
@@ -542,32 +579,6 @@ export const createRequest = mutation({
         });
       }
       await sendFormalNotices(ctx, notices);
-    }
-
-    // Two hosts who each asked for the other's formal: accept both at once.
-    // Only for one-for-one swaps; group swaps always need the host to accept.
-    if (args.requestType === "swap" && party.length === 0 && args.offeringListingId) {
-      const mirrorCandidates = await ctx.db
-        .query("requests")
-        .withIndex("by_targetListingId_and_status", (q) =>
-          q
-            .eq("targetListingId", args.offeringListingId!)
-            .eq("status", "pending"),
-        )
-        .take(200);
-      const mirror = mirrorCandidates.find(
-        (r) =>
-          resolveRequestType(r) === "swap" &&
-          r.offeringListingId === args.targetListingId &&
-          (r.party ?? []).length === 0 &&
-          r._id !== requestId,
-      );
-
-      if (mirror) {
-        await performAccept(ctx, mirror, [requestId]);
-        await ctx.db.patch(requestId, { status: "accepted" });
-        return { requestId, autoAccepted: true as const };
-      }
     }
 
     return { requestId, autoAccepted: false as const };
