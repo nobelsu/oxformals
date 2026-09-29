@@ -25,6 +25,7 @@ import { WeekFormals } from "./WeekFormals";
 import { BackToTop } from "@/components/ui/BackToTop";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FeedSkeleton } from "@/components/ui/Loading";
+import { ShallowLink } from "@/components/ui/ShallowLink";
 
 export function FeedTab() {
   const searchParams = useSearchParams();
@@ -177,12 +178,12 @@ export function FeedTab() {
           <div>
             {user ? (
               <div className="mb-2 flex gap-5 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_12%,transparent)]">
-                <Link href="/" scroll={false} className={tabCls(scope === "forYou")}>
+                <ShallowLink href="/" scroll={false} className={tabCls(scope === "forYou")}>
                   For you
-                </Link>
-                <Link href="/?feed=following" scroll={false} className={tabCls(scope === "following")}>
+                </ShallowLink>
+                <ShallowLink href="/?feed=following" scroll={false} className={tabCls(scope === "following")}>
                   Following
-                </Link>
+                </ShallowLink>
               </div>
             ) : null}
             {scope === "forYou" && raw?.wishlistEmpty ? (

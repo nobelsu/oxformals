@@ -52,9 +52,11 @@ export function HomeClient() {
         params.delete("edit");
       }
       const qs = params.toString();
-      router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+      // Shallow: `/` is server-rendered per request, so router.replace would
+      // wait on a round trip before the tab changed.
+      window.history.replaceState(null, "", qs ? `/?${qs}` : "/");
     },
-    [router, searchParams],
+    [searchParams],
   );
 
   const content = useMemo(() => {

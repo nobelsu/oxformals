@@ -13,6 +13,7 @@ import { CreditsChip } from "@/components/credits/CreditsChip";
 import { api } from "@/convex/_generated/api";
 import type { AvatarSource } from "@/lib/auth/types";
 import { BROWSE_ROUTE } from "@/lib/ui/routes";
+import { ShallowLink } from "@/components/ui/ShallowLink";
 import { useAuth } from "./auth/useAuth";
 
 function useNavTheme() {
@@ -750,7 +751,7 @@ function NavTabLink({
   const showUnread = tab.id === "chats" && totalUnread > 0;
 
   return (
-    <Link
+    <ShallowLink
       href={href}
       data-onboarding={onboardingId}
       onClick={onNavigate}
@@ -772,7 +773,7 @@ function NavTabLink({
       {showUnread ? (
         <UnreadBadge count={totalUnread} className="translate-y-px" />
       ) : null}
-    </Link>
+    </ShallowLink>
   );
 }
 
@@ -786,12 +787,12 @@ function FeedScopeTabs({ following }: { following: boolean }) {
     }`;
   return (
     <div className="flex items-center gap-6">
-      <Link href="/" scroll={false} className={cls(!following)}>
+      <ShallowLink href="/" scroll={false} className={cls(!following)}>
         For you
-      </Link>
-      <Link href="/?feed=following" scroll={false} className={cls(following)}>
+      </ShallowLink>
+      <ShallowLink href="/?feed=following" scroll={false} className={cls(following)}>
         Following
-      </Link>
+      </ShallowLink>
     </div>
   );
 }
