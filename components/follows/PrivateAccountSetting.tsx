@@ -47,11 +47,6 @@ export function PrivateAccountSetting() {
           />
         </button>
       </div>
-      <p className="mt-2 text-sm leading-relaxed text-[var(--ink-muted)]">
-        {on
-          ? "You approve who follows you. Only followers see your reviews, the formals you've been to and your badges. Your listings stay open to everyone."
-          : "Anyone can follow you and see your reviews and the formals you've been to. Turn this on to approve followers yourself."}
-      </p>
       {error ? <p className="mt-2 text-sm text-[var(--danger)]">{error}</p> : null}
     </div>
   );

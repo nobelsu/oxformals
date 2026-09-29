@@ -352,7 +352,7 @@ function JoinRequestModal({
             </div>
           ) : friendsList ? (
             <p className="mt-2 text-xs text-[var(--ink-muted)]">
-              Friends who follow you back show up here, so you can name them.
+              Mutual follows show up here.
             </p>
           ) : null}
 
@@ -400,8 +400,8 @@ function JoinRequestModal({
                     ? "Trade them a seat at your formal"
                     : `Trade them ${coveredSeats} seats at your formal`
                   : myListings.length > 0
-                    ? `Your formal needs ${coveredSeats} free seats to swap`
-                    : "You need an upcoming swap listing of your own"
+                    ? `Needs ${coveredSeats} free seats at your formal`
+                    : "Needs a listing of your own"
               }
               action={
                 canSwapBase || myListings.length > 0 ? null : (
@@ -427,7 +427,7 @@ function JoinRequestModal({
                 : canCreditBase
                   ? `Spend ${coveredSeats} credit${coveredSeats === 1 ? "" : "s"} · you have ${balance}`
                   : balance === 0
-                    ? "No credits yet. Host a guest to earn one"
+                    ? "Host a guest to earn one"
                     : `Needs ${coveredSeats} credits · you have ${balance}`
             }
           />
@@ -442,16 +442,16 @@ function JoinRequestModal({
               }
               detail={
                 coveredSeats > 1 && target.price !== undefined
-                  ? `${formatPrice(target.price)} × ${coveredSeats}, arranged with the host after they accept`
-                  : "Arranged with the host after they accept"
+                  ? `${formatPrice(target.price)} × ${coveredSeats}, paid to the host`
+                  : "Paid to the host"
               }
             />
           ) : null}
           {friendIds.length > 0 ? (
             <p className="text-xs text-[var(--ink-muted)]">
               {friendIds.length === 1
-                ? `${friendName(friendIds[0])} pays for their own seat with a credit, and confirms before the host can say yes.`
-                : "Your friends each pay for their own seat with a credit, and confirm before the host can say yes."}
+                ? `${friendName(friendIds[0])} pays their own credit.`
+                : "Friends pay their own credits."}
             </p>
           ) : null}
         </fieldset>

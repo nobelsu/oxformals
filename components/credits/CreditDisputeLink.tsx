@@ -22,7 +22,7 @@ export function CreditDisputeLink({ listingId }: { listingId: string }) {
   if (holds.disputed > 0) {
     return (
       <p className="text-xs text-[var(--ink-muted)]">
-        You said this formal didn&apos;t happen. We&apos;ll sort out your credit.
+        Reported. We&apos;ll sort out your credit.
       </p>
     );
   }
@@ -40,7 +40,7 @@ export function CreditDisputeLink({ listingId }: { listingId: string }) {
       {error ? <p className="text-xs text-[var(--danger)]">{error}</p> : null}
       <ConfirmDialog
         open={confirming}
-        message="Tell us this formal didn't happen? The host won't get your credit until we've looked into it."
+        message="Report that this formal didn't happen?"
         confirmLabel="It didn't happen"
         variant="destructive"
         onCancel={() => setConfirming(false)}

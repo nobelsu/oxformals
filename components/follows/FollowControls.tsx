@@ -72,11 +72,7 @@ export function FollowButton({
       </button>
       <ConfirmDialog
         open={confirming}
-        message={
-          state.isPrivate
-            ? `Unfollow ${first}? Their account is private, so you'd need to ask again to see their formals.`
-            : `Unfollow ${first}?`
-        }
+        message={`Unfollow ${first}?`}
         confirmLabel="Unfollow"
         variant="destructive"
         onCancel={() => setConfirming(false)}
@@ -308,13 +304,7 @@ export function LockIcon({ className = "h-3.5 w-3.5" }: { className?: string }) 
 }
 
 /** Stands in for a private account's activity when you don't follow them. */
-export function PrivateActivityNotice({
-  name,
-  pending,
-}: {
-  name: string;
-  pending: boolean;
-}) {
+export function PrivateActivityNotice({ pending }: { pending: boolean }) {
   return (
     <div className="mt-3 flex flex-col items-center gap-2 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_18%,transparent)] px-5 py-8 text-center">
       <span className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[var(--ink)]">
@@ -322,9 +312,7 @@ export function PrivateActivityNotice({
       </span>
       <p className="font-bold">This account is private</p>
       <p className="max-w-[32ch] text-sm text-[var(--ink-muted)]">
-        {pending
-          ? `You've asked to follow ${name.split(" ")[0]}. Their formals and reviews show up once they say yes.`
-          : `Follow ${name.split(" ")[0]} to see the formals they've been to and their reviews. Their listings are still open to everyone.`}
+        {pending ? "Request sent." : "Follow to see their formals and reviews."}
       </p>
     </div>
   );

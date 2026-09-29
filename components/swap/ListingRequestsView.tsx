@@ -323,7 +323,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                             );
                             setConfirmDialog({
                               message: swapPartner
-                                ? `Remove ${m.name}? This undoes your swap, so you'll lose your seat at their formal too.`
+                                ? `Remove ${m.name}? This also undoes your swap.`
                                 : `Remove ${m.name} from the group?`,
                               variant: "destructive",
                               confirmLabel: "Remove",
@@ -389,10 +389,10 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
                       setConfirmDialog({
                         message:
                           kind === "credit"
-                            ? `Accept ${who}? They join your group, and you earn ${requestSeatCount(r) > 1 ? `${requestSeatCount(r)} credits` : "a credit"} 24 hours after the formal.`
+                            ? `Accept ${who}?`
                             : kind === "pay"
-                              ? `Accept this pay request? ${who} will join your group.`
-                              : `Accept this swap? ${who} will join your group${requestSeatCount(r) > 1 ? `, and you get up to ${requestSeatCount(r)} seats at their formal` : ""}.`,
+                              ? `Accept ${who}?`
+                              : `Accept this swap with ${who}?`,
                         confirmLabel: "Accept",
                         onConfirm: async () => {
                           setConfirmDialog(null);
@@ -571,7 +571,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
           isPast
             ? "Delete this past listing?"
             : listing.members.length > 1
-              ? `Cancel this formal? Your ${listing.members.length - 1 === 1 ? "guest" : `${listing.members.length - 1} guests`} will be removed and emailed. Any swap tied to it is undone too, so you'll lose the seat you got in return.`
+              ? "Cancel this formal? Your guests will be notified."
               : "Delete this listing? All pending requests will be declined."
         }
         variant="destructive"

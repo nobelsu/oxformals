@@ -498,10 +498,7 @@ export function ProfileView({
         {activity === undefined ? (
           <p className="mt-3 text-[var(--ink-muted)]">Loading activity…</p>
         ) : activity.hidden && streamItems.length === 0 ? (
-          <PrivateActivityNotice
-            name={name}
-            pending={followState?.following === "pending"}
-          />
+          <PrivateActivityNotice pending={followState?.following === "pending"} />
         ) : streamItems.length === 0 ? (
           <div className="mt-3 rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_25%,transparent)] px-5 py-8 text-center text-[var(--ink-muted)]">
             {isOwnProfile
@@ -529,10 +526,7 @@ export function ProfileView({
           />
         )}
         {activity?.hidden && streamItems.length > 0 ? (
-          <PrivateActivityNotice
-            name={name}
-            pending={followState?.following === "pending"}
-          />
+          <PrivateActivityNotice pending={followState?.following === "pending"} />
         ) : null}
       </section>
 

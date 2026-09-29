@@ -253,9 +253,7 @@ export function ListFormalForm({
             className={`${fieldCls} disabled:cursor-not-allowed disabled:opacity-60`}
           />
           {dateLocked ? (
-            <span className="text-xs text-[var(--ink-soft)]">
-              Locked once people have joined. Cancel the formal to change it.
-            </span>
+            <span className="text-xs text-[var(--ink-soft)]">Locked once people join</span>
           ) : null}
         </label>
 
