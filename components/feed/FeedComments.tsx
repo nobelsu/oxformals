@@ -85,7 +85,7 @@ export function FeedComments({ targetKey }: { targetKey: string }) {
           }}
           maxLength={MAX_FEED_COMMENT_LENGTH}
           placeholder="Add a comment…"
-          className="min-w-0 flex-1 rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--bg)] px-3.5 py-1.5 text-[0.9rem] text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:border-[var(--accent-hover)] focus:outline-none"
+          className="min-w-0 flex-1 rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--bg)] px-3.5 py-1.5 text-[0.9rem] text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:bg-[var(--paper)] focus:outline-none"
         />
         <button
           type="button"

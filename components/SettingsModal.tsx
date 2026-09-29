@@ -152,7 +152,7 @@ export function SettingsModal({ open, onClose, onDeleteAccount }: Props) {
                   onChange={(e) => setPasswordInput(e.target.value)}
                   placeholder="New password (8+ characters)"
                   disabled={passwordBusy}
-                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-4 py-2.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none focus:border-[var(--accent-hover)] disabled:opacity-60"
+                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-4 py-2.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none focus:bg-[var(--paper)] disabled:opacity-60"
                 />
                 <input
                   type="password"
@@ -161,7 +161,7 @@ export function SettingsModal({ open, onClose, onDeleteAccount }: Props) {
                   onChange={(e) => setPasswordConfirm(e.target.value)}
                   placeholder="Confirm password"
                   disabled={passwordBusy}
-                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-4 py-2.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none focus:border-[var(--accent-hover)] disabled:opacity-60"
+                  className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] px-4 py-2.5 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none focus:bg-[var(--paper)] disabled:opacity-60"
                 />
                 <button
                   type="button"

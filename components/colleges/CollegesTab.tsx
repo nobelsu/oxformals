@@ -166,7 +166,7 @@ export function CollegesTab() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search colleges"
           aria-label="Search colleges"
-          className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] py-2.5 pl-11 pr-4 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:border-[var(--accent-hover)] focus:outline-none"
+          className="w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] py-2.5 pl-11 pr-4 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:bg-[var(--paper)] focus:outline-none"
         />
       </div>
 

@@ -388,7 +388,7 @@ export function LoginForm() {
   }
 
   const inputCls =
-    "w-full rounded-xl border-[2px] border-[var(--ink)] bg-[var(--paper)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2.5 text-base transition-shadow focus:outline-none focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-wash)]";
+    "w-full rounded-xl border-[2px] border-[var(--ink)] bg-[var(--paper)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2.5 text-base transition-shadow focus:outline-none focus:bg-[var(--paper)]";
   const stepEyebrow =
     step === "email"
       ? "Sign in"

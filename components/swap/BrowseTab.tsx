@@ -37,7 +37,7 @@ type Props = {
 };
 
 const FILTER_FIELD_CLS =
-  "min-w-0 origin-center rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base shadow-[0_0_0_0_transparent] transition-[border-color,transform,box-shadow] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] will-change-transform focus:outline-none focus:border-[var(--accent-hover)] focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_52%,transparent),0_12px_32px_-14px_color-mix(in_srgb,var(--accent-hover)_68%,transparent)] focus:scale-[1.012] motion-reduce:transition-none motion-reduce:focus:scale-100 motion-reduce:focus:shadow-[0_0_0_0_transparent]";
+  "min-w-0 origin-center rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2 text-base transition-colors focus:outline-none focus:bg-[var(--paper)]";
 
 function ClearInputIcon({ className }: { className?: string }) {
   return (
