@@ -10,9 +10,10 @@ import {
   optionalUserId,
   requireUserId,
   requireVerifiedUser,
+  sanitizeLimitedUser,
   sanitizePublicUser,
 } from "./guards";
-import { canSeeActivity } from "./follows";
+import { canSeeActivity, FOLLOW_LIST_LIMIT } from "./follows";
 
 const avatarValue = v.union(
   v.object({ kind: v.literal("preset"), id: v.string() }),
@@ -121,12 +122,33 @@ export const current = query({
   },
 });
 
+/**
+ * Members the signed-in app resolves names and avatars from. Signed-in only;
+ * private accounts are left out unless it's you or someone you follow (they
+ * come back, limited, through `getPublicByIds` when a listing needs them).
+ */
 export const listPublic = query({
   args: {},
   handler: async (ctx) => {
+    const viewerId = await optionalUserId(ctx);
+    if (!viewerId) return [];
+    const following = new Set(
+      (
+        await ctx.db
+          .query("follows")
+          .withIndex("by_followerId_and_status", (q) =>
+            q.eq("followerId", viewerId).eq("status", "active"),
+          )
+          .take(FOLLOW_LIST_LIMIT)
+      ).map((f) => f.followeeId),
+    );
     const users = await ctx.db.query("users").order("desc").take(500);
     return users
-      .filter((u) => u.deletedAt === undefined)
+      .filter(
+        (u) =>
+          u.deletedAt === undefined &&
+          (u.isPrivate !== true || u._id === viewerId || following.has(u._id)),
+      )
       .map(sanitizePublicUser);
   },
 });
@@ -156,15 +178,28 @@ export const listForChatPicker = query({
   },
 });
 
-/** Fetch specific users for request rows and profiles (not limited to listPublic page). */
+/**
+ * Fetch specific users for request rows, listing hosts and members (not
+ * limited to the listPublic page). Signed-in only; a private account the
+ * viewer doesn't follow comes back limited to name, college, year and role.
+ */
 export const getPublicByIds = query({
   args: { userIds: v.array(v.id("users")) },
   handler: async (ctx, args) => {
+    const viewerId = await optionalUserId(ctx);
+    if (!viewerId) return [];
     const unique = [...new Set(args.userIds)].slice(0, 100);
     const users = await Promise.all(unique.map((id) => ctx.db.get(id)));
-    return users
-      .filter((user): user is Doc<"users"> => user !== null)
-      .map(sanitizePublicUser);
+    const out = [];
+    for (const user of users) {
+      if (!user) continue;
+      out.push(
+        (await canSeeActivity(ctx, viewerId, user))
+          ? sanitizePublicUser(user)
+          : sanitizeLimitedUser(user),
+      );
+    }
+    return out;
   },
 });
 

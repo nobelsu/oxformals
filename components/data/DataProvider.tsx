@@ -111,25 +111,31 @@ export function DataProvider({ children }: { children: ReactNode }) {
     user ? {} : "skip",
   );
 
-  const requestPartyIds = useMemo(() => {
-    if (incomingRequests === undefined && outgoingRequests === undefined) {
-      return [] as Id<"users">[];
-    }
+  // People on requests and listings who aren't in `listPublic` (it leaves out
+  // private accounts you don't follow, and stops at 500).
+  const missingUserIds = useMemo(() => {
+    if (convexUsers === undefined) return [] as Id<"users">[];
+    const known = new Set<string>(convexUsers.map((u) => u._id));
     const ids = new Set<Id<"users">>();
-    for (const req of incomingRequests ?? []) {
-      ids.add(req.fromUserId);
-      ids.add(req.toUserId);
+    const add = (id: Id<"users">) => {
+      if (!known.has(id)) ids.add(id);
+    };
+    for (const req of [...(incomingRequests ?? []), ...(outgoingRequests ?? [])]) {
+      add(req.fromUserId);
+      add(req.toUserId);
     }
-    for (const req of outgoingRequests ?? []) {
-      ids.add(req.fromUserId);
-      ids.add(req.toUserId);
+    for (const listing of convexListings ?? []) {
+      add(listing.ownerUserId);
+      for (const member of listing.members) add(member);
     }
-    return [...ids];
-  }, [incomingRequests, outgoingRequests]);
+    return [...ids].slice(0, 100);
+  }, [convexUsers, convexListings, incomingRequests, outgoingRequests]);
 
   const requestPartyUsers = useQuery(
     api.users.getPublicByIds,
-    ready && requestPartyIds.length > 0 ? { userIds: requestPartyIds } : "skip",
+    ready && user && missingUserIds.length > 0
+      ? { userIds: missingUserIds }
+      : "skip",
   );
   const wishlist = useQuery(api.users.myWishlist, user ? {} : "skip");
 

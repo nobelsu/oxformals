@@ -11,7 +11,7 @@ import { ListingRow } from "@/components/swap/ListingRow";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
 import { JoinRequestFlow } from "@/components/swap/JoinRequestFlow";
 import { collegeToSlug } from "@/lib/data/collegeSlug";
-import { mapListing } from "@/lib/data/mapConvex";
+import { mapListing, mapUser } from "@/lib/data/mapConvex";
 import type { Listing } from "@/lib/data/types";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonRows } from "@/components/ui/Loading";
@@ -23,11 +23,25 @@ type Props = {
 export function CollegeListingsSection({ college }: Props) {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
-  const { getUser } = useData();
+  const { getUser: getKnownUser } = useData();
 
   const rawListings = useQuery(api.listings.listActiveListingsForCollege, {
     college,
   });
+  // Signed out, the app knows nobody: fetch just this page's hosts.
+  const signedOutHosts = useQuery(
+    api.listings.listActiveHostsForCollege,
+    isAuthenticated ? "skip" : { college },
+  );
+  const getUser = useCallback(
+    (userId: string) => {
+      const known = getKnownUser(userId);
+      if (known) return known;
+      const host = signedOutHosts?.find((h) => h._id === userId);
+      return host ? mapUser(host) : undefined;
+    },
+    [getKnownUser, signedOutHosts],
+  );
 
   const [detailListing, setDetailListing] = useState<Listing | null>(null);
   const [joinTarget, setJoinTarget] = useState<Listing | null>(null);

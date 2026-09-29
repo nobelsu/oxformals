@@ -537,11 +537,14 @@ export const listPublicReviewsForUser = query({
   handler: async (ctx, args) => {
     const limit = Math.min(args.limit ?? 50, 100);
     const viewerId = await optionalUserId(ctx);
+    // A private member's reviews are activity: followers only.
+    const author = await ctx.db.get(args.userId);
+    if (!(await canSeeActivity(ctx, viewerId, author))) return [];
 
     const rows = await ctx.db
       .query("collegeReviews")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(500);
 
     const publicRows = rows.filter((r) => !r.isAnonymous);
     const sorted = sortCollegeReviewRows(publicRows, "recent").slice(0, limit);

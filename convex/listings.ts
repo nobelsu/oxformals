@@ -45,7 +45,18 @@ import {
   resolveStatusAfterEdit,
   validateMenuPdfId,
 } from "./listingHelpers";
-import { requireActiveUser, sanitizePublicUser } from "./guards";
+import {
+  requireActiveUser,
+  sanitizeLimitedUser,
+  sanitizePublicUser,
+} from "./guards";
+
+/** A listing host as signed-out visitors see them: private accounts limited. */
+function signedOutHostSummary(user: Doc<"users">) {
+  return user.isPrivate === true
+    ? sanitizeLimitedUser(user)
+    : sanitizePublicUser(user);
+}
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -204,7 +215,7 @@ export const listUpcomingPublic = query({
     const ownersById = new Map(
       ownerDocs
         .filter((user): user is Doc<"users"> => user !== null)
-        .map((user) => [user._id, sanitizePublicUser(user)]),
+        .map((user) => [user._id, signedOutHostSummary(user)]),
     );
 
     return enriched.flatMap((listing) => {
@@ -243,6 +254,32 @@ export const listActiveListingsForCollege = query({
       .order("desc")
       .take(50);
     return Promise.all(listings.map((listing) => enrichListing(ctx, listing)));
+  },
+});
+
+/**
+ * Hosts of a college's open formals, for signed-out visitors of the college
+ * page (signed-in visitors resolve people through `users.listPublic`).
+ */
+export const listActiveHostsForCollege = query({
+  args: { college: v.string() },
+  handler: async (ctx, args) => {
+    const college = normalizeCollegeName(args.college);
+    const listings = await ctx.db
+      .query("listings")
+      .withIndex("by_college_and_status", (q) =>
+        q.eq("college", college).eq("status", "active"),
+      )
+      .order("desc")
+      .take(50);
+    const ownerIds = [...new Set(listings.map((l) => l.ownerUserId))];
+    const owners = await Promise.all(ownerIds.map((id) => ctx.db.get(id)));
+    return owners
+      .filter(
+        (user): user is Doc<"users"> =>
+          user !== null && user.deletedAt === undefined,
+      )
+      .map(signedOutHostSummary);
   },
 });
 

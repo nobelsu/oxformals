@@ -90,3 +90,18 @@ export function sanitizePublicUser(user: Doc<"users">) {
     avatar: user.avatar,
   };
 }
+
+/**
+ * A private account seen by someone who can't see their activity: who they
+ * are (name, college, year) but nothing about them. Same shape as
+ * `sanitizePublicUser` so callers don't branch.
+ */
+export function sanitizeLimitedUser(user: Doc<"users">) {
+  return {
+    ...sanitizePublicUser(user),
+    interests: [],
+    bio: "",
+    subject: "",
+    avatar: undefined,
+  };
+}

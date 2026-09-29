@@ -21,7 +21,9 @@ describe("deleted users are hidden", () => {
       });
       return { live, gone };
     });
-    const list = await t.query(api.users.listPublic, {});
+    const list = await t
+      .withIdentity({ subject: `${ids.live}|session` })
+      .query(api.users.listPublic, {});
     expect(list.map((u) => u._id)).toEqual([ids.live]);
     expect(
       await t.query(api.users.getPublicProfile, { userId: ids.gone }),
