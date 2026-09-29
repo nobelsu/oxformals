@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
-import { Space_Grotesk, Schoolbell } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { ConvexClientProvider } from "@/app/ConvexClientProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
@@ -9,16 +9,20 @@ import { Nav } from "@/components/Nav";
 import { OnboardingOverlay } from "@/components/onboarding/OnboardingOverlay";
 import { BadgeCelebration } from "@/components/badges/BadgeCelebration";
 
-const schoolbell = Schoolbell({
+// Self-hosted (Latin subset, from Google Fonts, both under the SIL Open Font
+// Licence) so builds never depend on reaching fonts.gstatic.com.
+const schoolbell = localFont({
+  src: "./fonts/Schoolbell-latin.woff2",
   variable: "--font-schoolbell",
-  subsets: ["latin"],
   weight: "400",
+  display: "swap",
 });
 
-const spaceGrotesk = Space_Grotesk({
+const spaceGrotesk = localFont({
+  src: "./fonts/SpaceGrotesk-latin.woff2",
   variable: "--font-space-grotesk",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "300 700",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
