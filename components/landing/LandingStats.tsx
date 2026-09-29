@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePaintCanvas";
 import { Reveal } from "@/components/landing/Reveal";
+import { Squiggle } from "@/components/ui/Squiggle";
 
 // TODO(numbers): placeholder figures — swap for the real ones the user supplies.
 const STATS = [
@@ -101,19 +102,8 @@ export function LandingStats() {
         <h2 className="text-center font-display text-3xl uppercase tracking-wide">
           Oxford formal swapping,{" "}
           <span className="relative inline-block">
-            {/* Light mode: filled highlighter behind the word. */}
-            <span
-              aria-hidden
-              className="absolute inset-x-[-0.15em] bottom-[0.05em] top-[0.42em] -z-0 -rotate-1 rounded-[0.2em] bg-[var(--accent-wash)] dark:hidden"
-            />
-            {/* Dark mode: an accent underline instead (highlight is unreadable on dark). */}
-            <span
-              aria-hidden
-              className="absolute inset-x-0 bottom-[0.04em] hidden h-[3px] -rotate-1 rounded-full bg-[var(--accent)] dark:block"
-            />
-            <span className="relative z-[1] text-[var(--accent-wash-ink)] dark:text-[var(--ink)]">
-              by the numbers
-            </span>
+            by the numbers
+            <Squiggle bumps={6} />
           </span>
         </h2>
       </Reveal>

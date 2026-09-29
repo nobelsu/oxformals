@@ -13,6 +13,7 @@ import { BIO_ERRORS, BioTextarea } from "@/components/ui/BioTextarea";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
 import { ROLE_OPTIONS } from "@/lib/data/roles";
+import { Squiggle } from "@/components/ui/Squiggle";
 
 type Step = "email" | "code" | "profile" | "password" | "set-password";
 const COLLEGE_LIST = OXFORD_COLLEGES as readonly string[];
@@ -413,19 +414,8 @@ export function LoginForm() {
           <h1 className="mb-6 mt-2 font-display text-3xl leading-tight text-[var(--ink)]">
             {greeting.lead}{" "}
             <span className="relative inline-block">
-              {/* Light mode: filled highlighter behind the word. */}
-              <span
-                aria-hidden
-                className="absolute inset-x-[-0.08em] bottom-[0.05em] block h-[0.5em] -rotate-1 rounded-[0.2em] bg-[var(--accent-wash)] dark:hidden"
-              />
-              {/* Dark mode: an accent underline instead (highlight is unreadable on dark). */}
-              <span
-                aria-hidden
-                className="absolute inset-x-0 bottom-[0.02em] hidden h-[3px] -rotate-1 rounded-full bg-[var(--accent)] dark:block"
-              />
-              <span className="relative text-[var(--accent-wash-ink)] dark:text-[var(--ink)]">
-                {greeting.word}
-              </span>
+              {greeting.word}
+              <Squiggle />
             </span>
             .
           </h1>
