@@ -15,6 +15,8 @@ const entryValidator = v.object({
   college: v.string(),
   wantCount: v.number(),
   weekCount: v.number(),
+  /** ISO time of the soonest upcoming formal with a free seat, if any. */
+  nextAt: v.union(v.null(), v.string()),
   reviewCount: v.number(),
   rating: v.union(v.null(), v.number()),
   onMyWishlist: v.boolean(),
@@ -36,19 +38,20 @@ export const listDirectory = query({
 
     const now = Date.now();
     const week = new Map<string, number>();
+    const next = new Map<string, string>();
+    const weekEnd = new Date(now + WEEK_MS).toISOString();
+    // Ascending by date, so the first listing seen per college is its soonest.
     const upcoming = await ctx.db
       .query("listings")
       .withIndex("by_status_and_dateTime", (q) =>
-        q
-          .eq("status", "active")
-          .gt("dateTime", new Date(now).toISOString())
-          .lt("dateTime", new Date(now + WEEK_MS).toISOString()),
+        q.eq("status", "active").gt("dateTime", new Date(now).toISOString()),
       )
-      .take(300);
+      .take(500);
     for (const l of upcoming) {
       if (l.seatsAvailable <= 0) continue;
       const c = normalizeCollegeName(l.college);
-      week.set(c, (week.get(c) ?? 0) + 1);
+      if (!next.has(c)) next.set(c, l.dateTime);
+      if (l.dateTime < weekEnd) week.set(c, (week.get(c) ?? 0) + 1);
     }
 
     const stats = new Map<string, { reviewCount: number; rating: number | null }>();
@@ -66,6 +69,7 @@ export const listDirectory = query({
       college,
       wantCount: want.get(college) ?? 0,
       weekCount: week.get(college) ?? 0,
+      nextAt: next.get(college) ?? null,
       reviewCount: stats.get(college)?.reviewCount ?? 0,
       rating: stats.get(college)?.rating ?? null,
       onMyWishlist: mine.has(college),

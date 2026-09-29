@@ -694,7 +694,16 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
 .loading-dot {
   animation: loading-dot 1s ease-in-out infinite;
 }
+/* Content arriving after a skeleton: a quick fade instead of a pop. */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fade-in {
+  animation: fade-in 200ms ease-out;
+}
 @media (prefers-reduced-motion: reduce) {
   .skeleton { animation: none; }
   .loading-dot { animation: none; opacity: 0.7; }
+  .fade-in { animation: none; }
 }

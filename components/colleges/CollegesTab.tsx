@@ -9,12 +9,14 @@ import { CollegeCrest } from "@/components/colleges/CollegeCrest";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Loading";
 import { collegeToSlug } from "@/lib/data/collegeSlug";
+import { formatShortDate } from "@/lib/data/format";
 
 type Sort = "soon" | "wanted" | "rated";
 type Entry = {
   college: string;
   wantCount: number;
   weekCount: number;
+  nextAt: string | null;
   reviewCount: number;
   rating: number | null;
   onMyWishlist: boolean;
@@ -26,7 +28,10 @@ const SORTS: { id: Sort; label: string }[] = [
   { id: "rated", label: "Top rated" },
 ];
 
-function signal(e: Entry): { text: string; hot: boolean } {
+function signal(e: Entry, sort: Sort): { text: string; hot: boolean } {
+  if (sort === "soon" && e.weekCount === 0 && e.nextAt) {
+    return { text: `Next formal ${formatShortDate(e.nextAt)}`, hot: false };
+  }
   if (e.weekCount > 0) {
     return { text: `${e.weekCount} formal${e.weekCount === 1 ? "" : "s"} this week`, hot: true };
   }
@@ -38,7 +43,15 @@ function signal(e: Entry): { text: string; hot: boolean } {
 function sortEntries(entries: Entry[], sort: Sort): Entry[] {
   const byName = (a: Entry, b: Entry) => a.college.localeCompare(b.college);
   const copy = [...entries];
-  if (sort === "soon") copy.sort((a, b) => b.weekCount - a.weekCount || b.wantCount - a.wantCount || byName(a, b));
+  if (sort === "soon") {
+    // Soonest formal first; colleges with nothing coming up go last.
+    copy.sort(
+      (a, b) =>
+        (a.nextAt ?? "~").localeCompare(b.nextAt ?? "~") ||
+        b.wantCount - a.wantCount ||
+        byName(a, b),
+    );
+  }
   if (sort === "wanted") copy.sort((a, b) => b.wantCount - a.wantCount || byName(a, b));
   if (sort === "rated") copy.sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1) || b.reviewCount - a.reviewCount || byName(a, b));
   return copy;
@@ -52,12 +65,12 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-function CollegeTile({ entry }: { entry: Entry }) {
+function CollegeTile({ entry, sort }: { entry: Entry; sort: Sort }) {
   const { isAuthenticated } = useAuth();
   const toggle = useMutation(api.users.toggleWishlistCollege);
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
   const wished = optimistic ?? entry.onMyWishlist;
-  const s = signal(entry);
+  const s = signal(entry, sort);
   return (
     <li className="relative">
       <Link
@@ -148,7 +161,7 @@ export function CollegesTab() {
       ) : (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {shown.map((entry) => (
-            <CollegeTile key={entry.college} entry={entry} />
+            <CollegeTile key={entry.college} entry={entry} sort={sort} />
           ))}
         </ul>
       )}

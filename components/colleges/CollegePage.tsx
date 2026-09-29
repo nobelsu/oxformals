@@ -14,7 +14,7 @@ import { CollegeReviewCard } from "@/components/colleges/CollegeReviewCard";
 import { StarRating } from "@/components/colleges/StarRating";
 import { Avatar } from "@/components/ui/Avatar";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { SkeletonRows } from "@/components/ui/Loading";
+import { Skeleton, SkeletonRows } from "@/components/ui/Loading";
 import type { AvatarSource } from "@/lib/auth/types";
 import {
   COLLEGE_REVIEW_CATEGORIES,
@@ -84,6 +84,7 @@ export function CollegePage({ college }: Props) {
   ]
     .filter(Boolean)
     .join(" · ");
+  const headerLoading = overview === undefined || aggregates === undefined;
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
@@ -116,9 +117,17 @@ export function CollegePage({ college }: Props) {
             <div className="-mt-12 rounded-2xl bg-[var(--paper)] p-1">
               <CollegeCrest college={college} size={84} />
             </div>
-            <div className="min-w-0 pb-1">
+            <div className="min-w-0 pb-1 pt-4">
               <h1 className="font-display text-4xl uppercase leading-none tracking-wide">{college}</h1>
-              {subline ? <p className="mt-1.5 text-sm text-[var(--ink-muted)]">{subline}</p> : null}
+              {/* The line keeps its height while the figures load, then fades
+                  in, so nothing jumps. */}
+              <p className="mt-2 h-5 text-sm text-[var(--ink-muted)]">
+                {headerLoading ? (
+                  <Skeleton className="h-3.5 w-40" />
+                ) : (
+                  <span className="fade-in">{subline}</span>
+                )}
+              </p>
             </div>
           </div>
         </div>
