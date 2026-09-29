@@ -55,7 +55,7 @@ export function HeroShowcase({ slides }: { slides: HeroSlide[] }) {
 
   return (
     <div
-      className="rounded-[16px] border-[2px] border-[var(--ink)] bg-[var(--paper)] p-4 sm:p-5"
+      className="min-w-0 rounded-[16px] border-[2px] border-[var(--ink)] bg-[var(--paper)] p-4 sm:p-5"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}

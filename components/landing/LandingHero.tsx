@@ -63,7 +63,7 @@ export function LandingHero({
 
   return (
     <section className="grid items-center gap-10 md:grid-cols-2 md:gap-14">
-      <div className="flex flex-col items-start">
+      <div className="flex min-w-0 flex-col items-start">
         <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
           Your seat at any{" "}
           <span className="whitespace-nowrap">
@@ -81,16 +81,16 @@ export function LandingHero({
           somewhere you&rsquo;ve never been.
         </p>
 
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-7 flex w-full flex-row gap-3 sm:w-auto">
           <Link
             href="/login"
-            className="inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-6 py-3 text-base font-semibold text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
+            className="inline-flex flex-1 items-center justify-center whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-3 text-base font-semibold text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)] sm:flex-none sm:px-6"
           >
             Take a seat
           </Link>
           <Link
             href={BROWSE_ROUTE}
-            className="inline-flex items-center justify-center rounded-full border-[2px] border-[var(--ink)] px-6 py-3 text-base font-semibold text-[var(--ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]"
+            className="inline-flex flex-1 items-center justify-center whitespace-nowrap rounded-full border-[2px] border-[var(--ink)] px-5 py-3 text-base font-semibold text-[var(--ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)] sm:flex-none sm:px-6"
           >
             Browse formals
           </Link>
