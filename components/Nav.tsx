@@ -451,7 +451,7 @@ function NavInner() {
           <>
           <p className="min-w-0 truncate text-center font-display text-lg uppercase tracking-[0.2em] text-[var(--nav-ink)] sm:hidden">
             {isCollegeDetail
-              ? "Rankings"
+              ? "Colleges"
               : onTabbedPage
                 ? activeTabLabel
                 : "Oxformals"}
