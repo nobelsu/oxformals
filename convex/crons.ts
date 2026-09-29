@@ -17,4 +17,12 @@ crons.interval(
   {},
 );
 
+// Retention limits promised in the privacy policy (see convex/retention.ts).
+crons.cron(
+  "enforce retention limits",
+  "30 3 * * *",
+  internal.retention.runDaily,
+  {},
+);
+
 export default crons;

@@ -257,10 +257,12 @@ export default function PrivacyPage() {
             </li>
             <li>
               Seat-credit records stay so other members&apos; balances add up,
-              for 2 years.
+              for 2 years after the formal (or after a dispute about it is
+              settled, if later).
             </li>
             <li>
-              Records of broken swaps stay to prevent abuse, for 12 months.
+              Records of broken swaps stay to prevent abuse, for 12 months
+              from when the swap was broken.
             </li>
           </ul>
         </Section>

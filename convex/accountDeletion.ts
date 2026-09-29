@@ -319,12 +319,14 @@ export const deleteMyAccount = mutation({
  *
  * Deleted: feed comments, bio reports about or by them (they hold a copy of
  * the bio), college tips, review votes and reports, party invites, the credit
- * balance, and every uploaded file (review photos, menu PDFs).
+ * balance, browser push subscriptions, their notifications, and every
+ * uploaded file (review photos, menu PDFs).
  * Blanked: free text on their requests and attendance "other" reasons; their
  * id on a college guide they last edited.
  * Kept on purpose (documented in the privacy policy): reviews (author shows as
  * "Deleted user"), messages in other people's chats, credit holds (the ledger
- * other people's balances depend on) and swap-break records (abuse history).
+ * other people's balances depend on) and swap-break records (abuse history),
+ * until the limits in convex/retention.ts remove them.
  */
 export const purgeUserContent = internalMutation({
   args: { userId: v.id("users") },
@@ -421,6 +423,16 @@ export const purgeUserContent = internalMutation({
         .query("creditAccounts")
         .withIndex("by_userId", (q) => q.eq("userId", userId)),
     );
+    await deleteAll(
+      ctx.db
+        .query("webPushSubscriptions")
+        .withIndex("by_userId", (q) => q.eq("userId", userId)),
+    );
+    await deleteAll(
+      ctx.db
+        .query("notifications")
+        .withIndex("by_userId_and_createdAt", (q) => q.eq("userId", userId)),
+    );
 
     // Free text they wrote on requests other people still see.
     for await (const r of ctx.db
@@ -464,4 +476,6 @@ type TableWithRows =
   | "collegeTips"
   | "collegeReviewReports"
   | "partyInvites"
-  | "creditAccounts";
+  | "creditAccounts"
+  | "webPushSubscriptions"
+  | "notifications";

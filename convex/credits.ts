@@ -108,7 +108,7 @@ export async function holdSeatCredits(
 
 async function refundHold(ctx: MutationCtx, hold: Doc<"creditHolds">) {
   if (hold.status !== "held" && hold.status !== "disputed") return;
-  await ctx.db.patch(hold._id, { status: "refunded" });
+  await ctx.db.patch(hold._id, { status: "refunded", resolvedAt: Date.now() });
   await adjustCredits(ctx, hold.payerId, 1);
 }
 
@@ -253,7 +253,7 @@ export const settleDueHolds = internalMutation({
       )
       .take(200);
     for (const hold of due) {
-      await ctx.db.patch(hold._id, { status: "paid" });
+      await ctx.db.patch(hold._id, { status: "paid", resolvedAt: Date.now() });
       await adjustCredits(ctx, hold.hostId, 1);
     }
     if (due.length === 200) {
@@ -276,7 +276,7 @@ export const resolveDispute = internalMutation({
     if (outcome === "refund") {
       await refundHold(ctx, hold);
     } else {
-      await ctx.db.patch(hold._id, { status: "paid" });
+      await ctx.db.patch(hold._id, { status: "paid", resolvedAt: Date.now() });
       await adjustCredits(ctx, hold.hostId, 1);
     }
     return null;

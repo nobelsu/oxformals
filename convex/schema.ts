@@ -65,7 +65,8 @@ export default defineSchema({
     notificationPrefs: v.optional(notificationPrefsValidator),
   })
     .index("email", ["email"])
-    .index("phone", ["phone"]),
+    .index("phone", ["phone"])
+    .index("by_deletedAt", ["deletedAt"]),
   collegeWishlists: defineTable({
     userId: v.id("users"),
     college: v.string(),
@@ -186,7 +187,9 @@ export default defineSchema({
         }),
       ),
     ),
-  }).index("by_conversationId", ["conversationId"]),
+  })
+    .index("by_conversationId", ["conversationId"])
+    .index("by_senderUserId", ["senderUserId"]),
   pushTokens: defineTable({
     userId: v.id("users"),
     token: v.string(),
@@ -319,7 +322,9 @@ export default defineSchema({
     wrongedUserId: v.id("users"),
     listingId: v.id("listings"),
     createdAt: v.number(),
-  }).index("by_brokenByUserId", ["brokenByUserId"]),
+  })
+    .index("by_brokenByUserId", ["brokenByUserId"])
+    .index("by_createdAt", ["createdAt"]),
   /**
    * The insider guide on a college page. Filled in by members of that
    * college; one row per college, last edit wins.
@@ -399,6 +404,8 @@ export default defineSchema({
       v.literal("disputed"),
     ),
     releaseAt: v.number(),
+    /** When it became paid or refunded (older rows: unset, use releaseAt). */
+    resolvedAt: v.optional(v.number()),
   })
     .index("by_status_and_releaseAt", ["status", "releaseAt"])
     .index("by_listingId_and_seatHolderId", ["listingId", "seatHolderId"])
