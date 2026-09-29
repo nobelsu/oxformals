@@ -44,13 +44,18 @@ function sortEntries(entries: Entry[], sort: Sort): Entry[] {
   const byName = (a: Entry, b: Entry) => a.college.localeCompare(b.college);
   const copy = [...entries];
   if (sort === "soon") {
-    // Soonest formal first; colleges with nothing coming up go last.
-    copy.sort(
-      (a, b) =>
-        (a.nextAt ?? "~").localeCompare(b.nextAt ?? "~") ||
-        b.wantCount - a.wantCount ||
-        byName(a, b),
-    );
+    // Soonest formal first; colleges with nothing coming up go last, A–Z.
+    // (Compare ISO strings with < rather than localeCompare, whose collation
+    // puts punctuation before digits.)
+    copy.sort((a, b) => {
+      if (a.nextAt && b.nextAt) {
+        if (a.nextAt !== b.nextAt) return a.nextAt < b.nextAt ? -1 : 1;
+        return b.wantCount - a.wantCount || byName(a, b);
+      }
+      if (a.nextAt) return -1;
+      if (b.nextAt) return 1;
+      return byName(a, b);
+    });
   }
   if (sort === "wanted") copy.sort((a, b) => b.wantCount - a.wantCount || byName(a, b));
   if (sort === "rated") copy.sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1) || b.reviewCount - a.reviewCount || byName(a, b));
@@ -96,6 +101,37 @@ function CollegeTile({ entry, sort }: { entry: Entry; sort: Sort }) {
         </button>
       ) : null}
     </li>
+  );
+}
+
+const GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4";
+
+/** Under "Formals soon", colleges with nothing listed sit under their own label. */
+function CollegeGrid({ entries, sort }: { entries: Entry[]; sort: Sort }) {
+  const upcoming = sort === "soon" ? entries.filter((e) => e.nextAt) : entries;
+  const rest = sort === "soon" ? entries.filter((e) => !e.nextAt) : [];
+  return (
+    <>
+      {upcoming.length > 0 ? (
+        <ul className={GRID}>
+          {upcoming.map((entry) => (
+            <CollegeTile key={entry.college} entry={entry} sort={sort} />
+          ))}
+        </ul>
+      ) : null}
+      {rest.length > 0 ? (
+        <>
+          <p className="mt-2 text-xs font-bold uppercase tracking-[0.14em] text-[var(--ink-soft)]">
+            Nothing listed yet
+          </p>
+          <ul className={GRID}>
+            {rest.map((entry) => (
+              <CollegeTile key={entry.college} entry={entry} sort={sort} />
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </>
   );
 }
 
@@ -159,11 +195,7 @@ export function CollegesTab() {
       ) : shown.length === 0 ? (
         <EmptyState icon="search" title="No colleges match" />
       ) : (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {shown.map((entry) => (
-            <CollegeTile key={entry.college} entry={entry} sort={sort} />
-          ))}
-        </ul>
+        <CollegeGrid entries={shown} sort={sort} />
       )}
     </div>
   );
