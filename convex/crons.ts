@@ -25,4 +25,19 @@ crons.cron(
   {},
 );
 
+// 08:00 and 09:00 UTC: whichever is 09:00 in London sends the reminders.
+crons.cron(
+  "formal tomorrow reminders",
+  "0 8,9 * * *",
+  internal.notifications.sendFormalReminders,
+  {},
+);
+
+crons.cron(
+  "delete old notifications",
+  "45 3 * * *",
+  internal.notifications.pruneOldNotifications,
+  {},
+);
+
 export default crons;

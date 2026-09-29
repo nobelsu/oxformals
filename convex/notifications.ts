@@ -1,5 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
   internalMutation,
@@ -18,6 +19,8 @@ import {
 } from "./notificationCopy";
 import { notificationCategoryValidator } from "./notificationKinds";
 import { emailAllowed, pushAllowed, resolvePrefs } from "./notificationPrefs";
+import { londonDayRange, londonHour } from "./londonTime";
+import { notify } from "./notify";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -325,5 +328,68 @@ export const removeMyWebPushSubscription = mutation({
       .first();
     if (existing && existing.userId === userId) await ctx.db.delete(existing._id);
     return null;
+  },
+});
+
+/** Reminders go out at 9am Oxford time. */
+export const REMINDER_HOUR = 9;
+export const RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+const PRUNE_BATCH = 500;
+
+/**
+ * "Worcester is tomorrow at 7:30 pm." to everyone seated at a formal tomorrow
+ * (formals with at least one guest). The cron fires at 08:00 and 09:00 UTC so
+ * one of them is 09:00 in London whatever the season; the other does nothing.
+ */
+export const sendFormalReminders = internalMutation({
+  args: {},
+  returns: v.object({ sent: v.number() }),
+  handler: async (ctx) => {
+    const now = Date.now();
+    if (londonHour(now) !== REMINDER_HOUR) return { sent: 0 };
+    const { start, end } = londonDayRange(now, 1);
+    const from = new Date(start).toISOString();
+    const to = new Date(end).toISOString();
+    let sent = 0;
+    for (const status of ["active", "confirmed", "closed"] as const) {
+      const listings = await ctx.db
+        .query("listings")
+        .withIndex("by_status_and_dateTime", (q) =>
+          q.eq("status", status).gte("dateTime", from).lt("dateTime", to),
+        )
+        .take(200);
+      for (const listing of listings) {
+        const guests = (listing.guestSeats ?? []).reduce((n, g) => n + g.count, 0);
+        if (listing.members.length + guests < 2) continue;
+        for (const userId of listing.members) {
+          const id = await notify(ctx, {
+            userId,
+            kind: "formal_tomorrow",
+            listingId: listing._id,
+            data: { college: listing.college, dateTime: listing.dateTime },
+          });
+          if (id) sent++;
+        }
+      }
+    }
+    return { sent };
+  },
+});
+
+/** Daily: notifications older than 90 days go, in batches. */
+export const pruneOldNotifications = internalMutation({
+  args: {},
+  returns: v.object({ deleted: v.number() }),
+  handler: async (ctx) => {
+    const cutoff = Date.now() - RETENTION_MS;
+    const old = await ctx.db
+      .query("notifications")
+      .withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff))
+      .take(PRUNE_BATCH);
+    for (const n of old) await ctx.db.delete(n._id);
+    if (old.length === PRUNE_BATCH) {
+      await ctx.scheduler.runAfter(0, internal.notifications.pruneOldNotifications, {});
+    }
+    return { deleted: old.length };
   },
 });

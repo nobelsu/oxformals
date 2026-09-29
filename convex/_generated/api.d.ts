@@ -44,6 +44,7 @@ import type * as listingFormat from "../listingFormat.js";
 import type * as listingHelpers from "../listingHelpers.js";
 import type * as listingMembership from "../listingMembership.js";
 import type * as listings from "../listings.js";
+import type * as londonTime from "../londonTime.js";
 import type * as migrations from "../migrations.js";
 import type * as moderation from "../moderation.js";
 import type * as notificationCopy from "../notificationCopy.js";
@@ -111,6 +112,7 @@ declare const fullApi: ApiFromModules<{
   listingHelpers: typeof listingHelpers;
   listingMembership: typeof listingMembership;
   listings: typeof listings;
+  londonTime: typeof londonTime;
   migrations: typeof migrations;
   moderation: typeof moderation;
   notificationCopy: typeof notificationCopy;
