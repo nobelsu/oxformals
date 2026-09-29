@@ -24,6 +24,8 @@ import { NeedsAttention } from "./NeedsAttention";
 import { WeekFormals } from "./WeekFormals";
 import { BackToTop } from "@/components/ui/BackToTop";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { InviteFriendsButton } from "@/components/invites/InviteFriendsButton";
+import { PeopleYouMayKnow } from "@/components/invites/PeopleYouMayKnow";
 import { FeedSkeleton } from "@/components/ui/Loading";
 import { ShallowLink } from "@/components/ui/ShallowLink";
 
@@ -112,7 +114,13 @@ export function FeedTab() {
     items === undefined ? (
       <FeedSkeleton />
     ) : items.length === 0 && scope === "following" ? (
-      <EmptyState className="mt-3" icon="users" title="Nothing from people you follow yet" />
+      <div className="mt-3 flex flex-col gap-3">
+        <EmptyState icon="users" title="Nothing from people you follow yet" />
+        <div className="flex justify-center">
+          <InviteFriendsButton variant="ink" />
+        </div>
+        <PeopleYouMayKnow limit={10} />
+      </div>
     ) : items.length === 0 ? (
       <EmptyState
         className="mt-3"

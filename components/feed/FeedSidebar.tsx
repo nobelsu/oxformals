@@ -4,6 +4,7 @@ import Link from "next/link";
 import { formatListingTime } from "@/lib/data/format";
 import type { useListingsHubData } from "@/components/swap/listings-hub/useListingsHubData";
 import type { Listing } from "@/lib/data/types";
+import { PeopleYouMayKnow } from "@/components/invites/PeopleYouMayKnow";
 import { NeedsAttention } from "./NeedsAttention";
 
 type Hub = ReturnType<typeof useListingsHubData>;
@@ -92,6 +93,7 @@ export function FeedSidebar({
     <div className="flex flex-col gap-3">
       {nextFormal ? <NextFormalCard nextFormal={nextFormal} /> : null}
       {hub.hasNeedsAttention ? <NeedsAttention hub={hub} /> : null}
+      <PeopleYouMayKnow />
     </div>
   );
 }

@@ -36,6 +36,7 @@ import { TOTAL_BADGE_COUNT, badgeById } from "@/lib/data/badges";
 import type { ProfileActivityItem } from "@/lib/data/groupActivityByDay";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton, SkeletonRows } from "@/components/ui/Loading";
+import { InviteFriendsButton } from "@/components/invites/InviteFriendsButton";
 
 function mapProfileListing(doc: {
   _id: string;
@@ -418,15 +419,18 @@ export function ProfileView({
         ) : null}
         <div className="flex gap-2">
           {isOwnProfile ? (
-            onEditProfile ? (
-              <button type="button" onClick={onEditProfile} className={editProfileClass}>
-                Edit profile
-              </button>
-            ) : (
-              <Link href="/?tab=mine&edit=1" className={editProfileClass}>
-                Edit profile
-              </Link>
-            )
+            <>
+              {onEditProfile ? (
+                <button type="button" onClick={onEditProfile} className={editProfileClass}>
+                  Edit profile
+                </button>
+              ) : (
+                <Link href="/?tab=mine&edit=1" className={editProfileClass}>
+                  Edit profile
+                </Link>
+              )}
+              <InviteFriendsButton variant="plain" className="flex-1" />
+            </>
           ) : isAuthenticated ? (
             <>
               {followState ? (
