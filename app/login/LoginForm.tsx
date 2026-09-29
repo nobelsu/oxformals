@@ -880,7 +880,6 @@ export function LoginForm() {
               <label htmlFor="bio-input" className="text-sm text-[var(--ink-muted)]">
                 Bio (optional)
               </label>
-              {bioError ? <FieldError>{bioError}</FieldError> : null}
               <BioTextarea
                 id="bio-input"
                 value={bio}
@@ -890,6 +889,8 @@ export function LoginForm() {
                 }}
                 className={inputCls}
               />
+              {/* Errors sit under the field (and its counter), as everywhere. */}
+              {bioError ? <FieldError>{bioError}</FieldError> : null}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

@@ -56,7 +56,7 @@ function Field({
   className?: string;
   /** Shown at the right end of the label row (e.g. a character counter). */
   aside?: ReactNode;
-  /** Shown under the label, so the field name reads first. */
+  /** Shown under the field. */
   error?: string | null;
   children: ReactNode;
 }) {
