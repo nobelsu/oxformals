@@ -10,6 +10,7 @@ import {
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { deliverExpoPushMessages } from "./expoPush";
 import { requireActiveUser } from "./guards";
+import { pushAllowed } from "./notificationPrefs";
 
 const PUSH_PREVIEW_MAX_LENGTH = 120;
 
@@ -316,5 +317,70 @@ export const sendChatMessagePush = internalAction({
 
     await deliverExpoPushMessages(ctx, payload.messages);
     return null;
+  },
+});
+
+const webSubscriptionValidator = v.object({
+  endpoint: v.string(),
+  p256dh: v.string(),
+  auth: v.string(),
+});
+
+/**
+ * Web push for a chat message: one item per recipient with browser
+ * subscriptions, gated by their "Social" push setting (the mobile app keeps
+ * using `pushChatAlerts`). Chat never creates bell rows.
+ */
+export const getChatWebPushPayload = internalQuery({
+  args: { messageId: v.id("messages") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      items: v.array(
+        v.object({
+          title: v.string(),
+          body: v.string(),
+          url: v.string(),
+          tag: v.string(),
+          subscriptions: v.array(webSubscriptionValidator),
+        }),
+      ),
+    }),
+  ),
+  handler: async (ctx, { messageId }) => {
+    const message = await ctx.db.get(messageId);
+    if (!message) return null;
+    const convo = await ctx.db.get(message.conversationId);
+    if (!convo) return null;
+
+    const sender = await ctx.db.get(message.senderUserId);
+    const senderName = sender?.name?.trim() || "User";
+    const preview = truncatePreview(message.body);
+    const isGroup = conversationKind(convo) === "group";
+    const recipientIds = isGroup
+      ? (await getGroupMemberUserIds(ctx, convo._id)).filter((id) => id !== message.senderUserId)
+      : [otherParticipantId(convo, message.senderUserId)];
+    const title = isGroup ? await resolveGroupTitle(ctx, convo, message.senderUserId) : senderName;
+    const body = isGroup ? `${senderName}: ${preview}` : preview;
+    const url = `/?tab=chats&conversation=${convo._id}`;
+
+    const items = [];
+    for (const recipientId of recipientIds) {
+      const user = await ctx.db.get(recipientId);
+      if (!user || user.deletedAt !== undefined || !pushAllowed(user, "social")) continue;
+      const subs = await ctx.db
+        .query("webPushSubscriptions")
+        .withIndex("by_userId", (q) => q.eq("userId", recipientId))
+        .take(20);
+      if (subs.length === 0) continue;
+      items.push({
+        title,
+        body,
+        url,
+        tag: `chat:${convo._id}`,
+        subscriptions: subs.map((s) => ({ endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth })),
+      });
+    }
+    return items.length > 0 ? { items } : null;
   },
 });

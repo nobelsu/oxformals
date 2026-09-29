@@ -104,3 +104,24 @@ export const deliver = internalAction({
     return null;
   },
 });
+
+/** Web push for one chat message (see getChatWebPushPayload). */
+export const sendChatWebPush = internalAction({
+  args: { messageId: v.id("messages") },
+  returns: v.null(),
+  handler: async (ctx, { messageId }) => {
+    const payload = await ctx.runQuery(internal.pushNotifications.getChatWebPushPayload, {
+      messageId,
+    });
+    if (!payload) return null;
+    for (const item of payload.items) {
+      await sendWeb(ctx, item.subscriptions, {
+        title: item.title,
+        body: item.body,
+        url: item.url,
+        tag: item.tag,
+      });
+    }
+    return null;
+  },
+});

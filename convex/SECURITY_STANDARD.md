@@ -102,6 +102,7 @@ The list below classifies every exported function in `convex/*.ts` (excluding `c
 - `removePushToken` (`mutation`): `PublicAuthed`
 - `setPushChatAlerts` (`mutation`): `PublicAuthed`
 - `getChatPushPayload` (`internalQuery`): `InternalOnly`
+- `getChatWebPushPayload` (`internalQuery`): `InternalOnly`
 - `pruneInvalidPushTokens` (`internalMutation`): `InternalOnly`
 - `sendChatMessagePush` (`internalAction`): `InternalOnly`
 

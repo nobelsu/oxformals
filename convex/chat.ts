@@ -1493,6 +1493,9 @@ export const sendMessage = mutation({
       internal.pushNotifications.sendChatMessagePush,
       { messageId },
     );
+    await ctx.scheduler.runAfter(0, internal.notificationDelivery.sendChatWebPush, {
+      messageId,
+    });
 
     return messageId;
   },
