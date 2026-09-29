@@ -20,7 +20,7 @@ export function SignInGate({ message = "Sign in to continue." }: Props) {
       seed={1}
       className="flex min-h-[58vh] items-center justify-center p-6 sm:p-8 md:min-h-[62vh] md:p-10"
     >
-      <div className="mx-auto flex w-full max-w-2xl flex-col items-center text-center">
+      <div className="m-auto flex w-full max-w-2xl flex-col items-center text-center">
         <h2 className="font-display text-3xl uppercase leading-tight tracking-wide sm:text-4xl">
           {message}
         </h2>
