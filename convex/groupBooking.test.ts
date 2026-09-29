@@ -87,6 +87,29 @@ describe("group requests (me + N)", () => {
     ).rejects.toThrow(/only 2 seats left/);
   });
 
+  test("me + 4 fills the biggest group; me + 5 is refused", async () => {
+    const t = convexTest(schema, modules);
+    const alice = await makeUser(t, "Alice", "Keble");
+    const wes = await makeUser(t, "Wes", "Worcester");
+    const worcester = await listing(t, wes, 6);
+    await expect(
+      as(t, alice).mutation(api.listings.createRequest, {
+        requestType: "pay",
+        targetListingId: worcester,
+        message: "",
+        guests: 5,
+      }),
+    ).rejects.toThrow(/bring up to 4 people/);
+    const { requestId } = await as(t, alice).mutation(api.listings.createRequest, {
+      requestType: "pay",
+      targetListingId: worcester,
+      message: "",
+      guests: 4,
+    });
+    await as(t, wes).mutation(api.listings.acceptRequest, { requestId });
+    expect((await get(t, worcester))?.seatsAvailable).toBe(0);
+  });
+
   test("credits: one per seat, and the host earns them all", async () => {
     const t = convexTest(schema, modules);
     const alice = await makeUser(t, "Alice", "Keble", 3);

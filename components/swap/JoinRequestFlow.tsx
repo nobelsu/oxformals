@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { MAX_GUESTS } from "@/convex/seats";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Avatar } from "@/components/ui/Avatar";
@@ -165,7 +166,7 @@ function JoinRequestModal({
 
   const [friendIds, setFriendIds] = useState<string[]>([]);
   const [guests, setGuests] = useState(0);
-  const maxExtra = Math.max(0, Math.min(5, target.seatsAvailable - 1));
+  const maxExtra = Math.max(0, Math.min(MAX_GUESTS, target.seatsAvailable - 1));
   const extra = friendIds.length + guests;
   const seats = 1 + extra;
 

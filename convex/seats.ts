@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
+import { MAX_GROUP_SIZE } from "./groupSize";
 
 /**
  * Seats belong to listings. A listing's seats are taken by its members (the
@@ -36,7 +37,11 @@ export type Seat = {
   method: SeatMethod;
 };
 
-export const MAX_GUESTS = 5;
+/**
+ * Most people a requester can bring: the biggest group, less the host and
+ * the requester themselves.
+ */
+export const MAX_GUESTS = MAX_GROUP_SIZE - 2;
 
 export function guestsBroughtBy(
   listing: Pick<Doc<"listings">, "guestSeats">,

@@ -121,7 +121,7 @@ export default defineSchema({
     /**
      * Extra seats beyond the requester's own (whose seat is paid by
      * `requestType`). Unnamed guests are paid by the requester; a named friend
-     * can pay for themselves. Bounded by the listing's group size (≤ 5).
+     * can pay for themselves. Bounded by the listing's group size (≤ 4).
      */
     party: v.optional(v.array(partySeatValidator)),
   })
