@@ -26,6 +26,7 @@ export default function TermsPage() {
             Eligibility and Accounts
           </h2>
           <ul className="list-disc space-y-2 pl-5 leading-relaxed text-[var(--ink-muted)]">
+            <li>You must be 18 or over to use Oxformals.</li>
             <li>You must provide accurate account information.</li>
             <li>You are responsible for activity on your account.</li>
             <li>

@@ -131,7 +131,9 @@ export function RulesSlide({ agreed, onToggle }: Props) {
             ) : null}
           </span>
         </span>
-        <span className="text-sm text-[var(--ink)]">I agree to the house rules</span>
+        <span className="text-sm text-[var(--ink)]">
+          I agree to the house rules, and I’m 18 or over
+        </span>
       </label>
     </div>
   );
