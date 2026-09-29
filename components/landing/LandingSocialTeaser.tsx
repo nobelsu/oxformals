@@ -664,14 +664,16 @@ export function LandingSocialTeaser() {
               Follow people, not just formals
             </span>
 
-            <div className="relative mt-4 h-[140px] sm:mt-6 sm:h-[180px]">
+            {/* All slides share one grid cell, so the block is as tall as the
+                longest one and nothing spills into the mockup below. */}
+            <div className="mt-4 grid sm:mt-6">
               {FEED_FEATURES.map((feature, i) => {
                 const state = active === i ? 0 : active > i ? -1 : 1;
                 return (
                   <div
                     key={feature.tag}
                     aria-hidden={active !== i}
-                    className="absolute inset-x-0 top-0 transition-[opacity,transform] duration-500 ease-out"
+                    className="[grid-area:1/1] transition-[opacity,transform] duration-500 ease-out"
                     style={{
                       opacity: state === 0 ? 1 : 0,
                       transform: `translateY(${state * 24}px)`,
@@ -694,14 +696,14 @@ export function LandingSocialTeaser() {
           </div>
 
           {/* Right side: mockup card that fades/slides */}
-          <div className="relative flex w-full items-center" style={{ minHeight: 220 }}>
+          <div className="grid w-full items-center">
             {FEED_FEATURES.map((feature, i) => {
               const state = active === i ? 0 : active > i ? -1 : 1;
               return (
                 <div
                   key={feature.tag}
                   aria-hidden={active !== i}
-                  className="absolute inset-x-0 transition-[opacity,transform] duration-500 ease-out"
+                  className="[grid-area:1/1] transition-[opacity,transform] duration-500 ease-out"
                   style={{
                     opacity: state === 0 ? 1 : 0,
                     transform: `translateY(${state * 32}px)`,
