@@ -30,28 +30,31 @@ type PublicActor = ReturnType<typeof sanitizePublicUser>;
 export const getCampusFeed = query({
   args: {
     limit: v.optional(v.number()),
-    /** "following": only people the viewer follows (and the viewer). */
-    scope: v.optional(v.union(v.literal("everyone"), v.literal("following"))),
+    /**
+     * "forYou" (default): listings and reviews at colleges on your wishlist
+     * (everything, if your wishlist is empty). "following": people you follow.
+     * Either way, "went to" items only ever show people you follow.
+     */
+    scope: v.optional(
+      v.union(v.literal("forYou"), v.literal("following"), v.literal("everyone")),
+    ),
   },
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
     const viewerId = await optionalUserId(ctx);
+    const scope = args.scope === "everyone" ? "forYou" : (args.scope ?? "forYou");
 
-    // Following: the same recent window, narrowed to people you follow.
-    let followed: Set<string> | null = null;
-    if (args.scope === "following") {
-      followed = new Set<string>(viewerId ? [viewerId] : []);
-      if (viewerId) {
-        const rows = await ctx.db
-          .query("follows")
-          .withIndex("by_followerId_and_status", (q) =>
-            q.eq("followerId", viewerId).eq("status", "active"),
-          )
-          .take(FOLLOW_SCAN);
-        for (const row of rows) followed.add(row.followeeId);
-      }
+    // You plus everyone you follow.
+    const followed = new Set<string>(viewerId ? [viewerId] : []);
+    if (viewerId) {
+      const rows = await ctx.db
+        .query("follows")
+        .withIndex("by_followerId_and_status", (q) =>
+          q.eq("followerId", viewerId).eq("status", "active"),
+        )
+        .take(FOLLOW_SCAN);
+      for (const row of rows) followed.add(row.followeeId);
     }
-    const inScope = (userId: Id<"users">) => !followed || followed.has(userId);
 
     // Viewer's wishlist colleges (denormalised on the user doc).
     let wishlist = new Set<string>();
@@ -59,6 +62,13 @@ export const getCampusFeed = query({
       const viewer = await ctx.db.get(viewerId);
       wishlist = new Set(viewer?.wishlistColleges ?? []);
     }
+    const wishlistEmpty = wishlist.size === 0;
+
+    // Listings and reviews: by college (For you) or by person (Following).
+    const inScope = (userId: Id<"users">, college: string) =>
+      scope === "following"
+        ? followed.has(userId)
+        : wishlistEmpty || wishlist.has(college) || followed.has(userId);
 
     // Cache actor lookups: many items share an author/owner.
     const actorCache = new Map<string, PublicActor | null>();
@@ -118,7 +128,7 @@ export const getCampusFeed = query({
       .order("desc")
       .take(SOURCE_SCAN);
     for (const listing of listingDocs) {
-      if (!inScope(listing.ownerUserId)) continue;
+      if (!inScope(listing.ownerUserId, listing.college)) continue;
       if (listing.dateTime <= nowIso) continue;
       const actor = await getActor(listing.ownerUserId);
       if (!actor) continue;
@@ -138,7 +148,7 @@ export const getCampusFeed = query({
       .order("desc")
       .take(SOURCE_SCAN);
     for (const review of reviewDocs) {
-      if (!inScope(review.userId)) continue;
+      if (!inScope(review.userId, review.college)) continue;
       if (review.isAnonymous) continue;
       if (!(await canSee(review.userId))) continue;
       const actor = await getActor(review.userId);
@@ -176,7 +186,8 @@ export const getCampusFeed = query({
     };
     const bundles = new Map<string, AttendedBundle>();
     for (const row of attendanceDocs) {
-      if (!inScope(row.userId)) continue;
+      // Who went where is only for the people who follow them.
+      if (!followed.has(row.userId)) continue;
       if (!rowCountsAsAttended(row)) continue;
       if (!(await canSee(row.userId))) continue;
       const listing = await ctx.db.get(row.listingId);
@@ -258,7 +269,7 @@ export const getCampusFeed = query({
       }),
     );
 
-    return { items: withCounts };
+    return { items: withCounts, wishlistEmpty };
   },
 });
 

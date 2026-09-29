@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { enrichListing } from "./listingHelpers";
 import { rowCountsAsAttended } from "../lib/data/formalAttendance";
-import { canSeeActivity } from "./follows";
+import { canSeeActivity, isActiveFollower } from "./follows";
 import { optionalUserId } from "./guards";
 
 /**
@@ -15,8 +15,15 @@ export const getProfileActivity = query({
   handler: async (ctx, args) => {
     // Listings are always public; a private account's formals attended and
     // reviews are only for itself and its followers.
+    const viewerId = await optionalUserId(ctx);
     const owner = await ctx.db.get(args.userId);
-    const visible = await canSeeActivity(ctx, await optionalUserId(ctx), owner);
+    const visible = await canSeeActivity(ctx, viewerId, owner);
+    // Which formals someone went to is only for them and their followers,
+    // public account or not (the count stays visible).
+    const seesAttended =
+      visible &&
+      viewerId !== null &&
+      (viewerId === args.userId || (await isActiveFollower(ctx, viewerId, args.userId)));
 
     const listingDocs = await ctx.db
       .query("listings")
@@ -83,7 +90,7 @@ export const getProfileActivity = query({
         ts: l._creationTime,
         listing: l,
       })),
-      ...attendedItems,
+      ...(seesAttended ? attendedItems : []),
       ...reviewItems,
     ]
       .sort((a, b) => b.ts - a.ts)

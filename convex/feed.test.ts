@@ -61,3 +61,45 @@ test("the Following feed only shows people you follow", async () => {
   expect(everyone.items).toHaveLength(4);
   expect(following.items.map((i) => (i.kind === "listing" ? i.actor._id : null))).toEqual([s.friend]);
 });
+
+test("'went to' items only reach people who follow them", async () => {
+  const t = convexTest(schema, modules);
+  const s = await seed(t);
+  await t.run(async (ctx) => {
+    for (const who of [s.friend, s.stranger]) {
+      const listing = await ctx.db.insert("listings", {
+        ownerUserId: who,
+        college: "Oriel",
+        dateTime: new Date(Date.now() - 864e5).toISOString(),
+        groupSize: 2,
+        seatsAvailable: 1,
+        members: [who],
+        year: "2",
+        role: "UG",
+        message: "",
+        status: "expired",
+      });
+      await ctx.db.insert("formalAttendanceConfirmations", {
+        listingId: listing,
+        userId: who,
+        confirmedAt: Date.now(),
+      });
+    }
+  });
+  const feed = await as(t, s.me).query(api.feed.getCampusFeed, {});
+  const attended = feed.items.filter((i) => i.kind === "attended");
+  expect(attended.flatMap((i) => (i.kind === "attended" ? i.actors.map((a) => a._id) : []))).toEqual([s.friend]);
+});
+
+test("For you narrows to your wishlist colleges once you have some", async () => {
+  const t = convexTest(schema, modules);
+  const s = await seed(t);
+  await t.run((ctx) => ctx.db.patch(s.me, { wishlistColleges: ["Magdalen"] }));
+  const feed = await as(t, s.me).query(api.feed.getCampusFeed, {});
+  expect(feed.wishlistEmpty).toBe(false);
+  // Magdalen (wishlist) + the friend's Keble listing (people you follow).
+  expect(feed.items.map((i) => (i.kind === "listing" ? i.listing.college : i.kind)).sort()).toEqual([
+    "Keble",
+    "Magdalen",
+  ]);
+});

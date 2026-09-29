@@ -22,9 +22,10 @@ import { PartyInvites } from "./PartyInvites";
 import { FeedSidebar, NextFormalCard, whenLabel, type NextFormal } from "./FeedSidebar";
 import { NeedsAttention } from "./NeedsAttention";
 import { WeekFormals } from "./WeekFormals";
+import { BackToTop } from "@/components/ui/BackToTop";
 
 export function FeedTab() {
-  const [scope, setScope] = useState<"everyone" | "following">("everyone");
+  const [scope, setScope] = useState<"forYou" | "following">("forYou");
   const raw = useQuery(api.feed.getCampusFeed, { scope });
   const { user } = useAuth();
   const { listings, getUser, getListing } = useData();
@@ -180,7 +181,7 @@ export function FeedTab() {
           <div>
             {user ? (
               <div className="mb-2 flex gap-5 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_12%,transparent)]">
-                <button type="button" className={tabCls(scope === "everyone")} onClick={() => setScope("everyone")}>
+                <button type="button" className={tabCls(scope === "forYou")} onClick={() => setScope("forYou")}>
                   For you
                 </button>
                 <button type="button" className={tabCls(scope === "following")} onClick={() => setScope("following")}>
@@ -188,16 +189,27 @@ export function FeedTab() {
                 </button>
               </div>
             ) : null}
+            {scope === "forYou" && raw?.wishlistEmpty ? (
+              <Link
+                href="/?tab=mine&edit=1"
+                className="mb-2 mt-3 flex items-center justify-between gap-3 rounded-2xl border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] px-4 py-3 text-sm transition-colors hover:border-[var(--ink)]"
+              >
+                <span>Pick the colleges you want to go to</span>
+                <span className="font-bold text-[var(--accent)]">Choose</span>
+              </Link>
+            ) : null}
             {stream}
           </div>
         </main>
 
         {user ? (
-          <aside className="hidden lg:sticky lg:top-4 lg:block">
+          <aside className="hidden lg:sticky lg:top-[calc(var(--app-nav-height)+1rem)] lg:block">
             <FeedSidebar hub={hub} nextFormal={nextFormal} />
           </aside>
         ) : null}
       </div>
+
+      <BackToTop />
 
       <ListingDetailModal
         open={open !== null}
