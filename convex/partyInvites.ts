@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { creditBalance } from "./credits";
 import { optionalUserId, requireActiveUser, sanitizePublicUser } from "./guards";
-import { sendFormalNotices } from "./swapLinks";
+import { notify } from "./notify";
 
 /**
  * A friend named in someone's group request answers it: "I'm in" (needed
@@ -46,19 +46,18 @@ export const respondToPartyInvite = mutation({
     next[index] = { ...seat, response };
     await ctx.db.patch(requestId, { party: next });
 
-    if (response === "out") {
-      const me = await ctx.db.get(userId);
-      await sendFormalNotices(ctx, [
-        {
-          userId: req.fromUserId,
-          subject: `${me?.name?.split(" ")[0] ?? "A friend"} can't make it`,
-          body: `${me?.name?.split(" ")[0] ?? "A friend"} said "Not me", so your group request is one seat smaller. The rest still stands.`,
-          cta: "formals",
-          eyebrow: "Group request",
-          listingId: req.targetListingId,
-        },
-      ]);
-    }
+    const listing = await ctx.db.get(req.targetListingId);
+    await notify(ctx, {
+      userId: req.fromUserId,
+      kind: "party_response",
+      actorId: userId,
+      listingId: req.targetListingId,
+      requestId,
+      data: {
+        response,
+        ...(listing ? { college: listing.college, dateTime: listing.dateTime } : {}),
+      },
+    });
     return null;
   },
 });

@@ -58,13 +58,10 @@ async function swapped(opts: { aliceDays?: number; wesDays?: number } = {}) {
   return { t, alice, wes, keble, worcester, requestId };
 }
 
-async function scheduledNotices(t: ReturnType<typeof convexTest>) {
-  return await t.run(async (ctx) => {
-    const jobs = await ctx.db.system.query("_scheduled_functions").collect();
-    return jobs
-      .filter((j) => j.name.includes("sendFormalNotices"))
-      .flatMap((j) => (j.args[0] as { notices: Array<{ userId: string; subject: string }> }).notices);
-  });
+async function notificationsOf(t: ReturnType<typeof convexTest>) {
+  return await t.run(async (ctx) =>
+    (await ctx.db.query("notifications").collect()).map((n) => [n.userId, n.kind]),
+  );
 }
 
 describe("linked swaps", () => {
@@ -86,11 +83,10 @@ describe("linked swaps", () => {
       expect(worcester?.seatsAvailable).toBe(2);
       expect((await ctx.db.get(s.requestId))?.status).toBe("declined");
     });
-    const notices = await scheduledNotices(s.t);
-    expect(notices.map((n) => [n.userId, n.subject])).toEqual(
+    expect(await notificationsOf(s.t)).toEqual(
       expect.arrayContaining([
-        [s.alice, "Your swap was undone"],
-        [s.wes, "Your formal has been cancelled"],
+        [s.alice, "swap_undone"],
+        [s.wes, "formal_cancelled"],
       ]),
     );
   });
@@ -170,8 +166,7 @@ describe("linked swaps", () => {
     await t.run(async (ctx) => {
       expect((await ctx.db.get(keble))?.members).toEqual([alice, wes]);
     });
-    const notices = await scheduledNotices(t);
-    expect(notices.map((n) => n.subject)).not.toContain("Your swap was undone");
+    expect((await notificationsOf(t)).map(([, kind]) => kind)).not.toContain("swap_undone");
   });
 
   test("a break after the other formal happened is recorded, not undone", async () => {

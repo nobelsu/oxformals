@@ -18,6 +18,7 @@ import {
   refundSeatHolderCredits,
 } from "./credits";
 import { areFriends } from "./follows";
+import { notify } from "./notify";
 import {
   countByMethod,
   guestsBroughtBy,
@@ -272,6 +273,31 @@ export const listActiveHostsForCollege = query({
       )
       .order("desc")
       .take(50);
+    const ownerIds = [...new Set(listings.map((l) => l.ownerUserId))];
+    const owners = await Promise.all(ownerIds.map((id) => ctx.db.get(id)));
+    return owners
+      .filter(
+        (user): user is Doc<"users"> =>
+          user !== null && user.deletedAt === undefined,
+      )
+      .map(signedOutHostSummary);
+  },
+});
+
+/**
+ * Hosts of upcoming active listings, for signed-out browsing (the user
+ * directory needs sign-in). Private hosts are limited to name, college, year
+ * and role.
+ */
+export const listActiveHosts = query({
+  args: {},
+  handler: async (ctx) => {
+    const listings = await ctx.db
+      .query("listings")
+      .withIndex("by_status_and_dateTime", (q) =>
+        q.eq("status", "active").gt("dateTime", new Date().toISOString()),
+      )
+      .take(300);
     const ownerIds = [...new Set(listings.map((l) => l.ownerUserId))];
     const owners = await Promise.all(ownerIds.map((id) => ctx.db.get(id)));
     return owners
@@ -571,18 +597,15 @@ export const createRequest = mutation({
 
       if (mirror) {
         await performAccept(ctx, mirror);
-        const me = await ctx.db.get(userId);
         const theirs = await ctx.db.get(mirror.targetListingId);
-        await sendFormalNotices(ctx, [
-          {
-            userId: mirror.fromUserId,
-            subject: "Your swap is on",
-            body: `${me?.name?.split(" ")[0] ?? "The host"} asked for your formal too, so the swap went through.`,
-            cta: "formals",
-            eyebrow: "Swap",
-            ...(theirs ? { listingId: theirs._id } : {}),
-          },
-        ]);
+        await notify(ctx, {
+          userId: mirror.fromUserId,
+          kind: "request_accepted",
+          actorId: userId,
+          listingId: mirror.targetListingId,
+          requestId: mirror._id,
+          ...(theirs ? { data: { college: theirs.college, dateTime: theirs.dateTime } } : {}),
+        });
         return { requestId: mirror._id, autoAccepted: true as const };
       }
     }
@@ -598,33 +621,44 @@ export const createRequest = mutation({
       ...(party.length > 0 ? { party } : {}),
     });
 
-    await ctx.scheduler.runAfter(0, internal.emails.sendNewRequestEmail, {
+    const formal = { college: target.college, dateTime: target.dateTime };
+    // The new-request email is sent by notify's delivery (it obeys prefs).
+    await notify(ctx, {
+      userId: target.ownerUserId,
+      kind: "request_received",
+      actorId: userId,
+      listingId: target._id,
       requestId,
+      data: { ...formal, count: seats.length },
     });
-
-    if (friends.length > 0) {
-      const me = await ctx.db.get(userId);
-      const myName = me?.name?.split(" ")[0] ?? "A friend";
-      const notices: FormalNotice[] = [];
-      for (const f of friends) {
-        await ctx.db.insert("partyInvites", { requestId, userId: f.userId });
-        notices.push({
-          userId: f.userId,
-          subject: `${myName} wants to bring you to ${target.college}`,
-          body: f.paysOwn
-            ? `Your seat is yours to pay for${f.method === "credit" ? " with a credit" : ""}. Are you in?`
-            : `${myName} is covering your seat. Tap "Not me" if you can't make it.`,
-          cta: "invites",
-          eyebrow: "Group invite",
-          listingId: args.targetListingId,
-        });
-      }
-      await sendFormalNotices(ctx, notices);
+    for (const f of friends) {
+      await ctx.db.insert("partyInvites", { requestId, userId: f.userId });
+      await notify(ctx, {
+        userId: f.userId,
+        kind: "party_invite",
+        actorId: userId,
+        listingId: target._id,
+        requestId,
+        data: { ...formal, paysOwn: f.paysOwn, method: f.method },
+      });
     }
 
     return { requestId, autoAccepted: false as const };
   },
 });
+
+/** Tell a requester their request was turned down (by the host, or because it filled up). */
+async function notifyDeclined(ctx: MutationCtx, req: Doc<"requests">) {
+  const target = await ctx.db.get(req.targetListingId);
+  await notify(ctx, {
+    userId: req.fromUserId,
+    kind: "request_declined",
+    actorId: req.toUserId,
+    listingId: req.targetListingId,
+    requestId: req._id,
+    ...(target ? { data: { college: target.college, dateTime: target.dateTime } } : {}),
+  });
+}
 
 export const declineRequest = mutation({
   args: { requestId: v.id("requests") },
@@ -636,6 +670,7 @@ export const declineRequest = mutation({
     if (req.status !== "pending") throw new Error("Request is no longer pending");
 
     await ctx.db.patch(req._id, { status: "declined" });
+    await notifyDeclined(ctx, req);
     return req._id;
   },
 });
@@ -717,6 +752,7 @@ async function declinePendingWhenFull(
   for (const r of pending) {
     if (skip.has(r._id)) continue;
     await ctx.db.patch(r._id, { status: "declined" });
+    await notifyDeclined(ctx, r);
   }
 }
 
@@ -869,6 +905,15 @@ export const acceptRequest = mutation({
 
     await performAccept(ctx, req);
 
+    const target = await ctx.db.get(req.targetListingId);
+    await notify(ctx, {
+      userId: req.fromUserId,
+      kind: "request_accepted",
+      actorId: userId,
+      listingId: req.targetListingId,
+      requestId: req._id,
+      ...(target ? { data: { college: target.college, dateTime: target.dateTime } } : {}),
+    });
     return req._id;
   },
 });
@@ -967,7 +1012,7 @@ export const removeMember = mutation({
     const notices: FormalNotice[] = [];
     if (link) {
       // Removing your swap partner undoes your half too.
-      await undoSwap(ctx, link, args.listingId, notices);
+      await undoSwap(ctx, link, args.listingId);
     }
     if (!listingIsPast(listing.dateTime, Date.now())) {
       const host = await ctx.db.get(userId);
@@ -1256,22 +1301,17 @@ export const deleteListing = mutation({
     // An upcoming formal with guests is cancelled: they're told, and any
     // swaps tied to it are undone (the host loses the seats they got back).
     if (!listingIsPast(listing.dateTime, Date.now()) && listing.members.length > 1) {
-      const notices: FormalNotice[] = [];
-      const host = await ctx.db.get(userId);
-      const hostName = host?.name?.split(" ")[0] ?? "The host";
-      await undoSwapsForCancelledListing(ctx, listing, notices);
+      await undoSwapsForCancelledListing(ctx, listing);
       for (const guestId of listing.members) {
         if (guestId === userId) continue;
-        notices.push({
+        await notify(ctx, {
           userId: guestId,
-          subject: "Your formal has been cancelled",
-          body: `${hostName} cancelled it, so your seat is gone.`,
-          cta: "browse",
-          eyebrow: "Cancelled",
+          kind: "formal_cancelled",
+          actorId: userId,
           listingId: listing._id,
+          data: { college: listing.college, dateTime: listing.dateTime },
         });
       }
-      await sendFormalNotices(ctx, notices);
     }
     if (!listingIsPast(listing.dateTime, Date.now())) {
       await refundListingCredits(ctx, listing._id);

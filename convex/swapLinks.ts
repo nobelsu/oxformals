@@ -3,6 +3,7 @@ import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { listingIsPast } from "./listingHelpers";
 import { detachMember } from "./listingMembership";
+import { notify } from "./notify";
 
 /**
  * A swap is one accepted request with an `offeringListingId`:
@@ -26,11 +27,6 @@ export type FormalNotice = {
 
 function isSwap(req: Doc<"requests">): boolean {
   return req.offeringListingId !== undefined && req.requestType !== "pay";
-}
-
-async function firstName(ctx: MutationCtx, userId: Id<"users">) {
-  const user = await ctx.db.get(userId);
-  return user?.name?.split(" ")[0] || "Your swap partner";
 }
 
 /** Accepted swaps touching a listing, from either side. */
@@ -86,7 +82,6 @@ export async function undoSwap(
   ctx: MutationCtx,
   req: Doc<"requests">,
   brokenListingId: Id<"listings">,
-  notices: FormalNotice[],
 ): Promise<void> {
   if (!req.offeringListingId) return;
   await ctx.db.patch(req._id, { status: "declined" });
@@ -118,14 +113,13 @@ export async function undoSwap(
   }
 
   await detachMember(ctx, otherListingId, brokenByUserId);
-  const partner = await firstName(ctx, wrongedUserId);
-  notices.push({
+  await notify(ctx, {
     userId: brokenByUserId,
-    subject: "Your swap was undone",
-    body: `Your swap with ${partner} fell through, so this seat has been released too. Swaps are all or nothing.`,
-    cta: "browse",
-    eyebrow: "Swap undone",
-    listingId: other._id,
+    kind: "swap_undone",
+    actorId: wrongedUserId,
+    listingId: otherListingId,
+    requestId: req._id,
+    data: { college: other.college, dateTime: other.dateTime },
   });
 }
 
@@ -133,11 +127,10 @@ export async function undoSwap(
 export async function undoSwapsForCancelledListing(
   ctx: MutationCtx,
   listing: Doc<"listings">,
-  notices: FormalNotice[],
 ): Promise<void> {
   const swaps = await acceptedSwapsForListing(ctx, listing._id);
   for (const req of swaps) {
-    await undoSwap(ctx, req, listing._id, notices);
+    await undoSwap(ctx, req, listing._id);
   }
 }
 
