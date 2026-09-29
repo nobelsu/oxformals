@@ -412,7 +412,7 @@ function NavInner() {
     // The signed-in app nav always keeps its background: the "inverted" state
     // is for the landing page's dark sections, and on dark app pages it would
     // leave the nav transparent over scrolling content.
-    <nav ref={navRef} className={`sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${hidden ? "pointer-events-none opacity-0" : "backdrop-blur-md bg-[var(--nav-bg)]/80"} ${collapsed ? "border-b-[1.5px] border-[color-mix(in_srgb,var(--nav-ink)_10%,transparent)]" : ""}`}>
+    <nav ref={navRef} className={`sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${hidden ? "pointer-events-none opacity-0" : "backdrop-blur-md bg-[var(--nav-bg)]/80"}`}>
       <div className={`pointer-events-auto mx-auto grid w-full max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 transition-[padding] duration-300 sm:grid-cols-[1fr_auto_1fr] sm:gap-4 sm:px-6 ${collapsed ? "py-2.5" : "py-5"}`}>
         <div className="flex items-center justify-start">
           <Link
