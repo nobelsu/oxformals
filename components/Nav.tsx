@@ -531,6 +531,13 @@ function NavInner() {
                   </span>
                 </span>
               </Link>
+              <Link
+                href="/?tab=requests&section=overview"
+                onClick={() => setDrawerOpen(false)}
+                className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+              >
+                Your formals
+              </Link>
               <button
                 type="button"
                 onClick={() => {
@@ -672,6 +679,14 @@ function AccountMenu({
             className={itemClass}
           >
             Profile
+          </Link>
+          <Link
+            href="/?tab=requests&section=overview"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className={itemClass}
+          >
+            Your formals
           </Link>
           <button
             type="button"

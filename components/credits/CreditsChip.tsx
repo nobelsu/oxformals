@@ -24,8 +24,8 @@ export function CoinIcon({ className = "h-[14px] w-[14px]" }: { className?: stri
   );
 }
 
-/** "2 credits" chip that opens how credits work. Hidden until loaded. */
-export function CreditsChip() {
+/** "2 credits" chip (just "2" when compact) that opens how credits work. */
+export function CreditsChip({ compact = false }: { compact?: boolean }) {
   const credits = useQuery(api.credits.getMyCredits, {});
   const [open, setOpen] = useState(false);
   if (!credits) return null;
@@ -34,10 +34,13 @@ export function CreditsChip() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--accent-wash)] px-4 py-2 text-[0.84rem] font-medium text-[var(--accent-wash-ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--accent-wash)_80%,var(--accent))]"
+        aria-label={`${credits.balance} credit${credits.balance === 1 ? "" : "s"}`}
+        className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--accent-wash)] py-2 text-[0.84rem] font-medium text-[var(--accent-wash-ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--accent-wash)_80%,var(--accent))] ${compact ? "px-3" : "px-4"}`}
       >
         <CoinIcon />
-        {credits.balance} credit{credits.balance === 1 ? "" : "s"}
+        {compact
+          ? credits.balance
+          : `${credits.balance} credit${credits.balance === 1 ? "" : "s"}`}
       </button>
       <CreditsInfoModal open={open} onClose={() => setOpen(false)} credits={credits} />
     </>

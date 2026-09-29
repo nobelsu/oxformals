@@ -11,6 +11,8 @@ import { collegeToSlug } from "../lib/data/collegeSlug";
 const SOURCE_SCAN = 120;
 const DEFAULT_LIMIT = 40;
 const MAX_LIMIT = 50;
+const FOLLOW_SCAN = 500;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 type PublicActor = ReturnType<typeof sanitizePublicUser>;
 
@@ -26,10 +28,30 @@ type PublicActor = ReturnType<typeof sanitizePublicUser>;
  * demands paging; this is deliberately the same tradeoff as getProfileActivity.
  */
 export const getCampusFeed = query({
-  args: { limit: v.optional(v.number()) },
+  args: {
+    limit: v.optional(v.number()),
+    /** "following": only people the viewer follows (and the viewer). */
+    scope: v.optional(v.union(v.literal("everyone"), v.literal("following"))),
+  },
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
     const viewerId = await optionalUserId(ctx);
+
+    // Following: the same recent window, narrowed to people you follow.
+    let followed: Set<string> | null = null;
+    if (args.scope === "following") {
+      followed = new Set<string>(viewerId ? [viewerId] : []);
+      if (viewerId) {
+        const rows = await ctx.db
+          .query("follows")
+          .withIndex("by_followerId_and_status", (q) =>
+            q.eq("followerId", viewerId).eq("status", "active"),
+          )
+          .take(FOLLOW_SCAN);
+        for (const row of rows) followed.add(row.followeeId);
+      }
+    }
+    const inScope = (userId: Id<"users">) => !followed || followed.has(userId);
 
     // Viewer's wishlist colleges (denormalised on the user doc).
     let wishlist = new Set<string>();
@@ -96,6 +118,7 @@ export const getCampusFeed = query({
       .order("desc")
       .take(SOURCE_SCAN);
     for (const listing of listingDocs) {
+      if (!inScope(listing.ownerUserId)) continue;
       if (listing.dateTime <= nowIso) continue;
       const actor = await getActor(listing.ownerUserId);
       if (!actor) continue;
@@ -115,6 +138,7 @@ export const getCampusFeed = query({
       .order("desc")
       .take(SOURCE_SCAN);
     for (const review of reviewDocs) {
+      if (!inScope(review.userId)) continue;
       if (review.isAnonymous) continue;
       if (!(await canSee(review.userId))) continue;
       const actor = await getActor(review.userId);
@@ -152,6 +176,7 @@ export const getCampusFeed = query({
     };
     const bundles = new Map<string, AttendedBundle>();
     for (const row of attendanceDocs) {
+      if (!inScope(row.userId)) continue;
       if (!rowCountsAsAttended(row)) continue;
       if (!(await canSee(row.userId))) continue;
       const listing = await ctx.db.get(row.listingId);
@@ -234,5 +259,65 @@ export const getCampusFeed = query({
     );
 
     return { items: withCounts };
+  },
+});
+
+/**
+ * Open formals in the next 7 days, one bubble per college per night (London
+ * time), soonest first. Colleges on the viewer's wishlist are flagged.
+ */
+export const getWeekFormals = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      key: v.string(),
+      college: v.string(),
+      dateTime: v.string(),
+      listingIds: v.array(v.id("listings")),
+      onWishlist: v.boolean(),
+    }),
+  ),
+  handler: async (ctx) => {
+    const viewerId = await optionalUserId(ctx);
+    const viewer = viewerId ? await ctx.db.get(viewerId) : null;
+    const wishlist = new Set(viewer?.wishlistColleges ?? []);
+    const now = Date.now();
+    const listings = await ctx.db
+      .query("listings")
+      .withIndex("by_status_and_dateTime", (q) =>
+        q
+          .eq("status", "active")
+          .gt("dateTime", new Date(now).toISOString())
+          .lt("dateTime", new Date(now + WEEK_MS).toISOString()),
+      )
+      .take(100);
+    const nightOf = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/London",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const bubbles = new Map<
+      string,
+      { key: string; college: string; dateTime: string; listingIds: Id<"listings">[]; onWishlist: boolean }
+    >();
+    for (const listing of listings) {
+      if (listing.seatsAvailable <= 0) continue;
+      if (viewerId && listing.ownerUserId === viewerId) continue;
+      const key = `${collegeToSlug(listing.college)}:${nightOf.format(new Date(listing.dateTime))}`;
+      const bubble = bubbles.get(key);
+      if (bubble) {
+        bubble.listingIds.push(listing._id);
+      } else {
+        bubbles.set(key, {
+          key,
+          college: listing.college,
+          dateTime: listing.dateTime,
+          listingIds: [listing._id],
+          onWishlist: wishlist.has(listing.college),
+        });
+      }
+    }
+    return [...bubbles.values()].sort((a, b) => a.dateTime.localeCompare(b.dateTime));
   },
 });

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { CreditsChip } from "@/components/credits/CreditsChip";
 
 function greetingWord(): string {
@@ -11,83 +10,32 @@ function greetingWord(): string {
   return "Evening";
 }
 
-function Chip({
-  href,
-  children,
-  solid,
-  onboardingId,
-}: {
-  href: string;
-  children: ReactNode;
-  solid?: boolean;
-  /** Target for the first-run tour (`data-onboarding`). */
-  onboardingId?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      data-onboarding={onboardingId}
-      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] px-4 py-2 text-[0.84rem] font-medium transition-colors ${
-        solid
-          ? "border-[var(--ink)] bg-[var(--ink)] text-[var(--bg)] hover:bg-[color-mix(in_srgb,var(--ink)_88%,var(--accent))]"
-          : "border-[var(--ink)] bg-[var(--paper)] text-[var(--ink)] hover:bg-[color-mix(in_srgb,var(--ink)_5%,transparent)]"
-      }`}
-    >
-      {children}
-    </Link>
-  );
-}
+const PlusIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="h-[14px] w-[14px]" aria-hidden>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
 
-/**
- * Feed header — a greeting, a one-line summary of what's going on (your next
- * formal + anything needing you), and quick-action chips into "Your formals".
- */
-export function FeedHeader({
-  firstName,
-  nextFormalCollege,
-  nextFormalWhen,
-  attentionCount,
-}: {
-  firstName: string;
-  nextFormalCollege?: string;
-  nextFormalWhen?: string;
-  attentionCount: number;
-}) {
-  const clauses: string[] = [];
-  if (nextFormalCollege && nextFormalWhen) {
-    clauses.push(
-      `You’re going to ${nextFormalCollege} ${nextFormalWhen.toLowerCase()}`,
-    );
-  }
-  if (attentionCount > 0) {
-    clauses.push(
-      `${attentionCount} thing${attentionCount === 1 ? "" : "s"} need${attentionCount === 1 ? "s" : ""} you`,
-    );
-  }
-  const subline =
-    clauses.length > 0
-      ? `${clauses.join(" · ")}.`
-      : "Here’s what’s happening around Oxford.";
-
+/** Greeting, plus "List a formal" (and credits on phones, where there's no sidebar). */
+export function FeedHeader({ firstName }: { firstName: string }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div>
-        <h1 className="text-[1.5rem] font-semibold leading-tight">
-          <span className="font-display font-normal">{greetingWord()},</span>{" "}
-          {firstName}
-        </h1>
-        <p className="mt-0.5 text-[0.92rem] text-[var(--ink-muted)]">{subline}</p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Chip href="/?tab=requests&openList=1" solid onboardingId="list">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="h-[14px] w-[14px]" aria-hidden>
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          List a formal
-        </Chip>
-        <Chip href="/?tab=requests&section=listings">Your formals</Chip>
-        <Chip href="/?tab=mine&edit=1">Wishlist</Chip>
-        <CreditsChip />
+    <div className="flex items-center justify-between gap-3">
+      <h1 className="text-[1.5rem] font-semibold leading-tight">
+        <span className="font-display font-normal">{greetingWord()},</span> {firstName}
+      </h1>
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="lg:hidden">
+          <CreditsChip compact />
+        </span>
+        <Link
+          href="/?tab=requests&openList=1"
+          data-onboarding="list"
+          aria-label="List a formal"
+          className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--ink)] px-3 py-2 text-[0.84rem] font-medium text-[var(--bg)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_88%,var(--accent))] sm:px-4"
+        >
+          <PlusIcon />
+          <span className="hidden sm:inline">List a formal</span>
+        </Link>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
@@ -10,27 +11,26 @@ import { useData } from "@/components/data/useData";
 import { useListingsHubData } from "@/components/swap/listings-hub/useListingsHubData";
 import { mapListing, mapUser } from "@/lib/data/mapConvex";
 import { BROWSE_ROUTE } from "@/lib/ui/routes";
+import { collegeToSlug } from "@/lib/data/collegeSlug";
 import { useNowMs } from "@/lib/hooks/useNowMs";
-import type { Id } from "@/convex/_generated/dataModel";
 import type { FeedItem } from "@/lib/data/feed";
 import type { Listing } from "@/lib/data/types";
 import type { User } from "@/lib/auth/types";
 import { FeedRow } from "./FeedRow";
 import { FeedHeader } from "./FeedHeader";
 import { PartyInvites } from "./PartyInvites";
-import { FeedSidebar, whenLabel, type NextFormal } from "./FeedSidebar";
+import { FeedSidebar, NextFormalCard, whenLabel, type NextFormal } from "./FeedSidebar";
+import { NeedsAttention } from "./NeedsAttention";
+import { WeekFormals } from "./WeekFormals";
 
 export function FeedTab() {
-  const raw = useQuery(api.feed.getCampusFeed, {});
+  const [scope, setScope] = useState<"everyone" | "following">("everyone");
+  const raw = useQuery(api.feed.getCampusFeed, { scope });
   const { user } = useAuth();
-  const { listings, getUser } = useData();
+  const { listings, getUser, getListing } = useData();
+  const router = useRouter();
   const hub = useListingsHubData();
   const nowMs = useNowMs();
-  const reviewCount =
-    useQuery(
-      api.collegeReviews.listPublicReviewsForUser,
-      user ? { userId: user.id as Id<"users"> } : "skip",
-    )?.length ?? 0;
   const [open, setOpen] = useState<{
     listing: Listing;
     owner: User | null;
@@ -105,6 +105,10 @@ export function FeedTab() {
   const stream =
     items === undefined ? (
       <p className="text-[var(--ink-muted)]">Loading your feed…</p>
+    ) : items.length === 0 && scope === "following" ? (
+      <div className="rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] px-5 py-8 text-center">
+        <p className="text-[var(--ink-muted)]">Nothing from people you follow yet.</p>
+      </div>
     ) : items.length === 0 ? (
       <div className="rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] px-5 py-8 text-center">
         <p className="text-[var(--ink-muted)]">
@@ -130,37 +134,69 @@ export function FeedTab() {
       </ul>
     );
 
-  const sidebar = user ? (
-    <FeedSidebar hub={hub} nextFormal={nextFormal} reviewCount={reviewCount} />
-  ) : null;
+  const openBubble = (bubble: { college: string; listingIds: string[] }) => {
+    if (bubble.listingIds.length > 1) {
+      router.push(`/college/${collegeToSlug(bubble.college)}?section=listings`);
+      return;
+    }
+    const listing = getListing(bubble.listingIds[0]);
+    if (listing) {
+      setOpen({ listing, owner: getUser(listing.ownerUserId) ?? null });
+    } else {
+      router.push(`/?tab=browse&listing=${bubble.listingIds[0]}`);
+    }
+  };
+
+  const tabCls = (on: boolean) =>
+    `-mb-[1.5px] cursor-pointer border-b-[2.5px] py-2 text-sm transition-colors ${
+      on
+        ? "border-[var(--ink)] font-bold text-[var(--ink)]"
+        : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"
+    }`;
 
   return (
     <div className="mx-auto w-full max-w-[1000px]">
-      <div className="lg:grid lg:grid-cols-[minmax(0,600px)_320px] lg:items-start lg:justify-center lg:gap-10">
+      <div className="lg:grid lg:grid-cols-[minmax(0,600px)_300px] lg:items-start lg:justify-center lg:gap-10">
         <main className="mx-auto flex w-full max-w-[600px] flex-col gap-4 lg:mx-0 lg:max-w-none">
           {user ? (
-            <FeedHeader
-              firstName={user.name.split(" ")[0] || user.name}
-              nextFormalCollege={nextFormal?.listing.college}
-              nextFormalWhen={nextFormal?.whenLabel}
-              attentionCount={attentionCount}
-            />
+            <FeedHeader firstName={user.name.split(" ")[0] || user.name} />
           ) : null}
+
+          <WeekFormals onOpen={openBubble} />
+
           {user ? <PartyInvites /> : null}
 
-          {/* Mobile: personal sidebar sits above the stream */}
-          <div className="lg:hidden">{sidebar}</div>
+          {/* Phones: next formal (with what needs you) above the stream */}
+          {nextFormal ? (
+            <div className="lg:hidden">
+              <NextFormalCard nextFormal={nextFormal} attentionCount={attentionCount} />
+            </div>
+          ) : attentionCount > 0 ? (
+            <div className="lg:hidden">
+              <NeedsAttention hub={hub} />
+            </div>
+          ) : null}
 
           <div>
-            <div className="mb-1 flex items-center gap-3 text-[0.66rem] uppercase tracking-[0.11em] text-[var(--ink-soft)]">
-              From around Oxford
-              <span className="h-[1.5px] flex-1 bg-[color-mix(in_srgb,var(--ink)_12%,transparent)]" />
-            </div>
+            {user ? (
+              <div className="mb-2 flex gap-5 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_12%,transparent)]">
+                <button type="button" className={tabCls(scope === "everyone")} onClick={() => setScope("everyone")}>
+                  For you
+                </button>
+                <button type="button" className={tabCls(scope === "following")} onClick={() => setScope("following")}>
+                  Following
+                </button>
+              </div>
+            ) : null}
             {stream}
           </div>
         </main>
 
-        <aside className="hidden lg:sticky lg:top-4 lg:block">{sidebar}</aside>
+        {user ? (
+          <aside className="hidden lg:sticky lg:top-4 lg:block">
+            <FeedSidebar hub={hub} nextFormal={nextFormal} />
+          </aside>
+        ) : null}
       </div>
 
       <ListingDetailModal

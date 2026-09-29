@@ -84,9 +84,6 @@ export function NeedsAttention({ hub }: { hub: Hub }) {
 
   return (
     <div>
-      <p className="mb-2 px-0.5 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-soft)]">
-        Needs your attention
-      </p>
       <ul className="overflow-hidden rounded-[16px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] shadow-[0_2px_14px_-10px_rgba(0,0,0,0.35)]">
         {rows.map((r) => (
           <li key={r.key} className="border-t border-[color-mix(in_srgb,var(--ink)_8%,transparent)] first:border-t-0">
