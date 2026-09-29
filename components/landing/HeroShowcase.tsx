@@ -102,7 +102,7 @@ export function HeroShowcase({ slides }: { slides: HeroSlide[] }) {
           {slides.map((s, i) => (
             <div
               key={s.id}
-              className="min-h-[16rem] w-full shrink-0"
+              className="min-h-[16rem] w-full min-w-0 shrink-0 overflow-hidden"
               aria-hidden={i !== index}
             >
               {s.content}
