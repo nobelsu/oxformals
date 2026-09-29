@@ -89,18 +89,6 @@ function FilterIcon({ className }: { className?: string }) {
   );
 }
 
-function FilterCountBadge({ count }: { count: number }) {
-  if (count === 0) return null;
-  return (
-    <span
-      aria-hidden
-      className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--accent-ink)] ring-2 ring-[var(--bg)]"
-    >
-      {count}
-    </span>
-  );
-}
-
 export function BrowseTab({
   onNavigateToRequests,
   onSignInRequired,
@@ -277,53 +265,54 @@ export function BrowseTab({
             one search pill with the filter button beside it. */}
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
           <h1 className="font-display text-4xl uppercase tracking-wide">Formals</h1>
-          <div className="flex items-center gap-2">
-            <form
-              className="relative min-w-0 flex-1"
-              onSubmit={handleBrowseSearchSubmit}
+          {/* One pill: search on the left, the filter button inside its
+              right end. */}
+          <form className="relative" onSubmit={handleBrowseSearchSubmit}>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ink-soft)]"
             >
-              <span
-                aria-hidden
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ink-soft)]"
+              <SearchIcon className="h-4 w-4" />
+            </span>
+            <input
+              id="browse-hero-search"
+              type="text"
+              inputMode="search"
+              enterKeyHint="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search college, menu, host"
+              aria-label="Search for college, menu, role, host"
+              autoComplete="off"
+              className={`w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] py-2.5 pl-11 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none ${
+                searchQuery !== "" ? "pr-24" : "pr-14"
+              }`}
+            />
+            {searchQuery !== "" ? (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-12 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
+                aria-label="Clear search"
               >
-                <SearchIcon className="h-4 w-4" />
-              </span>
-              <input
-                id="browse-hero-search"
-                type="text"
-                inputMode="search"
-                enterKeyHint="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search college, menu, host"
-                aria-label="Search for college, menu, role, host"
-                autoComplete="off"
-                className={`w-full rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] py-2.5 pl-11 text-base text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none ${
-                  searchQuery !== "" ? "pr-11" : "pr-4"
-                }`}
-              />
-              {searchQuery !== "" ? (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
-                  aria-label="Clear search"
-                >
-                  <ClearInputIcon className="h-4 w-4" />
-                </button>
-              ) : null}
-            </form>
+                <ClearInputIcon className="h-4 w-4" />
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => setFilterOpen(true)}
               aria-label={activeSections ? `Filters, ${activeSections} on` : "Filters"}
               aria-expanded={filterOpen}
-              className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-[var(--paper)] text-[var(--ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_6%,var(--paper))] focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]"
+              className={`absolute right-1.5 top-1/2 flex h-9 min-w-9 -translate-y-1/2 cursor-pointer items-center justify-center gap-1 rounded-full px-2 text-sm font-bold transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)] ${
+                activeSections
+                  ? "bg-[var(--ink)] text-[var(--bg)]"
+                  : "text-[var(--ink)] hover:bg-[color-mix(in_srgb,var(--ink)_8%,transparent)]"
+              }`}
             >
               <FilterIcon className="h-5 w-5" />
-              <FilterCountBadge count={activeSections} />
+              {activeSections ? <span>{activeSections}</span> : null}
             </button>
-          </div>
+          </form>
         </div>
 
         {browseListings.length === 0 ? (
