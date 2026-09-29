@@ -130,12 +130,12 @@ html[data-ui-font="schoolbell"] {
 }
 
 html[data-ui-font="inter"] {
-  --font-app: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-app: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display-face: var(--font-app);
 }
 
 html[data-ui-font="dm_sans"] {
-  --font-app: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-app: var(--font-dm-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display-face: var(--font-app);
   --bg: #faf5f3;
   --paper: #fff9f7;
@@ -154,7 +154,7 @@ html[data-ui-font="dm_sans"] {
 }
 
 html[data-ui-font="lora"] {
-  --font-app: "Lora", Georgia, "Times New Roman", serif;
+  --font-app: var(--font-lora), "Lora", Georgia, "Times New Roman", serif;
   --font-display-face: var(--font-app);
   --bg: #f4f1ea;
   --paper: #faf7f0;

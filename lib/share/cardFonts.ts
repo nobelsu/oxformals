@@ -1,34 +1,36 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
 /**
- * Fonts for the share-card images. next/og needs raw ttf data, so fetch the
- * Google Fonts files once per server process. Without a browser User-Agent,
- * the Google Fonts CSS API serves truetype URLs.
+ * Fonts for the share-card images, read from lib/share/fonts (self-hosted so
+ * no request goes to Google). next/og needs ttf/otf/woff, not woff2, so these
+ * are the static truetype cuts. Loaded once per server process.
  */
 type CardFont = {
   name: string;
-  data: ArrayBuffer;
+  data: Buffer;
   weight: 400 | 700;
   style: "normal";
 };
 
-const CSS_URL =
-  "https://fonts.googleapis.com/css2?family=Schoolbell&family=Space+Grotesk:wght@400;700&display=swap";
+const FONTS: { name: string; file: string; weight: 400 | 700 }[] = [
+  { name: "Schoolbell", file: "Schoolbell-Regular.ttf", weight: 400 },
+  { name: "Space Grotesk", file: "SpaceGrotesk-Regular.ttf", weight: 400 },
+  { name: "Space Grotesk", file: "SpaceGrotesk-Bold.ttf", weight: 700 },
+];
 
 let fontsPromise: Promise<CardFont[]> | null = null;
 
 async function load(): Promise<CardFont[]> {
-  const css = await (await fetch(CSS_URL)).text();
-  const blocks = css.split("@font-face").slice(1);
-  const fonts: CardFont[] = [];
-  for (const block of blocks) {
-    const family = /font-family:\s*'([^']+)'/.exec(block)?.[1];
-    const weight = Number(/font-weight:\s*(\d+)/.exec(block)?.[1] ?? 400);
-    const url = /src:\s*url\(([^)]+)\)/.exec(block)?.[1];
-    if (!family || !url || (weight !== 400 && weight !== 700)) continue;
-    const data = await (await fetch(url)).arrayBuffer();
-    fonts.push({ name: family, data, weight, style: "normal" });
-  }
-  if (fonts.length === 0) throw new Error("Could not load share-card fonts");
-  return fonts;
+  return await Promise.all(
+    FONTS.map(async ({ name, file, weight }) => ({
+      name,
+      // process.cwd() is the project root (see next.config outputFileTracingIncludes).
+      data: await readFile(join(process.cwd(), "lib/share/fonts", file)),
+      weight,
+      style: "normal" as const,
+    })),
+  );
 }
 
 export function loadCardFonts(): Promise<CardFont[]> {

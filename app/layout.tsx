@@ -25,6 +25,41 @@ const spaceGrotesk = localFont({
   display: "swap",
 });
 
+// Optional fonts from the UI font picker (globals.css, html[data-ui-font]).
+// Variable Latin subsets, not preloaded: most people never pick them.
+const inter = localFont({
+  src: [
+    { path: "./fonts/Inter-latin.woff2", style: "normal" },
+    { path: "./fonts/Inter-Italic-latin.woff2", style: "italic" },
+  ],
+  variable: "--font-inter",
+  weight: "400 700",
+  display: "swap",
+  preload: false,
+});
+
+const dmSans = localFont({
+  src: [
+    { path: "./fonts/DMSans-latin.woff2", style: "normal" },
+    { path: "./fonts/DMSans-Italic-latin.woff2", style: "italic" },
+  ],
+  variable: "--font-dm-sans",
+  weight: "400 700",
+  display: "swap",
+  preload: false,
+});
+
+const lora = localFont({
+  src: [
+    { path: "./fonts/Lora-latin.woff2", style: "normal" },
+    { path: "./fonts/Lora-Italic-latin.woff2", style: "italic" },
+  ],
+  variable: "--font-lora",
+  weight: "400 700",
+  display: "swap",
+  preload: false,
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://oxformals.com",
@@ -42,10 +77,6 @@ export const metadata: Metadata = {
   },
 };
 
-/** Self-hosted Schoolbell; Inter / DM Sans / Lora load via stylesheet so `font-family: "Inter"` etc. always resolve. */
-const googleUiFontsHref =
-  "https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Inter:ital,opsz,wght@0,14..32,400..700;1,14..32,400..700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -55,17 +86,8 @@ export default function RootLayout({
     <ConvexAuthNextjsServerProvider>
       <html
         lang="en"
-        className={`${schoolbell.variable} ${spaceGrotesk.variable} h-full antialiased`}
+        className={`${schoolbell.variable} ${spaceGrotesk.variable} ${inter.variable} ${dmSans.variable} ${lora.variable} h-full antialiased`}
       >
-        <head>
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link
-            rel="preconnect"
-            href="https://fonts.gstatic.com"
-            crossOrigin="anonymous"
-          />
-          <link rel="stylesheet" href={googleUiFontsHref} />
-        </head>
         <body className="min-h-full flex flex-col">
           <ConvexClientProvider>
             <AuthProvider>
