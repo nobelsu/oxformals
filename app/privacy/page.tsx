@@ -20,15 +20,6 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-/** A value the operator still has to supply; visible on purpose. */
-function Fill({ children }: { children: ReactNode }) {
-  return (
-    <mark className="rounded bg-[var(--accent-wash)] px-1 text-[var(--accent-wash-ink)]">
-      [{children}]
-    </mark>
-  );
-}
-
 function Email() {
   return (
     <a href="mailto:team@oxformals.com" className="underline underline-offset-4">
@@ -144,7 +135,7 @@ export default function PrivacyPage() {
           <p className={P}>
             Oxformals helps Oxford students find, list and swap seats at college
             formals. The controller of your personal data is{" "}
-            <Fill>LEGAL NAME</Fill>, <Fill>ADDRESS</Fill>. Contact us about
+            Nobel Suhendra, 140 Kingston Road, Oxford OX2 6RP. Contact us about
             anything in this policy at <Email />.
           </p>
         </Section>
@@ -258,19 +249,18 @@ export default function PrivacyPage() {
           <ul className={UL}>
             <li>
               Messages you sent stay in the other person&apos;s chat, shown as
-              from &ldquo;Deleted user&rdquo;, for <Fill>N</Fill> months.
+              from &ldquo;Deleted user&rdquo;, for 12 months.
             </li>
             <li>
               Your college reviews (text and ratings, not photos) stay, shown as
-              by &ldquo;Deleted user&rdquo;, for <Fill>N</Fill> months.
+              by &ldquo;Deleted user&rdquo;, for 24 months.
             </li>
             <li>
               Seat-credit records stay so other members&apos; balances add up,
-              for <Fill>N</Fill> years.
+              for 2 years.
             </li>
             <li>
-              Records of broken swaps stay to prevent abuse, for{" "}
-              <Fill>N</Fill> months.
+              Records of broken swaps stay to prevent abuse, for 12 months.
             </li>
           </ul>
         </Section>
