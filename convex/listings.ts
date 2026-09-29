@@ -389,15 +389,24 @@ export const createListing = mutation({
         : { price: args.price }),
     });
 
-    await ctx.scheduler.runAfter(0, internal.emails.notifyWishlistForNewListing, {
-      listingId,
-    });
-
-    await ctx.scheduler.runAfter(
-      0,
-      internal.pushNotifications.sendWishlistListingPush,
-      { listingId },
-    );
+    // Everyone who wants to go to this college hears about it (bell, push,
+    // and email if "Credits & reminders" email is on).
+    const wishers = await ctx.db
+      .query("collegeWishlists")
+      .withIndex("by_college", (q) => q.eq("college", college))
+      .take(500);
+    const told = new Set<Id<"users">>();
+    for (const w of wishers) {
+      if (w.userId === userId || told.has(w.userId)) continue;
+      told.add(w.userId);
+      await notify(ctx, {
+        userId: w.userId,
+        kind: "wishlist_listing",
+        actorId: userId,
+        listingId,
+        data: { college, dateTime: new Date(timestamp).toISOString() },
+      });
+    }
 
     const listing = await ctx.db.get(listingId);
     if (listing) {

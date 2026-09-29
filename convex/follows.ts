@@ -12,6 +12,7 @@ import {
   sanitizeLimitedUser,
   sanitizePublicUser,
 } from "./guards";
+import { notify } from "./notify";
 
 /**
  * Instagram/Beli-style follows. Following is instant, unless the other person
@@ -163,6 +164,14 @@ export const follow = mutation({
     if (existing) return existing.status;
     const status = target.isPrivate === true ? "pending" : "active";
     await ctx.db.insert("follows", { followerId: me, followeeId: userId, status });
+    if (status === "pending") {
+      await notify(ctx, { userId, kind: "follow_request", actorId: me });
+    } else if (await isActiveFollower(ctx, userId, me)) {
+      await notify(ctx, { userId, kind: "now_friends", actorId: me });
+      await notify(ctx, { userId: me, kind: "now_friends", actorId: userId });
+    } else {
+      await notify(ctx, { userId, kind: "new_follower", actorId: me });
+    }
     return status;
   },
 });
@@ -200,6 +209,10 @@ export const approveFollower = mutation({
     if (!existing) throw new Error("That request was withdrawn.");
     if (existing.status === "pending") {
       await ctx.db.patch(existing._id, { status: "active" });
+      if (await isActiveFollower(ctx, me, userId)) {
+        await notify(ctx, { userId, kind: "now_friends", actorId: me });
+        await notify(ctx, { userId: me, kind: "now_friends", actorId: userId });
+      }
     }
     return null;
   },

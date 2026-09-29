@@ -207,11 +207,6 @@ export const sendNewRequestEmail = internalAction({
   },
 });
 
-const listingAlertRecipientValidator = v.object({
-  userId: v.id("users"),
-  toEmail: v.string(),
-});
-
 const newListingAlertEmailPayloadValidator = v.union(
   v.null(),
   v.object({
@@ -250,42 +245,6 @@ function formatListingTypeTag(listing: Doc<"listings">): string {
 function listingBrowseUrl(listingId: string): string {
   return `${siteUrl()}/?listing=${listingId}`;
 }
-
-export const getNewListingAlertRecipients = internalQuery({
-  args: { listingId: v.id("listings") },
-  returns: v.array(listingAlertRecipientValidator),
-  handler: async (ctx, args) => {
-    const listing = await ctx.db.get(args.listingId);
-    if (!listing || listing.status !== "active") {
-      return [];
-    }
-
-    const rows = await ctx.db
-      .query("collegeWishlists")
-      .withIndex("by_college", (q) => q.eq("college", listing.college))
-      .collect();
-
-    const recipients: { userId: Doc<"users">["_id"]; toEmail: string }[] = [];
-    const seen = new Set<string>();
-
-    for (const row of rows) {
-      if (row.userId === listing.ownerUserId) continue;
-      if (seen.has(row.userId)) continue;
-
-      const user = await ctx.db.get(row.userId);
-      if (!user?.email?.trim()) continue;
-      if (!emailNotificationsEnabled(user)) continue;
-
-      seen.add(row.userId);
-      recipients.push({
-        userId: row.userId,
-        toEmail: user.email.trim().toLowerCase(),
-      });
-    }
-
-    return recipients;
-  },
-});
 
 export const getNewListingAlertEmailPayload = internalQuery({
   args: {
@@ -337,30 +296,6 @@ export function newListingAlertEmail(p: NewListingAlertEmailPayload): EmailConte
     cta: { href: p.browseUrl, label: "View formal" },
   };
 }
-
-export const notifyWishlistForNewListing = internalAction({
-  args: { listingId: v.id("listings") },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const recipients: { userId: Doc<"users">["_id"]; toEmail: string }[] =
-      await ctx.runQuery(internal.emails.getNewListingAlertRecipients, {
-        listingId: args.listingId,
-      });
-
-    for (const recipient of recipients) {
-      await ctx.scheduler.runAfter(
-        0,
-        internal.emails.sendNewListingAlertEmail,
-        {
-          listingId: args.listingId,
-          userId: recipient.userId,
-        },
-      );
-    }
-
-    return null;
-  },
-});
 
 export const sendNewListingAlertEmail = internalAction({
   args: {

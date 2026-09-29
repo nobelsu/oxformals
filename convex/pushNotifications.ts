@@ -9,10 +9,6 @@ import {
 } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { deliverExpoPushMessages } from "./expoPush";
-import {
-  formatListingDate,
-  formatListingTypeLabel,
-} from "./listingFormat";
 import { requireActiveUser } from "./guards";
 
 const PUSH_PREVIEW_MAX_LENGTH = 120;
@@ -292,54 +288,6 @@ export const getChatPushPayload = internalQuery({
   },
 });
 
-export const getWishlistListingPushPayload = internalQuery({
-  args: { listingId: v.id("listings") },
-  returns: pushPayloadValidator,
-  handler: async (ctx, args) => {
-    const listing = await ctx.db.get(args.listingId);
-    if (!listing || listing.status !== "active") {
-      return null;
-    }
-
-    const owner = await ctx.db.get(listing.ownerUserId);
-    const posterName = owner?.name?.trim() || "Someone";
-    const dateLabel = formatListingDate(listing.dateTime);
-    const typeLabel = formatListingTypeLabel(listing);
-    const title = `New ${listing.college} formal`;
-    const body = `${posterName} · ${dateLabel} · ${typeLabel}`;
-    const data = {
-      url: `/listing/${args.listingId}`,
-      listingId: args.listingId,
-    };
-
-    const rows = await ctx.db
-      .query("collegeWishlists")
-      .withIndex("by_college", (q) => q.eq("college", listing.college))
-      .collect();
-
-    const messages: PushMessage[] = [];
-    const seen = new Set<string>();
-
-    for (const row of rows) {
-      if (row.userId === listing.ownerUserId) continue;
-      if (seen.has(row.userId)) continue;
-      seen.add(row.userId);
-
-      if (!(await shouldNotifyUser(ctx, row.userId))) continue;
-
-      const tokens = await getTokensForUser(ctx, row.userId);
-      if (tokens.length === 0) continue;
-
-      for (const token of tokens) {
-        messages.push({ to: token, title, body, data });
-      }
-    }
-
-    if (messages.length === 0) return null;
-    return { messages };
-  },
-});
-
 export const pruneInvalidPushTokens = internalMutation({
   args: { tokens: v.array(v.string()) },
   returns: v.null(),
@@ -361,24 +309,6 @@ export const sendChatMessagePush = internalAction({
     const payload = await ctx.runQuery(internal.pushNotifications.getChatPushPayload, {
       messageId: args.messageId,
     });
-
-    if (!payload || payload.messages.length === 0) {
-      return null;
-    }
-
-    await deliverExpoPushMessages(ctx, payload.messages);
-    return null;
-  },
-});
-
-export const sendWishlistListingPush = internalAction({
-  args: { listingId: v.id("listings") },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const payload = await ctx.runQuery(
-      internal.pushNotifications.getWishlistListingPushPayload,
-      { listingId: args.listingId },
-    );
 
     if (!payload || payload.messages.length === 0) {
       return null;

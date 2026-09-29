@@ -102,10 +102,8 @@ The list below classifies every exported function in `convex/*.ts` (excluding `c
 - `removePushToken` (`mutation`): `PublicAuthed`
 - `setPushChatAlerts` (`mutation`): `PublicAuthed`
 - `getChatPushPayload` (`internalQuery`): `InternalOnly`
-- `getWishlistListingPushPayload` (`internalQuery`): `InternalOnly`
 - `pruneInvalidPushTokens` (`internalMutation`): `InternalOnly`
 - `sendChatMessagePush` (`internalAction`): `InternalOnly`
-- `sendWishlistListingPush` (`internalAction`): `InternalOnly`
 
 ### `storage.ts`
 
@@ -135,6 +133,8 @@ an empty/null result to signed-out callers rather than throwing.
 - `accountDeletion.ts`: `getDeletionImpact`, `deleteMyAccount` `PublicAuthed` (own account, email confirmation); `purgeUserContent` `InternalOnly` (scheduled, batched).
 - `password.ts`: `hasPassword`, `setPassword` (`action`) `PublicAuthed`; `setPasswordForEmail`, `passwordStateForEmail` `InternalOnly`.
 - `migrations.ts`: all exported functions are `InternalOnly`.
+- `notifications.ts`: `getBellState`, `listMyNotifications`, `getMyNotificationPrefs` `PublicAuthed` (own rows only; actors via `visibleAvatar`); `markAllRead`, `setNotificationPref`, `saveWebPushSubscription`, `removeMyWebPushSubscription` `PublicAuthed` (mutations; a subscription endpoint must be `https://`); `getDeliveryPlan`, `removeWebPushSubscriptions`, `sendFormalReminders`, `pruneOldNotifications` `InternalOnly`.
+- `notificationDelivery.ts` (`"use node"`): `deliver`, `sendChatWebPush` `InternalOnly`.
 
 ### Internal-Only Modules
 

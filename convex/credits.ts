@@ -10,6 +10,7 @@ import {
 } from "./_generated/server";
 import { optionalUserId, requireActiveUser } from "./guards";
 import { listingIsPast } from "./listingHelpers";
+import { notify } from "./notify";
 
 /**
  * Seat credits. Host a guest who pays with a credit and you earn one; spend
@@ -104,6 +105,20 @@ export async function holdSeatCredits(
       releaseAt,
     });
   }
+  const req = await ctx.db.get(args.requestId);
+  await notify(ctx, {
+    userId: args.listing.ownerUserId,
+    kind: "credit_earned",
+    ...(req ? { actorId: req.fromUserId } : {}),
+    listingId: args.listing._id,
+    requestId: args.requestId,
+    data: {
+      college: args.listing.college,
+      dateTime: args.listing.dateTime,
+      count: args.charges.length,
+      pending: true,
+    },
+  });
 }
 
 async function refundHold(ctx: MutationCtx, hold: Doc<"creditHolds">) {
@@ -252,9 +267,33 @@ export const settleDueHolds = internalMutation({
         q.eq("status", "held").lte("releaseAt", Date.now()),
       )
       .take(200);
+    const paidOut = new Map<
+      string,
+      { hostId: Id<"users">; listingId: Id<"listings">; count: number }
+    >();
     for (const hold of due) {
       await ctx.db.patch(hold._id, { status: "paid", resolvedAt: Date.now() });
       await adjustCredits(ctx, hold.hostId, 1);
+      const key = `${hold.hostId}|${hold.listingId}`;
+      const entry = paidOut.get(key) ?? {
+        hostId: hold.hostId,
+        listingId: hold.listingId,
+        count: 0,
+      };
+      entry.count++;
+      paidOut.set(key, entry);
+    }
+    for (const { hostId, listingId, count } of paidOut.values()) {
+      const listing = await ctx.db.get(listingId);
+      await notify(ctx, {
+        userId: hostId,
+        kind: "credit_paid_out",
+        listingId,
+        data: {
+          count,
+          ...(listing ? { college: listing.college, dateTime: listing.dateTime } : {}),
+        },
+      });
     }
     if (due.length === 200) {
       await ctx.scheduler.runAfter(0, internal.credits.settleDueHolds, {});
