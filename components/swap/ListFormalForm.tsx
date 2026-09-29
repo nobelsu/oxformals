@@ -16,6 +16,7 @@ import {
   type ListingType,
 } from "@/lib/data/types";
 import { formalTypeInfo } from "@/components/swap/FormalTypeTag";
+import { isoToOxfordInput, oxfordInputToIso } from "@/lib/data/format";
 import {
   isMenuImageContentType,
   MENU_FILE_ACCEPT,
@@ -60,17 +61,9 @@ type Props = {
   onSubmit: (input: NewListingInput) => void;
 };
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
-
-function isoToLocalInput(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
-
 function defaultDateTime(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T19:00`;
+  // Today at 7pm, Oxford time.
+  return `${isoToOxfordInput(new Date().toISOString()).slice(0, 10)}T19:00`;
 }
 
 export function ListFormalForm({
@@ -91,7 +84,7 @@ export function ListFormalForm({
   );
 
   const [dateTime, setDateTime] = useState(
-    initialValues ? isoToLocalInput(initialValues.dateTime) : defaultDateTime(),
+    initialValues ? isoToOxfordInput(initialValues.dateTime) : defaultDateTime(),
   );
   const [groupSize, setGroupSize] = useState<GroupSize>(
     initialValues?.groupSize ?? 2,
@@ -205,7 +198,11 @@ export function ListFormalForm({
         return;
       }
     }
-    const iso = new Date(dateTime).toISOString();
+    const iso = oxfordInputToIso(dateTime);
+    if (!iso) {
+      setError("Pick a date and time.");
+      return;
+    }
     onSubmit({
       dateTime: iso,
       groupSize,

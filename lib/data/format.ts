@@ -167,6 +167,57 @@ export function isoToOxfordDateKey(iso: string): string {
   }).format(new Date(iso));
 }
 
+/** Oxford wall-clock parts of an instant. */
+function oxfordParts(ms: number) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: OXFORD_TIME_ZONE,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(new Date(ms));
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return {
+    y: get("year"),
+    mo: get("month"),
+    d: get("day"),
+    h: get("hour"),
+    mi: get("minute"),
+  };
+}
+
+/** An instant as an Oxford `YYYY-MM-DDTHH:mm` for `<input type="datetime-local">`. */
+export function isoToOxfordInput(iso: string): string {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return "";
+  const { y, mo, d, h, mi } = oxfordParts(ms);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${y}-${p(mo)}-${p(d)}T${p(h)}:${p(mi)}`;
+}
+
+/**
+ * A `datetime-local` value read as Oxford time, whatever the browser's own
+ * timezone, as an ISO instant. Returns "" for an unparseable value.
+ */
+export function oxfordInputToIso(local: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(local);
+  if (!m) return "";
+  const [y, mo, d, h, mi] = m.slice(1).map(Number);
+  const wall = Date.UTC(y, mo - 1, d, h, mi);
+  // Guess, then correct by the Oxford offset at that instant (twice, so a
+  // guess that lands across a clock change settles).
+  let ms = wall;
+  for (let i = 0; i < 2; i++) {
+    const o = oxfordParts(ms);
+    const shown = Date.UTC(o.y, o.mo - 1, o.d, o.h, o.mi);
+    ms += wall - shown;
+  }
+  return new Date(ms).toISOString();
+}
+
 export function formatRelativeTime(ts: number): string {
   const diff = Date.now() - ts;
   const mins = Math.round(diff / 60000);

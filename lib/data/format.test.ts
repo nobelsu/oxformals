@@ -9,6 +9,8 @@ import {
   formatListingTime,
   formatRowTail,
   formatWeekdayDate,
+  isoToOxfordInput,
+  oxfordInputToIso,
 } from "./format";
 
 describe("formatListingTime", () => {
@@ -165,5 +167,22 @@ describe("existing formatters still behave", () => {
 describe("formatWeekdayDate", () => {
   it("reads the Oxford day", () => {
     assert.equal(formatWeekdayDate("2026-10-08T23:30:00.000Z"), "Fri 9 Oct");
+  });
+});
+
+describe("Oxford datetime-local round trip", () => {
+  it("reads the input as Oxford time in summer (BST)", () => {
+    assert.equal(oxfordInputToIso("2026-10-09T19:15"), "2026-10-09T18:15:00.000Z");
+  });
+  it("reads the input as Oxford time in winter (GMT)", () => {
+    assert.equal(oxfordInputToIso("2026-11-20T19:15"), "2026-11-20T19:15:00.000Z");
+  });
+  it("shows an instant as Oxford wall time", () => {
+    assert.equal(isoToOxfordInput("2026-10-09T18:15:00.000Z"), "2026-10-09T19:15");
+    assert.equal(isoToOxfordInput("2026-11-20T19:15:00.000Z"), "2026-11-20T19:15");
+  });
+  it("rejects junk", () => {
+    assert.equal(oxfordInputToIso("nope"), "");
+    assert.equal(isoToOxfordInput("nope"), "");
   });
 });
