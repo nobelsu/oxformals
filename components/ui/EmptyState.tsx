@@ -47,6 +47,12 @@ const ICONS: Record<EmptyIcon, ReactNode> = {
       <path d="M4 10h16M9 3v4M15 3v4" />
     </>
   ),
+  bell: (
+    <>
+      <path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+      <path d="M10 20a2 2 0 0 0 4 0" />
+    </>
+  ),
 };
 
 export type EmptyIcon =
@@ -57,7 +63,8 @@ export type EmptyIcon =
   | "camera"
   | "users"
   | "search"
-  | "calendar";
+  | "calendar"
+  | "bell";
 
 type Action =
   | { label: string; href: string; onClick?: never }

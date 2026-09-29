@@ -10,6 +10,7 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { Avatar } from "@/components/ui/Avatar";
 import { Drawer } from "@/components/ui/Drawer";
 import { CreditsChip } from "@/components/credits/CreditsChip";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { api } from "@/convex/_generated/api";
 import type { AvatarSource } from "@/lib/auth/types";
 import { BROWSE_ROUTE } from "@/lib/ui/routes";
@@ -489,7 +490,12 @@ function NavInner() {
         </div>
 
         <div className="flex min-w-0 items-center justify-end gap-2 text-sm whitespace-nowrap sm:gap-3">
-          {status === "ready" && isAuthenticated && user ? <CreditsChip compact /> : null}
+          {status === "ready" && isAuthenticated && user ? (
+            <>
+              <NotificationBell />
+              <CreditsChip compact />
+            </>
+          ) : null}
           {status !== "ready" ? null : isAuthenticated && user ? (
             <AccountMenu
               name={user.name}
