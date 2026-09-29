@@ -137,6 +137,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ? { userIds: missingUserIds }
       : "skip",
   );
+  // Signed out, the user directory is empty, so load listing hosts directly.
+  const signedOutHosts = useQuery(
+    api.listings.listActiveHosts,
+    ready && !user ? {} : "skip",
+  );
   const wishlist = useQuery(api.users.myWishlist, user ? {} : "skip");
 
   const createListingMut = useMutation(api.listings.createListing);
@@ -158,13 +163,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     for (const doc of convexUsers) {
       byId.set(doc._id, mapUser(doc));
     }
-    for (const doc of requestPartyUsers ?? []) {
+    for (const doc of [...(requestPartyUsers ?? []), ...(signedOutHosts ?? [])]) {
       if (!byId.has(doc._id)) {
         byId.set(doc._id, mapUser(doc));
       }
     }
     return [...byId.values()];
-  }, [ready, convexUsers, requestPartyUsers]);
+  }, [ready, convexUsers, requestPartyUsers, signedOutHosts]);
 
   const listings = useMemo<Listing[]>(() => {
     if (!ready || convexListings === undefined) return [];
