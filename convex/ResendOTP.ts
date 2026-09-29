@@ -1,6 +1,7 @@
 import { Email } from "@convex-dev/auth/providers/Email";
 import { generateRandomString, type RandomReader } from "@oslojs/crypto/random";
 import { Resend as ResendAPI } from "resend";
+import { renderEmail, renderEmailText, type EmailContent } from "./emailTemplate";
 
 function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
@@ -10,95 +11,28 @@ function isOxfordEmail(email: string): boolean {
   return email.endsWith("@ox.ac.uk") || email.endsWith("@oxford.said.edu") || email.endsWith("@said.ox.ac.uk") || email.endsWith("@said.oxford.edu");
 }
 
-export function buildOtpEmailHtml({
+export function otpEmail({
   token,
   expiresInMinutes,
 }: {
   token: string;
   expiresInMinutes: number;
-}): string {
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Your Oxformals sign-in code</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-    <link href="https://fonts.googleapis.com/css2?family=Schoolbell&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet" />
-  </head>
-  <body style="margin:0;padding:0;background:#f2ecdd;color:#1b1a12;font-family:'Space Grotesk',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f2ecdd;padding:24px 12px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border:2px solid #1b1a12;border-radius:20px;overflow:hidden;">
-            <tr>
-              <td style="padding:28px 24px 10px 24px;text-align:center;">
-                <div style="font-family:'Schoolbell','Marker Felt','Comic Sans MS','Space Grotesk',ui-sans-serif,sans-serif;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Oxformals</div>
-                <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:#565039;">Find your next formal.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:8px 24px 0 24px;">
-                <p style="margin:0;font-size:16px;line-height:1.6;color:#1b1a12;">Quick pit stop before the dance floor: your Oxformals magic code is here.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:14px 24px 0 24px;">
-                <div style="background:#f2c4cb;border:2px solid #1b1a12;border-radius:14px;padding:16px 12px;text-align:center;">
-                  <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;font-size:34px;font-weight:800;letter-spacing:0.35em;color:#1b1a12;display:inline-block;padding-left:0.35em;">${token}</span>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:16px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#565039;">Pop this in within ${expiresInMinutes} minutes - it is single-use and then it vanishes.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#716b55;">If you did not request this email, you can safely ignore it - no changes have been made to your account.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#565039;">For inquiries or issues, contact us at <a href="mailto:team@oxformals.com" style="color:#1b1a12;font-weight:700;text-decoration:underline;">team@oxformals.com</a>.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:18px 24px 28px 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#1b1a12;">See you at dinner,<br />The Oxformals Team</p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
+}): EmailContent {
+  return {
+    title: "Your Oxformals sign-in code",
+    eyebrow: "Sign in",
+    heading: "Your sign-in code",
+    code: token,
+    note: `Expires in ${expiresInMinutes} minutes. Didn't ask for it? Ignore this email.`,
+  };
 }
 
-export function buildOtpEmailText({
-  token,
-  expiresInMinutes,
-}: {
-  token: string;
-  expiresInMinutes: number;
-}): string {
-  return `Quick pit stop before the dance floor:
+export function buildOtpEmailHtml(args: { token: string; expiresInMinutes: number }): string {
+  return renderEmail(otpEmail(args));
+}
 
-Your Oxformals magic code is:
-
-${token}
-
-Pop this in within ${expiresInMinutes} minutes - it is single-use and then it vanishes.
-
-If you did not request this email, you can safely ignore it - no changes have been made to your account.
-
-For inquiries or issues, contact us at team@oxformals.com.
-
-See you at dinner,
-The Oxformals Team`;
+export function buildOtpEmailText(args: { token: string; expiresInMinutes: number }): string {
+  return renderEmailText(otpEmail(args));
 }
 
 /**

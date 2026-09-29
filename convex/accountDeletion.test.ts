@@ -223,22 +223,21 @@ describe("deleteMyAccount", () => {
 });
 
 test("notice copy", () => {
-  expect(
-    buildAccountDeletionNoticeText({
-      kind: "hostLeft",
-      formalLabel: "Worcester · Sat 12 Oct · 7pm",
-    }),
-  ).toContain(
-    "The host of your Worcester · Sat 12 Oct · 7pm formal has left Oxformals, so the formal is cancelled.",
-  );
-  expect(
-    buildAccountDeletionNoticeText({
-      kind: "guestLeft",
-      formalLabel: "Keble · Sun 3 Nov · 7pm",
-    }),
-  ).toContain(
-    "A guest has left your Keble · Sun 3 Nov · 7pm formal, so a seat is free again.",
-  );
+  const host = buildAccountDeletionNoticeText({
+    kind: "hostLeft",
+    college: "Worcester",
+    when: "Sat 12 Oct · 7pm",
+  });
+  expect(host).toContain("Your formal was cancelled");
+  expect(host).toContain("The host left Oxformals, so this formal is off.");
+  expect(host).toContain("Worcester · Sat 12 Oct · 7pm");
+  const guest = buildAccountDeletionNoticeText({
+    kind: "guestLeft",
+    college: "Keble",
+    when: "Sun 3 Nov · 7pm",
+  });
+  expect(guest).toContain("A guest left Oxformals, so their seat is open again.");
+  expect(guest).toContain("Keble · Sun 3 Nov · 7pm");
 });
 
 describe("deleteMyAccount purges user content", () => {

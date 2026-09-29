@@ -9,6 +9,12 @@ import { hasConfirmedAttendance } from "./formalAttendance";
 import { emailNotificationsEnabled } from "./emailNotifications";
 import { listingIsPast } from "./listingHelpers";
 import { normalizeCollegeName } from "../lib/data/colleges";
+import {
+  EMAIL_SITE_URL,
+  renderEmail,
+  renderEmailText,
+  type EmailContent,
+} from "./emailTemplate";
 
 function resolveRequestType(req: Doc<"requests">): "swap" | "pay" | "credit" {
   return (
@@ -16,26 +22,39 @@ function resolveRequestType(req: Doc<"requests">): "swap" | "pay" | "credit" {
   );
 }
 
-const APP_BASE_URL = "https://oxformals.vercel.app";
-
 function siteUrl(): string {
-  return APP_BASE_URL;
+  return EMAIL_SITE_URL;
 }
 
-function formatListingDate(iso: string): string {
-  const d = new Date(iso);
-  const day = new Intl.DateTimeFormat("en-GB", {
+const FROM = "Oxformals <team@oxformals.com>";
+
+/** Formals happen in Oxford, so emails show Oxford time. */
+const OXFORD_TIME_ZONE = "Europe/London";
+
+/** `Thu 9 Oct` */
+export function formatFormalDay(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: OXFORD_TIME_ZONE,
     weekday: "short",
     day: "numeric",
     month: "short",
-  }).format(d);
-  let hours = d.getHours();
-  const minutes = d.getMinutes().toString().padStart(2, "0");
+  }).format(new Date(iso));
+}
+
+/** `Thu 9 Oct · 7:15pm`, or `· 7pm` on the hour. */
+export function formatFormalWhen(iso: string): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: OXFORD_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(iso));
+  let hours = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  const minutes = parts.find((p) => p.type === "minute")?.value ?? "00";
   const suffix = hours >= 12 ? "pm" : "am";
   hours = hours % 12 || 12;
-  const time =
-    minutes === "00" ? `${hours}${suffix}` : `${hours}:${minutes}${suffix}`;
-  return `${day} · ${time}`;
+  const time = minutes === "00" ? `${hours}${suffix}` : `${hours}:${minutes}${suffix}`;
+  return `${formatFormalDay(iso)} · ${time}`;
 }
 
 function formatPrice(gbp: number): string {
@@ -48,12 +67,30 @@ function truncateMessage(message: string, maxLen = 200): string {
   return `${trimmed.slice(0, maxLen - 1)}…`;
 }
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+function firstNameOf(name: string | undefined, fallback: string): string {
+  return name?.trim().split(/\s+/)[0] || fallback;
+}
+
+/** Send one templated email. Logs (never throws) on failure. */
+async function sendEmail(
+  label: string,
+  to: string,
+  subject: string,
+  content: EmailContent,
+): Promise<void> {
+  const apiKey = process.env.AUTH_RESEND_KEY;
+  if (!apiKey) {
+    console.error(`${label}: AUTH_RESEND_KEY is not set`);
+    return;
+  }
+  const { error } = await new ResendAPI(apiKey).emails.send({
+    from: FROM,
+    to: [to],
+    subject,
+    html: renderEmail(content),
+    text: renderEmailText(content),
+  });
+  if (error) console.error(`${label}: Resend error`, error);
 }
 
 const newRequestEmailPayloadValidator = v.union(
@@ -62,12 +99,28 @@ const newRequestEmailPayloadValidator = v.union(
     toEmail: v.string(),
     subject: v.string(),
     requesterName: v.string(),
-    requestTypeLabel: v.string(),
-    formalLabel: v.string(),
+    seats: v.number(),
+    college: v.string(),
+    when: v.string(),
+    tag: v.string(),
+    detail: v.string(),
     message: v.string(),
     reviewUrl: v.string(),
   }),
 );
+
+export type NewRequestEmailPayload = {
+  requesterName: string;
+  /** Seats asked for, the requester's included. */
+  seats: number;
+  college: string;
+  when: string;
+  tag: string;
+  /** One line under the headline ("" for none). */
+  detail: string;
+  message: string;
+  reviewUrl: string;
+};
 
 export const getNewRequestEmailPayload = internalQuery({
   args: { requestId: v.id("requests") },
@@ -86,184 +139,68 @@ export const getNewRequestEmailPayload = internalQuery({
     }
 
     const requestType = resolveRequestType(req);
-    const requesterName = fromUser?.name?.trim() || "Someone";
-    const formalDate = formatListingDate(targetListing.dateTime);
-
-    let requestTypeLabel: string;
+    let tag: string;
+    let detail = "";
     if (requestType === "credit") {
-      requestTypeLabel = "Credit request · you earn a credit when they come";
+      tag = "Credit";
+      detail = "You earn a credit when they come.";
     } else if (requestType === "pay") {
-      requestTypeLabel =
+      tag =
         targetListing.price !== undefined
-          ? `Pay request · ${formatPrice(targetListing.price)}`
-          : "Pay request";
-    } else if (req.offeringListingId) {
-      const offering = await ctx.db.get(req.offeringListingId);
-      requestTypeLabel = offering
-        ? `Swap request · offering ${offering.college} · ${formatListingDate(offering.dateTime)}`
-        : "Swap request";
+          ? `Pay ${formatPrice(targetListing.price)}`
+          : "Pay";
     } else {
-      requestTypeLabel = "Swap request";
+      tag = "Swap";
+      const offering = req.offeringListingId
+        ? await ctx.db.get(req.offeringListingId)
+        : null;
+      if (offering) {
+        detail = `In return: ${offering.college}, ${formatFormalWhen(offering.dateTime)}.`;
+      }
     }
 
     const extraSeats = (req.party ?? []).filter((p) => p.response !== "out").length;
-    if (extraSeats > 0) {
-      requestTypeLabel = `${extraSeats + 1} seats · ${requestTypeLabel}`;
-    }
-    const formalLabel = `${targetListing.college} · ${formalDate}`;
-    const reviewUrl = `${siteUrl()}/requests/${req.targetListingId}`;
 
     return {
       toEmail: toUser.email.trim().toLowerCase(),
       subject: `New request for your ${targetListing.college} formal`,
-      requesterName,
-      requestTypeLabel,
-      formalLabel,
+      requesterName: firstNameOf(fromUser?.name, "Someone"),
+      seats: extraSeats + 1,
+      college: targetListing.college,
+      when: formatFormalWhen(targetListing.dateTime),
+      tag,
+      detail,
       message: truncateMessage(req.message),
-      reviewUrl,
+      reviewUrl: `${siteUrl()}/requests/${req.targetListingId}`,
     };
   },
 });
 
-function buildNewRequestEmailHtml(payload: {
-  requesterName: string;
-  requestTypeLabel: string;
-  formalLabel: string;
-  message: string;
-  reviewUrl: string;
-}): string {
-  const messageBlock = payload.message
-    ? `<p style="margin:12px 0 0 0;font-size:15px;line-height:1.6;color:#1b1a12;font-style:italic;">&ldquo;${escapeHtml(payload.message)}&rdquo;</p>`
-    : "";
-
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>New formal request</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-    <link href="https://fonts.googleapis.com/css2?family=Schoolbell&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet" />
-  </head>
-  <body style="margin:0;padding:0;background:#f2ecdd;color:#1b1a12;font-family:'Space Grotesk',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f2ecdd;padding:24px 12px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border:2px solid #1b1a12;border-radius:20px;overflow:hidden;">
-            <tr>
-              <td style="padding:28px 24px 10px 24px;text-align:center;">
-                <div style="font-family:'Schoolbell','Marker Felt','Comic Sans MS','Space Grotesk',ui-sans-serif,sans-serif;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Oxformals</div>
-                <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:#565039;">Find your next formal.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:8px 24px 0 24px;">
-                <p style="margin:0;font-size:16px;line-height:1.6;color:#1b1a12;"><strong>${escapeHtml(payload.requesterName)}</strong> sent you a request for your formal.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:14px 24px 0 24px;">
-                <div style="background:#f2c4cb;border:2px solid #1b1a12;border-radius:14px;padding:16px 14px;">
-                  <p style="margin:0;font-size:14px;line-height:1.5;color:#565039;">${escapeHtml(payload.requestTypeLabel)}</p>
-                  <p style="margin:8px 0 0 0;font-size:18px;line-height:1.4;font-weight:800;color:#1b1a12;">${escapeHtml(payload.formalLabel)}</p>
-                  ${messageBlock}
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:20px 24px 0 24px;text-align:center;">
-                <a href="${escapeHtml(payload.reviewUrl)}" style="display:inline-block;background:#b8524c;color:#ffffff;font-size:15px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:999px;border:2px solid #b8524c;">Review request</a>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:16px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#716b55;">You can accept or decline this request in Oxformals.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#565039;">For inquiries or issues, contact us at <a href="mailto:team@oxformals.com" style="color:#1b1a12;font-weight:700;text-decoration:underline;">team@oxformals.com</a>.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:18px 24px 28px 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#1b1a12;">See you at dinner,<br />The Oxformals Team</p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
-}
-
-function buildNewRequestEmailText(payload: {
-  requesterName: string;
-  requestTypeLabel: string;
-  formalLabel: string;
-  message: string;
-  reviewUrl: string;
-}): string {
-  const messageLine = payload.message
-    ? `\n\n"${payload.message}"`
-    : "";
-
-  return `${payload.requesterName} sent you a request for your formal.
-
-${payload.requestTypeLabel}
-${payload.formalLabel}${messageLine}
-
-Review the request: ${payload.reviewUrl}
-
-You can accept or decline this request in Oxformals.
-
-For inquiries or issues, contact us at team@oxformals.com.
-
-See you at dinner,
-The Oxformals Team`;
+export function newRequestEmail(p: NewRequestEmailPayload): EmailContent {
+  return {
+    eyebrow: "New request",
+    heading:
+      p.seats > 1
+        ? `${p.requesterName} wants ${p.seats} seats at your formal`
+        : `${p.requesterName} wants a seat at your formal`,
+    body: p.detail || undefined,
+    ticket: { college: p.college, when: p.when, tag: p.tag, quote: p.message },
+    cta: { href: p.reviewUrl, label: "Review request" },
+  };
 }
 
 export const sendNewRequestEmail = internalAction({
   args: { requestId: v.id("requests") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const payload: {
-      toEmail: string;
-      subject: string;
-      requesterName: string;
-      requestTypeLabel: string;
-      formalLabel: string;
-      message: string;
-      reviewUrl: string;
-    } | null = await ctx.runQuery(internal.emails.getNewRequestEmailPayload, {
-      requestId: args.requestId,
-    });
-
+    const payload: (NewRequestEmailPayload & { toEmail: string; subject: string }) | null =
+      await ctx.runQuery(internal.emails.getNewRequestEmailPayload, {
+        requestId: args.requestId,
+      });
     if (!payload) {
       return null;
     }
-
-    const apiKey = process.env.AUTH_RESEND_KEY;
-    if (!apiKey) {
-      console.error("sendNewRequestEmail: AUTH_RESEND_KEY is not set");
-      return null;
-    }
-
-    const resend = new ResendAPI(apiKey);
-    const { error } = await resend.emails.send({
-      from: "Oxformals <team@oxformals.com>",
-      to: [payload.toEmail],
-      subject: payload.subject,
-      html: buildNewRequestEmailHtml(payload),
-      text: buildNewRequestEmailText(payload),
-    });
-
-    if (error) {
-      console.error("sendNewRequestEmail: Resend error", error);
-    }
-
+    await sendEmail("sendNewRequestEmail", payload.toEmail, payload.subject, newRequestEmail(payload));
     return null;
   },
 });
@@ -278,13 +215,21 @@ const newListingAlertEmailPayloadValidator = v.union(
   v.object({
     toEmail: v.string(),
     subject: v.string(),
-    posterName: v.string(),
-    listingTypeLabel: v.string(),
-    formalLabel: v.string(),
+    college: v.string(),
+    when: v.string(),
+    tag: v.string(),
     message: v.string(),
     browseUrl: v.string(),
   }),
 );
+
+export type NewListingAlertEmailPayload = {
+  college: string;
+  when: string;
+  tag: string;
+  message: string;
+  browseUrl: string;
+};
 
 function resolveListingType(
   listing: Pick<Doc<"listings">, "listingType">,
@@ -292,19 +237,12 @@ function resolveListingType(
   return listing.listingType ?? "swap";
 }
 
-function formatListingTypeLabel(listing: Doc<"listings">): string {
+function formatListingTypeTag(listing: Doc<"listings">): string {
   const listingType = resolveListingType(listing);
   if (listingType === "pay") {
-    return listing.price !== undefined
-      ? `Pay · ${formatPrice(listing.price)}`
-      : "Pay";
+    return listing.price !== undefined ? `Pay ${formatPrice(listing.price)}` : "Pay";
   }
-  if (listingType === "both") {
-    const pricePart =
-      listing.price !== undefined ? ` · ${formatPrice(listing.price)}` : "";
-    return `Swap or pay${pricePart}`;
-  }
-  return "Swap";
+  return listingType === "both" ? "Swap or pay" : "Swap";
 }
 
 function listingBrowseUrl(listingId: string): string {
@@ -377,118 +315,25 @@ export const getNewListingAlertEmailPayload = internalQuery({
       return null;
     }
 
-    const owner = await ctx.db.get(listing.ownerUserId);
-    const posterName = owner?.name?.trim() || "Someone";
-    const formalLabel = `${listing.college} · ${formatListingDate(listing.dateTime)}`;
-
     return {
       toEmail: user.email.trim().toLowerCase(),
-      subject: `New ${listing.college} formal on Oxformals`,
-      posterName,
-      listingTypeLabel: formatListingTypeLabel(listing),
-      formalLabel,
+      subject: `A seat just opened at ${listing.college}`,
+      college: listing.college,
+      when: formatFormalWhen(listing.dateTime),
+      tag: formatListingTypeTag(listing),
       message: truncateMessage(listing.message),
       browseUrl: listingBrowseUrl(args.listingId),
     };
   },
 });
 
-function buildNewListingAlertEmailHtml(payload: {
-  posterName: string;
-  listingTypeLabel: string;
-  formalLabel: string;
-  message: string;
-  browseUrl: string;
-}): string {
-  const messageBlock = payload.message
-    ? `<p style="margin:12px 0 0 0;font-size:15px;line-height:1.6;color:#1b1a12;font-style:italic;">&ldquo;${escapeHtml(payload.message)}&rdquo;</p>`
-    : "";
-
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>New formal listing</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-    <link href="https://fonts.googleapis.com/css2?family=Schoolbell&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet" />
-  </head>
-  <body style="margin:0;padding:0;background:#f2ecdd;color:#1b1a12;font-family:'Space Grotesk',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f2ecdd;padding:24px 12px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border:2px solid #1b1a12;border-radius:20px;overflow:hidden;">
-            <tr>
-              <td style="padding:28px 24px 10px 24px;text-align:center;">
-                <div style="font-family:'Schoolbell','Marker Felt','Comic Sans MS','Space Grotesk',ui-sans-serif,sans-serif;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Oxformals</div>
-                <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:#565039;">Find your next formal.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:8px 24px 0 24px;">
-                <p style="margin:0;font-size:16px;line-height:1.6;color:#1b1a12;"><strong>${escapeHtml(payload.posterName)}</strong> posted a new formal at a college on your wishlist.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:14px 24px 0 24px;">
-                <div style="background:#f2c4cb;border:2px solid #1b1a12;border-radius:14px;padding:16px 14px;">
-                  <p style="margin:0;font-size:14px;line-height:1.5;color:#565039;">${escapeHtml(payload.listingTypeLabel)}</p>
-                  <p style="margin:8px 0 0 0;font-size:18px;line-height:1.4;font-weight:800;color:#1b1a12;">${escapeHtml(payload.formalLabel)}</p>
-                  ${messageBlock}
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:20px 24px 0 24px;text-align:center;">
-                <a href="${escapeHtml(payload.browseUrl)}" style="display:inline-block;background:#b8524c;color:#ffffff;font-size:15px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:999px;border:2px solid #b8524c;">View formal</a>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:16px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#716b55;">You received this because ${escapeHtml(payload.formalLabel.split(" · ")[0] ?? "this college")} is on your wishlist. Turn off email notifications in Settings.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#565039;">For inquiries or issues, contact us at <a href="mailto:team@oxformals.com" style="color:#1b1a12;font-weight:700;text-decoration:underline;">team@oxformals.com</a>.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:18px 24px 28px 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#1b1a12;">See you at dinner,<br />The Oxformals Team</p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
-}
-
-function buildNewListingAlertEmailText(payload: {
-  posterName: string;
-  listingTypeLabel: string;
-  formalLabel: string;
-  message: string;
-  browseUrl: string;
-}): string {
-  const messageLine = payload.message ? `\n\n"${payload.message}"` : "";
-
-  return `${payload.posterName} posted a new formal at a college on your wishlist.
-
-${payload.listingTypeLabel}
-${payload.formalLabel}${messageLine}
-
-View the formal: ${payload.browseUrl}
-
-You received this because this college is on your wishlist. Turn off email notifications in Settings.
-
-For inquiries or issues, contact us at team@oxformals.com.
-
-See you at dinner,
-The Oxformals Team`;
+export function newListingAlertEmail(p: NewListingAlertEmailPayload): EmailContent {
+  return {
+    eyebrow: "Wants to go",
+    heading: `A seat just opened at ${p.college}`,
+    ticket: { college: p.college, when: p.when, tag: p.tag, quote: p.message },
+    cta: { href: p.browseUrl, label: "View formal" },
+  };
 }
 
 export const notifyWishlistForNewListing = internalAction({
@@ -522,42 +367,20 @@ export const sendNewListingAlertEmail = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const payload: {
-      toEmail: string;
-      subject: string;
-      posterName: string;
-      listingTypeLabel: string;
-      formalLabel: string;
-      message: string;
-      browseUrl: string;
-    } | null = await ctx.runQuery(internal.emails.getNewListingAlertEmailPayload, {
-      listingId: args.listingId,
-      userId: args.userId,
-    });
-
+    const payload: (NewListingAlertEmailPayload & { toEmail: string; subject: string }) | null =
+      await ctx.runQuery(internal.emails.getNewListingAlertEmailPayload, {
+        listingId: args.listingId,
+        userId: args.userId,
+      });
     if (!payload) {
       return null;
     }
-
-    const apiKey = process.env.AUTH_RESEND_KEY;
-    if (!apiKey) {
-      console.error("sendNewListingAlertEmail: AUTH_RESEND_KEY is not set");
-      return null;
-    }
-
-    const resend = new ResendAPI(apiKey);
-    const { error } = await resend.emails.send({
-      from: "Oxformals <team@oxformals.com>",
-      to: [payload.toEmail],
-      subject: payload.subject,
-      html: buildNewListingAlertEmailHtml(payload),
-      text: buildNewListingAlertEmailText(payload),
-    });
-
-    if (error) {
-      console.error("sendNewListingAlertEmail: Resend error", error);
-    }
-
+    await sendEmail(
+      "sendNewListingAlertEmail",
+      payload.toEmail,
+      payload.subject,
+      newListingAlertEmail(payload),
+    );
     return null;
   },
 });
@@ -576,10 +399,17 @@ const reviewReminderEmailPayloadValidator = v.union(
   v.object({
     toEmail: v.string(),
     subject: v.string(),
-    formalLabel: v.string(),
+    college: v.string(),
+    day: v.string(),
     reviewUrl: v.string(),
   }),
 );
+
+export type ReviewReminderEmailPayload = {
+  college: string;
+  day: string;
+  reviewUrl: string;
+};
 
 async function isReviewReminderEligible(
   ctx: QueryCtx,
@@ -701,98 +531,24 @@ export const getReviewReminderEmailPayload = internalQuery({
       return null;
     }
 
-    const formalLabel = `${listing.college} · ${formatListingDate(listing.dateTime)}`;
-
     return {
       toEmail: user.email.trim().toLowerCase(),
-      subject: `Rate your ${listing.college} formal`,
-      formalLabel,
+      subject: `How was ${listing.college}?`,
+      college: listing.college,
+      day: formatFormalDay(listing.dateTime),
       reviewUrl: listingReviewUrl(args.listingId),
     };
   },
 });
 
-function buildReviewReminderEmailHtml(payload: {
-  formalLabel: string;
-  reviewUrl: string;
-}): string {
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Rate your formal</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-    <link href="https://fonts.googleapis.com/css2?family=Schoolbell&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet" />
-  </head>
-  <body style="margin:0;padding:0;background:#f2ecdd;color:#1b1a12;font-family:'Space Grotesk',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f2ecdd;padding:24px 12px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border:2px solid #1b1a12;border-radius:20px;overflow:hidden;">
-            <tr>
-              <td style="padding:28px 24px 10px 24px;text-align:center;">
-                <div style="font-family:'Schoolbell','Marker Felt','Comic Sans MS','Space Grotesk',ui-sans-serif,sans-serif;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Oxformals</div>
-                <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:#565039;">How was dinner?</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:8px 24px 0 24px;">
-                <p style="margin:0;font-size:16px;line-height:1.6;color:#1b1a12;">Your formal has finished — share how it went so other students can discover great formals.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:14px 24px 0 24px;">
-                <div style="background:#f2c4cb;border:2px solid #1b1a12;border-radius:14px;padding:16px 14px;">
-                  <p style="margin:0;font-size:18px;line-height:1.4;font-weight:800;color:#1b1a12;">${escapeHtml(payload.formalLabel)}</p>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:20px 24px 0 24px;text-align:center;">
-                <a href="${escapeHtml(payload.reviewUrl)}" style="display:inline-block;background:#b8524c;color:#ffffff;font-size:15px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:999px;border:2px solid #b8524c;">Rate formal</a>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:16px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#716b55;">Turn off email notifications in Settings if you prefer not to receive these reminders.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#565039;">For inquiries or issues, contact us at <a href="mailto:team@oxformals.com" style="color:#1b1a12;font-weight:700;text-decoration:underline;">team@oxformals.com</a>.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:18px 24px 28px 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#1b1a12;">See you at dinner,<br />The Oxformals Team</p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
-}
-
-function buildReviewReminderEmailText(payload: {
-  formalLabel: string;
-  reviewUrl: string;
-}): string {
-  return `Your formal has finished — share how it went so other students can discover great formals.
-
-${payload.formalLabel}
-
-Rate the formal: ${payload.reviewUrl}
-
-Turn off email notifications in Settings if you prefer not to receive these reminders.
-
-For inquiries or issues, contact us at team@oxformals.com.
-
-See you at dinner,
-The Oxformals Team`;
+export function reviewReminderEmail(p: ReviewReminderEmailPayload): EmailContent {
+  return {
+    eyebrow: "After dinner",
+    heading: `How was ${p.college}?`,
+    body: "Your review helps people pick their next formal.",
+    ticket: { college: p.college, when: p.day },
+    cta: { href: p.reviewUrl, label: "Rate formal" },
+  };
 }
 
 export const notifyReviewReminderForListing = internalAction({
@@ -822,39 +578,20 @@ export const sendReviewReminderEmail = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const payload: {
-      toEmail: string;
-      subject: string;
-      formalLabel: string;
-      reviewUrl: string;
-    } | null = await ctx.runQuery(internal.emails.getReviewReminderEmailPayload, {
-      listingId: args.listingId,
-      userId: args.userId,
-    });
-
+    const payload: (ReviewReminderEmailPayload & { toEmail: string; subject: string }) | null =
+      await ctx.runQuery(internal.emails.getReviewReminderEmailPayload, {
+        listingId: args.listingId,
+        userId: args.userId,
+      });
     if (!payload) {
       return null;
     }
-
-    const apiKey = process.env.AUTH_RESEND_KEY;
-    if (!apiKey) {
-      console.error("sendReviewReminderEmail: AUTH_RESEND_KEY is not set");
-      return null;
-    }
-
-    const resend = new ResendAPI(apiKey);
-    const { error } = await resend.emails.send({
-      from: "Oxformals <team@oxformals.com>",
-      to: [payload.toEmail],
-      subject: payload.subject,
-      html: buildReviewReminderEmailHtml(payload),
-      text: buildReviewReminderEmailText(payload),
-    });
-
-    if (error) {
-      console.error("sendReviewReminderEmail: Resend error", error);
-    }
-
+    await sendEmail(
+      "sendReviewReminderEmail",
+      payload.toEmail,
+      payload.subject,
+      reviewReminderEmail(payload),
+    );
     return null;
   },
 });
@@ -868,133 +605,53 @@ const accountDeletionNoticeValidator = v.object({
   dateTime: v.string(),
 });
 
-type AccountDeletionNoticeCopy = {
+export type AccountDeletionNoticeCopy = {
   kind: "hostLeft" | "guestLeft";
-  formalLabel: string;
+  college: string;
+  /** e.g. "Sat 12 Oct · 7pm" */
+  when: string;
 };
 
-function accountDeletionSentence({
-  kind,
-  formalLabel,
-}: AccountDeletionNoticeCopy): string {
+export function accountDeletionEmail({ kind, college, when }: AccountDeletionNoticeCopy): EmailContent {
+  const ticket = { college, when };
   return kind === "hostLeft"
-    ? `The host of your ${formalLabel} formal has left Oxformals, so the formal is cancelled.`
-    : `A guest has left your ${formalLabel} formal, so a seat is free again.`;
-}
-
-function accountDeletionCta(kind: AccountDeletionNoticeCopy["kind"]): {
-  href: string;
-  label: string;
-} {
-  return kind === "hostLeft"
-    ? { href: `${siteUrl()}/?tab=browse`, label: "Find another formal" }
+    ? {
+        eyebrow: "Cancelled",
+        heading: "Your formal was cancelled",
+        body: "The host left Oxformals, so this formal is off.",
+        ticket,
+        cta: { href: `${siteUrl()}/?tab=browse`, label: "Find another formal" },
+      }
     : {
-        href: `${siteUrl()}/?tab=requests&section=listings`,
-        label: "See your formal",
+        eyebrow: "Seat free",
+        heading: "A seat is free at your formal",
+        body: "A guest left Oxformals, so their seat is open again.",
+        ticket,
+        cta: { href: `${siteUrl()}/?tab=requests&section=listings`, label: "See your formal" },
       };
 }
 
-export function buildAccountDeletionNoticeText(
-  copy: AccountDeletionNoticeCopy,
-): string {
-  const cta = accountDeletionCta(copy.kind);
-  return `${accountDeletionSentence(copy)}
-
-${cta.label}: ${cta.href}
-
-For inquiries or issues, contact us at team@oxformals.com.
-
-See you at dinner,
-The Oxformals Team`;
-}
-
-/** The review-reminder email's shell: wordmark, title, one paragraph, one button. */
-function buildSimpleNoticeHtml(payload: {
-  title: string;
-  body: string;
-  cta: { href: string; label: string };
-}): string {
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${escapeHtml(payload.title)}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-    <link href="https://fonts.googleapis.com/css2?family=Schoolbell&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet" />
-  </head>
-  <body style="margin:0;padding:0;background:#f2ecdd;color:#1b1a12;font-family:'Space Grotesk',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f2ecdd;padding:24px 12px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border:2px solid #1b1a12;border-radius:20px;overflow:hidden;">
-            <tr>
-              <td style="padding:28px 24px 10px 24px;text-align:center;">
-                <div style="font-family:'Schoolbell','Marker Felt','Comic Sans MS','Space Grotesk',ui-sans-serif,sans-serif;font-size:34px;line-height:1.05;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Oxformals</div>
-                <p style="margin:10px 0 0 0;font-size:15px;line-height:1.6;color:#565039;">${escapeHtml(payload.title)}</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:8px 24px 0 24px;">
-                <p style="margin:0;font-size:16px;line-height:1.6;color:#1b1a12;">${escapeHtml(payload.body)}</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:20px 24px 0 24px;text-align:center;">
-                <a href="${escapeHtml(payload.cta.href)}" style="display:inline-block;background:#b8524c;color:#ffffff;font-size:15px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:999px;border:2px solid #b8524c;">${escapeHtml(payload.cta.label)}</a>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:16px 24px 0 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#565039;">For inquiries or issues, contact us at <a href="mailto:team@oxformals.com" style="color:#1b1a12;font-weight:700;text-decoration:underline;">team@oxformals.com</a>.</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:18px 24px 28px 24px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#1b1a12;">See you at dinner,<br />The Oxformals Team</p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
+export function buildAccountDeletionNoticeText(copy: AccountDeletionNoticeCopy): string {
+  return renderEmailText(accountDeletionEmail(copy));
 }
 
 export const sendAccountDeletionNotices = internalAction({
   args: { notices: v.array(accountDeletionNoticeValidator) },
   returns: v.null(),
   handler: async (_ctx, { notices }) => {
-    const apiKey = process.env.AUTH_RESEND_KEY;
-    if (!apiKey) {
-      console.error("sendAccountDeletionNotices: AUTH_RESEND_KEY is not set");
-      return null;
-    }
-    const resend = new ResendAPI(apiKey);
     for (const notice of notices) {
-      const copy: AccountDeletionNoticeCopy = {
-        kind: notice.kind,
-        formalLabel: `${notice.college} · ${formatListingDate(notice.dateTime)}`,
-      };
-      const { error } = await resend.emails.send({
-        from: "Oxformals <team@oxformals.com>",
-        to: [notice.toEmail],
-        subject:
-          notice.kind === "hostLeft"
-            ? "Your formal has been cancelled"
-            : "A seat is free at your formal",
-        html: buildSimpleNoticeHtml({
-          title: "A change to your formal",
-          body: accountDeletionSentence(copy),
-          cta: accountDeletionCta(copy.kind),
+      await sendEmail(
+        "sendAccountDeletionNotices",
+        notice.toEmail,
+        notice.kind === "hostLeft"
+          ? "Your formal was cancelled"
+          : "A seat is free at your formal",
+        accountDeletionEmail({
+          kind: notice.kind,
+          college: notice.college,
+          when: formatFormalWhen(notice.dateTime),
         }),
-        text: buildAccountDeletionNoticeText(copy),
-      });
-      if (error) {
-        console.error("sendAccountDeletionNotices: Resend error", error);
-      }
+      );
     }
     return null;
   },
@@ -1002,29 +659,26 @@ export const sendAccountDeletionNotices = internalAction({
 
 // ── Bio reports ─────────────────────────────────────────────────────────────
 
+export function bioReportEmail(p: { bioText: string; reportedUserId: string }): EmailContent {
+  return {
+    eyebrow: "Report",
+    heading: "A bio was reported",
+    body: `"${p.bioText}"`,
+    cta: { href: `${siteUrl()}/profile/${p.reportedUserId}`, label: "View profile" },
+    note: `To remove it: npx convex run --prod bio:clearBio '{"userId":"${p.reportedUserId}"}'`,
+  };
+}
+
 export const sendBioReportEmail = internalAction({
   args: { reportedUserId: v.id("users"), bioText: v.string() },
   returns: v.null(),
   handler: async (_ctx, { reportedUserId, bioText }) => {
-    const apiKey = process.env.AUTH_RESEND_KEY;
-    if (!apiKey) {
-      console.error("sendBioReportEmail: AUTH_RESEND_KEY is not set");
-      return null;
-    }
-    const profileUrl = `${siteUrl()}/profile/${reportedUserId}`;
-    const body = `A bio was reported: "${bioText}". To remove it, run: npx convex run --prod bio:clearBio '{"userId":"${reportedUserId}"}'`;
-    const { error } = await new ResendAPI(apiKey).emails.send({
-      from: "Oxformals <team@oxformals.com>",
-      to: ["team@oxformals.com"],
-      subject: "A bio was reported",
-      html: buildSimpleNoticeHtml({
-        title: "Bio reported",
-        body,
-        cta: { href: profileUrl, label: "View profile" },
-      }),
-      text: `${body}\n\nProfile: ${profileUrl}`,
-    });
-    if (error) console.error("sendBioReportEmail: Resend error", error);
+    await sendEmail(
+      "sendBioReportEmail",
+      "team@oxformals.com",
+      "A bio was reported",
+      bioReportEmail({ bioText, reportedUserId }),
+    );
     return null;
   },
 });
@@ -1036,6 +690,10 @@ const formalNoticeValidator = v.object({
   subject: v.string(),
   body: v.string(),
   cta: v.union(v.literal("formals"), v.literal("browse"), v.literal("invites")),
+  /** Small label above the headline; defaults by `cta`. */
+  eyebrow: v.optional(v.string()),
+  /** The formal to show as a ticket. */
+  listingId: v.optional(v.id("listings")),
 });
 
 export const getNoticeEmails = internalQuery({
@@ -1056,11 +714,45 @@ export const getNoticeEmails = internalQuery({
   },
 });
 
-function formalNoticeCta(cta: "formals" | "browse" | "invites") {
-  if (cta === "invites") return { href: `${siteUrl()}/`, label: "Answer on Oxformals" };
-  return cta === "browse"
-    ? { href: `${siteUrl()}/?tab=browse`, label: "Find another formal" }
-    : { href: `${siteUrl()}/?tab=requests&section=listings`, label: "See your formals" };
+export const getNoticeFormals = internalQuery({
+  args: { listingIds: v.array(v.id("listings")) },
+  returns: v.array(
+    v.object({ listingId: v.id("listings"), college: v.string(), dateTime: v.string() }),
+  ),
+  handler: async (ctx, { listingIds }) => {
+    const out = [];
+    for (const listingId of new Set(listingIds)) {
+      const listing = await ctx.db.get(listingId);
+      if (listing) out.push({ listingId, college: listing.college, dateTime: listing.dateTime });
+    }
+    return out;
+  },
+});
+
+export type FormalNoticeEmailInput = {
+  subject: string;
+  body: string;
+  cta: "formals" | "browse" | "invites";
+  eyebrow?: string;
+  formal?: { college: string; when: string };
+};
+
+export function formalNoticeEmail(n: FormalNoticeEmailInput): EmailContent {
+  const home = `${siteUrl()}/`;
+  const buttons: Pick<EmailContent, "cta" | "secondary"> =
+    n.cta === "invites"
+      ? { cta: { href: home, label: "I'm in" }, secondary: { href: home, label: "Not me" } }
+      : n.cta === "browse"
+        ? { cta: { href: `${siteUrl()}/?tab=browse`, label: "Find another formal" } }
+        : { cta: { href: `${siteUrl()}/?tab=requests&section=listings`, label: "See your formals" } };
+  return {
+    eyebrow:
+      n.eyebrow ?? (n.cta === "invites" ? "Group invite" : n.cta === "browse" ? "Change of plans" : "Your formal"),
+    heading: n.subject,
+    body: n.body,
+    ticket: n.formal,
+    ...buttons,
+  };
 }
 
 /** Transactional: sent whatever the user's notification setting. */
@@ -1068,33 +760,32 @@ export const sendFormalNotices = internalAction({
   args: { notices: v.array(formalNoticeValidator) },
   returns: v.null(),
   handler: async (ctx, { notices }) => {
-    const apiKey = process.env.AUTH_RESEND_KEY;
-    if (!apiKey) {
-      console.error("sendFormalNotices: AUTH_RESEND_KEY is not set");
-      return null;
-    }
     const emails: Array<{ userId: Id<"users">; email: string | null }> =
       await ctx.runQuery(internal.emails.getNoticeEmails, {
         userIds: notices.map((n) => n.userId),
       });
     const byId = new Map(emails.map((e) => [e.userId, e.email]));
-    const resend = new ResendAPI(apiKey);
+    const listingIds = notices.flatMap((n) => (n.listingId ? [n.listingId] : []));
+    const formals: Array<{ listingId: Id<"listings">; college: string; dateTime: string }> =
+      listingIds.length > 0
+        ? await ctx.runQuery(internal.emails.getNoticeFormals, { listingIds })
+        : [];
+    const formalById = new Map(formals.map((f) => [f.listingId, f]));
     for (const notice of notices) {
       const to = byId.get(notice.userId);
       if (!to) continue;
-      const cta = formalNoticeCta(notice.cta);
-      const { error } = await resend.emails.send({
-        from: "Oxformals <team@oxformals.com>",
-        to: [to],
-        subject: notice.subject,
-        html: buildSimpleNoticeHtml({
-          title: "A change to your formal",
-          body: notice.body,
-          cta,
+      const formal = notice.listingId ? formalById.get(notice.listingId) : undefined;
+      await sendEmail(
+        "sendFormalNotices",
+        to,
+        notice.subject,
+        formalNoticeEmail({
+          ...notice,
+          formal: formal
+            ? { college: formal.college, when: formatFormalWhen(formal.dateTime) }
+            : undefined,
         }),
-        text: `${notice.body}\n\n${cta.label}: ${cta.href}\n\nFor inquiries or issues, contact us at team@oxformals.com.\n\nSee you at dinner,\nThe Oxformals Team`,
-      });
-      if (error) console.error("sendFormalNotices: Resend error", error);
+      );
     }
     return null;
   },
@@ -1121,11 +812,6 @@ export const sendSwapBreakReport = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const apiKey = process.env.AUTH_RESEND_KEY;
-    if (!apiKey) {
-      console.error("sendSwapBreakReport: AUTH_RESEND_KEY is not set");
-      return null;
-    }
     const names: { brokenBy: string; wronged: string } = await ctx.runQuery(
       internal.emails.getSwapBreakNames,
       {
@@ -1133,23 +819,30 @@ export const sendSwapBreakReport = internalAction({
         wrongedUserId: args.wrongedUserId,
       },
     );
-    const body = `${names.brokenBy} broke a swap with ${names.wronged} after already going to ${names.wronged.split(" <")[0]}'s formal (request ${args.requestId}). Their seat couldn't be taken back.`;
-    const profileUrl = `${siteUrl()}/profile/${args.brokenByUserId}`;
-    const { error } = await new ResendAPI(apiKey).emails.send({
-      from: "Oxformals <team@oxformals.com>",
-      to: ["team@oxformals.com"],
-      subject: "A swap was broken",
-      html: buildSimpleNoticeHtml({
-        title: "Swap broken",
-        body,
-        cta: { href: profileUrl, label: "View profile" },
-      }),
-      text: `${body}\n\nProfile: ${profileUrl}`,
-    });
-    if (error) console.error("sendSwapBreakReport: Resend error", error);
+    await sendEmail(
+      "sendSwapBreakReport",
+      "team@oxformals.com",
+      "A swap was broken",
+      swapBreakEmail({ ...names, requestId: args.requestId, brokenByUserId: args.brokenByUserId }),
+    );
     return null;
   },
 });
+
+export function swapBreakEmail(p: {
+  brokenBy: string;
+  wronged: string;
+  requestId: string;
+  brokenByUserId: string;
+}): EmailContent {
+  return {
+    eyebrow: "Report",
+    heading: "A swap was broken",
+    body: `${p.brokenBy} broke a swap with ${p.wronged} after already going to ${p.wronged.split(" <")[0]}'s formal. Their seat couldn't be taken back.`,
+    cta: { href: `${siteUrl()}/profile/${p.brokenByUserId}`, label: "View profile" },
+    note: `Request ${p.requestId}`,
+  };
+}
 
 // ── Credit disputes ─────────────────────────────────────────────────────────
 
@@ -1164,7 +857,7 @@ export const getCreditDisputeDetails = internalQuery({
       reporter: `${reporter?.name ?? "Unknown"} <${reporter?.email ?? "?"}>`,
       host: `${host?.name ?? "Unknown"} <${host?.email ?? "?"}>`,
       formal: listing
-        ? `${listing.college} · ${formatListingDate(listing.dateTime)}`
+        ? `${listing.college} · ${formatFormalWhen(listing.dateTime)}`
         : "a deleted listing",
     };
   },
@@ -1178,29 +871,33 @@ export const sendCreditDisputeEmail = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const apiKey = process.env.AUTH_RESEND_KEY;
-    if (!apiKey) {
-      console.error("sendCreditDisputeEmail: AUTH_RESEND_KEY is not set");
-      return null;
-    }
     const d: { reporter: string; host: string; formal: string } =
       await ctx.runQuery(internal.emails.getCreditDisputeDetails, {
         listingId: args.listingId,
         reporterId: args.reporterId,
       });
-    const body = `${d.reporter} says ${d.formal} (hosted by ${d.host}) didn't happen, and paid ${args.credits} credit${args.credits === 1 ? "" : "s"} for it. The payout is on hold. Settle each hold with: npx convex run --prod credits:resolveDispute '{"holdId":"…","outcome":"refund"}' (or "payHost"). Listing ${args.listingId}.`;
-    const { error } = await new ResendAPI(apiKey).emails.send({
-      from: "Oxformals <team@oxformals.com>",
-      to: ["team@oxformals.com"],
-      subject: "A formal was reported as not happening",
-      html: buildSimpleNoticeHtml({
-        title: "Credit dispute",
-        body,
-        cta: { href: listingBrowseUrl(args.listingId), label: "View listing" },
-      }),
-      text: body,
-    });
-    if (error) console.error("sendCreditDisputeEmail: Resend error", error);
+    await sendEmail(
+      "sendCreditDisputeEmail",
+      "team@oxformals.com",
+      "A formal was reported as not happening",
+      creditDisputeEmail({ ...d, credits: args.credits, listingId: args.listingId }),
+    );
     return null;
   },
 });
+
+export function creditDisputeEmail(p: {
+  reporter: string;
+  host: string;
+  formal: string;
+  credits: number;
+  listingId: string;
+}): EmailContent {
+  return {
+    eyebrow: "Credit dispute",
+    heading: "A formal was reported as not happening",
+    body: `${p.reporter} says ${p.formal} (hosted by ${p.host}) didn't happen, and paid ${p.credits} credit${p.credits === 1 ? "" : "s"} for it. The payout is on hold.`,
+    cta: { href: listingBrowseUrl(p.listingId), label: "View listing" },
+    note: `Settle each hold: npx convex run --prod credits:resolveDispute '{"holdId":"…","outcome":"refund"}' (or "payHost"). Listing ${p.listingId}.`,
+  };
+}

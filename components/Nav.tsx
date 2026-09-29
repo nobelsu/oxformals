@@ -177,6 +177,18 @@ function NavInner() {
     setDrawerOpen(false);
   }, [pathname, searchParams]);
 
+  // Emails' "Email settings" link lands on ?settings=1, which opens Settings
+  // once signed in; closing it drops the param.
+  const settingsFromLink = isAuthenticated && searchParams.get("settings") === "1";
+  const closeSettings = () => {
+    setSettingsOpen(false);
+    if (!settingsFromLink) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("settings");
+    const qs = params.toString();
+    window.history.replaceState(null, "", `${pathname ?? "/"}${qs ? `?${qs}` : ""}`);
+  };
+
   // Landing page and signed-in app alike collapse once you scroll.
   useEffect(() => {
     const onScroll = () => {
@@ -585,8 +597,8 @@ function NavInner() {
       {isAuthenticated && user ? (
         <>
           <SettingsModal
-            open={settingsOpen}
-            onClose={() => setSettingsOpen(false)}
+            open={settingsOpen || settingsFromLink}
+            onClose={closeSettings}
             onDeleteAccount={() => setDeleteAccountOpen(true)}
           />
           <DeleteAccountModal

@@ -52,8 +52,10 @@ export const respondToPartyInvite = mutation({
         {
           userId: req.fromUserId,
           subject: `${me?.name?.split(" ")[0] ?? "A friend"} can't make it`,
-          body: `${me?.name?.split(" ")[0] ?? "A friend"} said "Not me" to your group request, so it's one seat smaller now. The rest of the request still stands.`,
+          body: `${me?.name?.split(" ")[0] ?? "A friend"} said "Not me", so your group request is one seat smaller. The rest still stands.`,
           cta: "formals",
+          eyebrow: "Group request",
+          listingId: req.targetListingId,
         },
       ]);
     }

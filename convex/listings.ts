@@ -577,8 +577,10 @@ export const createRequest = mutation({
           {
             userId: mirror.fromUserId,
             subject: "Your swap is on",
-            body: `${me?.name?.split(" ")[0] ?? "The host"} asked for your formal too, so your swap into ${theirs?.college ?? "their formal"} has gone through.`,
+            body: `${me?.name?.split(" ")[0] ?? "The host"} asked for your formal too, so the swap went through.`,
             cta: "formals",
+            eyebrow: "Swap",
+            ...(theirs ? { listingId: theirs._id } : {}),
           },
         ]);
         return { requestId: mirror._id, autoAccepted: true as const };
@@ -610,9 +612,11 @@ export const createRequest = mutation({
           userId: f.userId,
           subject: `${myName} wants to bring you to ${target.college}`,
           body: f.paysOwn
-            ? `${myName} asked for seats at ${target.college} for the two of you (and maybe more). Your seat is yours to pay for${f.method === "credit" ? " with a credit" : ""}, so tap "I'm in" to confirm, or "Not me" if you can't make it.`
-            : `${myName} asked for seats at ${target.college} for the two of you (and maybe more), and is covering your seat. If you can't make it, tap "Not me".`,
+            ? `Your seat is yours to pay for${f.method === "credit" ? " with a credit" : ""}. Are you in?`
+            : `${myName} is covering your seat. Tap "Not me" if you can't make it.`,
           cta: "invites",
+          eyebrow: "Group invite",
+          listingId: args.targetListingId,
         });
       }
       await sendFormalNotices(ctx, notices);
@@ -886,8 +890,10 @@ export const leaveGroup = mutation({
           {
             userId: listing.ownerUserId,
             subject: "Your swap partner left",
-            body: `${me?.name?.split(" ")[0] ?? "Your swap partner"} left your ${listing.college} formal and gave up their half of your swap. Your seat at their formal is still yours.`,
+            body: `${me?.name?.split(" ")[0] ?? "Your swap partner"} gave up their half of your swap. Your seat at their formal is still yours.`,
             cta: "formals",
+            eyebrow: "Swap",
+            listingId: listing._id,
           },
         ]);
       }
@@ -968,8 +974,10 @@ export const removeMember = mutation({
       notices.push({
         userId: args.memberId,
         subject: "You were removed from a formal",
-        body: `${host?.name?.split(" ")[0] ?? "The host"} removed you from their ${listing.college} formal.${link ? " Your swap with them is off, so they've lost their seat at your formal too." : ""}`,
+        body: `${host?.name?.split(" ")[0] ?? "The host"} removed you from their formal.${link ? " Your swap is off, so they lose their seat at yours too." : ""}`,
         cta: "browse",
+        eyebrow: "Removed",
+        listingId: listing._id,
       });
     }
     await sendFormalNotices(ctx, notices);
@@ -1257,8 +1265,10 @@ export const deleteListing = mutation({
         notices.push({
           userId: guestId,
           subject: "Your formal has been cancelled",
-          body: `${hostName} cancelled their ${listing.college} formal, so your seat there is gone.`,
+          body: `${hostName} cancelled it, so your seat is gone.`,
           cta: "browse",
+          eyebrow: "Cancelled",
+          listingId: listing._id,
         });
       }
       await sendFormalNotices(ctx, notices);

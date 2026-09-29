@@ -18,21 +18,14 @@ export type FormalNotice = {
   body: string;
   /** Where the email's button goes: your formals, browse, or the feed (invites). */
   cta: "formals" | "browse" | "invites";
+  /** Small label above the email's headline. */
+  eyebrow?: string;
+  /** The formal the email shows as a ticket. */
+  listingId?: Id<"listings">;
 };
 
 function isSwap(req: Doc<"requests">): boolean {
   return req.offeringListingId !== undefined && req.requestType !== "pay";
-}
-
-function formalLabel(listing: Pick<Doc<"listings">, "college" | "dateTime">) {
-  const d = new Date(listing.dateTime);
-  const day = new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    timeZone: "Europe/London",
-  }).format(d);
-  return `${listing.college} on ${day}`;
 }
 
 async function firstName(ctx: MutationCtx, userId: Id<"users">) {
@@ -129,8 +122,10 @@ export async function undoSwap(
   notices.push({
     userId: brokenByUserId,
     subject: "Your swap was undone",
-    body: `Your swap with ${partner} fell through, so your seat at ${formalLabel(other)} has been released too. Swaps are all or nothing: nobody keeps their half.`,
+    body: `Your swap with ${partner} fell through, so this seat has been released too. Swaps are all or nothing.`,
     cta: "browse",
+    eyebrow: "Swap undone",
+    listingId: other._id,
   });
 }
 
