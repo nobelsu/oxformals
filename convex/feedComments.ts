@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { optionalUserId, requireActiveUser, sanitizePublicUser } from "./guards";
+import { optionalUserId, requireActiveUser } from "./guards";
+import { visibleUser } from "./userVisibility";
 import { MAX_FEED_COMMENT_LENGTH } from "../lib/data/feedConstants";
 
 /** All comments on one feed item (its `targetKey`), oldest first, author-enriched. */
@@ -21,7 +22,8 @@ export const listComments = query({
           id: row._id,
           text: row.text,
           ts: row._creationTime,
-          author: user ? sanitizePublicUser(user) : null,
+          // A private author the viewer can't see: name and initials only.
+          author: user ? await visibleUser(ctx, viewerId, user) : null,
           isMine: viewerId !== null && viewerId === row.userId,
         };
       }),

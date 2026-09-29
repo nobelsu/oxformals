@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import { optionalUserId, sanitizePublicUser } from "./guards";
+import { visibleUser } from "./userVisibility";
 import { activityVisibility } from "./follows";
 import { enrichListing } from "./listingHelpers";
 import { rowCountsAsAttended } from "../lib/data/formalAttendance";
@@ -78,7 +79,8 @@ export const getCampusFeed = query({
       const cached = actorCache.get(userId);
       if (cached !== undefined) return cached;
       const user = await ctx.db.get(userId);
-      const actor = user ? sanitizePublicUser(user) : null;
+      // A private host the viewer can't see shows as name and initials.
+      const actor = user ? await visibleUser(ctx, viewerId, user) : null;
       actorCache.set(userId, actor);
       return actor;
     };

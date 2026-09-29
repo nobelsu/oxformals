@@ -14,6 +14,7 @@ import {
   sanitizePublicUser,
 } from "./guards";
 import { canSeeActivity, FOLLOW_LIST_LIMIT } from "./follows";
+import { visibleAvatar } from "./userVisibility";
 
 const avatarValue = v.union(
   v.object({ kind: v.literal("preset"), id: v.string() }),
@@ -192,19 +193,21 @@ export const listForChatPicker = query({
     if (!viewerId) return [];
 
     const users = await ctx.db.query("users").order("desc").take(500);
-    return users
-      .filter(
-        (u) =>
-          u._id !== viewerId &&
-          u.deletedAt === undefined &&
-          hasVerifiedEmail(u),
-      )
-      .map((u) => ({
-        _id: u._id,
-        name: u.name,
-        college: u.college,
-        avatar: u.avatar,
-      }));
+    const picked = users.filter(
+      (u) =>
+        u._id !== viewerId && u.deletedAt === undefined && hasVerifiedEmail(u),
+    );
+    return await Promise.all(
+      picked.map(async (u) => {
+        const avatar = await visibleAvatar(ctx, viewerId, u);
+        return {
+          _id: u._id,
+          name: u.name,
+          college: u.college,
+          ...(avatar ? { avatar } : {}),
+        };
+      }),
+    );
   },
 });
 
@@ -426,15 +429,19 @@ export const getPublicProfile = query({
       .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", args.userId))
       .take(200);
 
+    // A private account shows only who they are (name, college, year, role,
+    // initials avatar) unless the viewer is them, an approved follower, or
+    // matched with them on an upcoming formal. Follow counts and the
+    // Follow/Request button come from `follows.getFollowState`.
+    const canSee = await canSeeActivity(ctx, viewerId, user);
+    const shown =
+      canSee || revealContact
+        ? sanitizePublicUser(user)
+        : sanitizeLimitedUser(user);
+
     return {
       user: {
-        _id: user._id,
-        name: user.name,
-        college: user.college,
-        year: user.year,
-        role: user.role,
-        interests: user.interests,
-        bio: user.bio ?? "",
+        ...shown,
         ...(revealContact
           ? {
               instagramHandle: user.instagramHandle,
@@ -444,14 +451,10 @@ export const getPublicProfile = query({
               dietaryRequirements: user.dietaryRequirements ?? "",
             }
           : {}),
-        subject: user.subject ?? "",
         uiFont: user.uiFont ?? DEFAULT_UI_FONT,
-        avatar: user.avatar,
         // Colleges they want to go to — part of their activity, so private
         // accounts only show it to followers.
-        wishlistColleges: (await canSeeActivity(ctx, viewerId, user))
-          ? (user.wishlistColleges ?? [])
-          : [],
+        wishlistColleges: canSee ? (user.wishlistColleges ?? []) : [],
       },
       listings: await Promise.all(
         activeListings

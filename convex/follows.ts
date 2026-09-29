@@ -6,7 +6,12 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server";
-import { optionalUserId, requireActiveUser, sanitizePublicUser } from "./guards";
+import {
+  optionalUserId,
+  requireActiveUser,
+  sanitizeLimitedUser,
+  sanitizePublicUser,
+} from "./guards";
 
 /**
  * Instagram/Beli-style follows. Following is instant, unless the other person
@@ -233,11 +238,25 @@ export const getMyPrivacy = query({
   },
 });
 
-async function publicUsers(ctx: Ctx, ids: Id<"users">[]) {
+/**
+ * Summaries for a follow list. With `redactFor`, a private account that
+ * viewer can't see comes back limited (name, college, year, role). Without it
+ * the relationship already justifies the full summary (my friends, people
+ * asking to follow me).
+ */
+async function publicUsers(
+  ctx: Ctx,
+  ids: Id<"users">[],
+  redactFor?: { viewerId: Id<"users"> | null },
+) {
   const out: ReturnType<typeof sanitizePublicUser>[] = [];
   for (const id of ids) {
     const user = await ctx.db.get(id);
-    if (user && !user.deletedAt) out.push(sanitizePublicUser(user));
+    if (!user || user.deletedAt) continue;
+    const limited =
+      redactFor !== undefined &&
+      !(await canSeeActivity(ctx, redactFor.viewerId, user));
+    out.push(limited ? sanitizeLimitedUser(user) : sanitizePublicUser(user));
   }
   return out;
 }
@@ -274,6 +293,7 @@ export const listFollows = query({
     return await publicUsers(
       ctx,
       rows.map((r) => (direction === "followers" ? r.followerId : r.followeeId)),
+      { viewerId },
     );
   },
 });

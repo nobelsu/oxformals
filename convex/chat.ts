@@ -11,6 +11,7 @@ import {
 } from "./chatMentions";
 import { assertVerifiedEmail } from "./userVerification";
 import { requireActiveUser } from "./guards";
+import { visibleAvatar } from "./userVisibility";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -1021,20 +1022,27 @@ export const searchUsersForChat = query({
     if (q.length < 2) return [];
 
     const users = await ctx.db.query("users").take(500);
-    return users
+    const matches = users
       .filter((u) => u._id !== userId && (u.name?.trim() ?? "").length > 0)
       .filter((u) => {
         const name = u.name!.toLowerCase();
         const college = (u.college ?? "").toLowerCase();
         return name.includes(q) || college.includes(q);
       })
-      .slice(0, 15)
-      .map((u) => ({
-        id: u._id,
-        name: u.name!.trim(),
-        ...(u.college?.trim() ? { college: u.college.trim() } : {}),
-        ...(u.avatar ? { avatar: u.avatar } : {}),
-      }));
+      .slice(0, 15);
+    return await Promise.all(
+      matches.map(async (u) => {
+        // Not in a chat with them yet: a private account they can't see
+        // shows initials, not their photo.
+        const avatar = await visibleAvatar(ctx, userId, u);
+        return {
+          id: u._id,
+          name: u.name!.trim(),
+          ...(u.college?.trim() ? { college: u.college.trim() } : {}),
+          ...(avatar ? { avatar } : {}),
+        };
+      }),
+    );
   },
 });
 
@@ -1070,8 +1078,21 @@ export const searchUsersForMention = query({
       }
     }
 
+    // Anyone, not just this chat's members: a private account the viewer
+    // can't see shows initials, not their photo.
     const users = await ctx.db.query("users").take(500);
-    return searchUsersByPrefix(users, userId, args.query, 15);
+    const byId = new Map(users.map((u) => [u._id, u]));
+    return await Promise.all(
+      searchUsersByPrefix(users, userId, args.query, 15).map(async (m) => {
+        const avatar = await visibleAvatar(ctx, userId, byId.get(m.id)!);
+        return {
+          id: m.id,
+          name: m.name,
+          ...(m.college ? { college: m.college } : {}),
+          ...(avatar ? { avatar } : {}),
+        };
+      }),
+    );
   },
 });
 
