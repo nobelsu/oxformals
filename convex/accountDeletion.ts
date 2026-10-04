@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
@@ -160,7 +160,7 @@ export const deleteMyAccount = mutation({
       !user.email ||
       normalizeEmail(confirmEmail) !== normalizeEmail(user.email)
     ) {
-      throw new Error("That email doesn't match your account.");
+      throw new ConvexError("That email doesn't match your account.");
     }
 
     const notices: Notice[] = [];

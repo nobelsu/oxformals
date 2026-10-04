@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
@@ -104,9 +105,7 @@ export function IncomingRequests({ listing }: { listing: Listing }) {
                         }
                       } catch (err) {
                         setAcceptError(
-                          err instanceof Error
-                            ? err.message
-                            : "Could not accept request.",
+                          errorMessage(err, "Could not accept request."),
                         );
                       }
                     },

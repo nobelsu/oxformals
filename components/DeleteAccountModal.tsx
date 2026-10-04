@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useRouter } from "next/navigation";
@@ -78,7 +79,7 @@ export function DeleteAccountDialog({
       await onConfirm(confirmInput);
     } catch (e) {
       setError(
-        e instanceof Error && e.message.includes("doesn't match")
+        errorMessage(e, "").includes("doesn't match")
           ? "That email doesn't match your account."
           : "Couldn't delete. Try again.",
       );

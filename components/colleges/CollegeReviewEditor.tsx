@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { CloseIcon } from "@/components/ui/icons";
 import { useMutation } from "convex/react";
@@ -140,7 +141,7 @@ export function CollegeReviewEditor({ review, onSaved, onCancel }: Props) {
       ]);
     } catch (e) {
       URL.revokeObjectURL(previewUrl);
-      setImageError(e instanceof Error ? e.message : "Could not upload image.");
+      setImageError(errorMessage(e, "Could not upload image."));
     } finally {
       setImageUploading(false);
       if (imageInputRef.current) imageInputRef.current.value = "";
@@ -183,7 +184,7 @@ export function CollegeReviewEditor({ review, onSaved, onCancel }: Props) {
       });
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(errorMessage(e, "Something went wrong."));
     } finally {
       setSubmitting(false);
     }

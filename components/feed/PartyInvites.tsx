@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -27,7 +28,7 @@ export function PartyInvites() {
     } catch (err) {
       setErrors((e) => ({
         ...e,
-        [requestId]: err instanceof Error ? err.message : "Couldn't send that.",
+        [requestId]: errorMessage(err, "Couldn't send that."),
       }));
     } finally {
       setBusy(null);

@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -45,7 +46,7 @@ export function ConfirmAttendanceSection({ listingId }: Props) {
         nowMs,
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(errorMessage(e, "Something went wrong."));
     } finally {
       setSubmitting(false);
     }
@@ -76,7 +77,7 @@ export function ConfirmAttendanceSection({ listingId }: Props) {
         removeFromHistory,
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(errorMessage(e, "Something went wrong."));
     } finally {
       setSubmitting(false);
     }

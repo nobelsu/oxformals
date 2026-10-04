@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import { roleNeedsYear } from "@/lib/data/roles";
 import { useMutation } from "convex/react";
 import { useMemo, useRef, useState, type FormEvent } from "react";
@@ -154,7 +155,7 @@ export function ListFormalForm({
       }
     } catch (err) {
       setMenuPdfError(
-        err instanceof Error ? err.message : "Could not upload file.",
+        errorMessage(err, "Could not upload file."),
       );
     } finally {
       setMenuPdfUploading(false);

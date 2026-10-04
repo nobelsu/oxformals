@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import { useState, type ReactNode } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -227,7 +228,7 @@ function GuideEditor({
                 });
                 onClose();
               } catch (err) {
-                setError(err instanceof Error ? err.message : "Couldn't save that.");
+                setError(errorMessage(err, "Couldn't save that."));
               } finally {
                 setBusy(false);
               }
@@ -285,7 +286,7 @@ function TipEditor({ college, onClose }: { college: string; onClose: () => void 
                 if (res.ok) onClose();
                 else setError(REASONS[res.reason] ?? "Couldn't post that.");
               } catch (err) {
-                setError(err instanceof Error ? err.message : "Couldn't post that.");
+                setError(errorMessage(err, "Couldn't post that."));
               } finally {
                 setBusy(false);
               }
