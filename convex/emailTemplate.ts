@@ -20,9 +20,9 @@ import {
 export const EMAIL_SITE_URL = "https://oxformals.vercel.app";
 export const TEAM_EMAIL = "team@oxformals.com";
 
-/** Opens the Settings modal (Nav reads `settings=1`). */
+/** The notifications section of the settings page. */
 export function emailSettingsUrl(siteUrl = EMAIL_SITE_URL): string {
-  return `${siteUrl}/?tab=mine&settings=1`;
+  return `${siteUrl}/settings?section=notifications`;
 }
 
 export type EmailLink = { href: string; label: string };

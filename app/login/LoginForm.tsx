@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { useOnChange } from "@/lib/hooks/useOnChange";
 import {
   useEffect,
   useMemo,
@@ -164,30 +165,34 @@ export function LoginForm() {
 
   // Pick a random greeting on mount (avoids SSR/client hydration mismatch).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- random, so it can't be chosen during render
     setGreetingIdx(Math.floor(Math.random() * DINNER_GREETINGS.length));
   }, []);
 
   const greeting = DINNER_GREETINGS[greetingIdx];
 
+  // Offer optional password setup once, when the user has none yet.
+  const offerPassword =
+    status === "ready" && isAuthenticated && hasPassword === false && !passwordDone;
+  useOnChange(String(offerPassword), () => {
+    if (offerPassword) setStep("set-password");
+  });
+
   useEffect(() => {
     if (status !== "ready" || !isAuthenticated) return;
-    // Offer optional password setup once, when the user has none yet.
-    if (hasPassword === false && !passwordDone) {
-      setStep("set-password");
-      return;
-    }
+    if (offerPassword) return;
     // Wait until we know whether a password exists before redirecting.
     if (hasPassword === undefined && !passwordDone) return;
     router.replace(nextPath);
-  }, [status, isAuthenticated, hasPassword, passwordDone, nextPath, router]);
+  }, [status, isAuthenticated, hasPassword, passwordDone, offerPassword, nextPath, router]);
 
-  useEffect(() => {
+  useOnChange(`${status}|${needsOnboarding}|${authEmail ?? ""}`, () => {
     if (status !== "ready" || !needsOnboarding) return;
     setStep("profile");
     if (authEmail) {
       setEmail(authEmail);
     }
-  }, [status, needsOnboarding, authEmail]);
+  });
 
   useEffect(() => {
     if (!collegePickerOpen && !rolePickerOpen) return;

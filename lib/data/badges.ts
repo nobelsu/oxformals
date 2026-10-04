@@ -1,6 +1,6 @@
 import { OXFORD_COLLEGES } from "./colleges";
 
-export type BadgeFamily = "milestone" | "college";
+export type BadgeFamily = "milestone" | "college" | "special";
 
 /** Keys into the hand-drawn icon set in components/badges/BadgeArt.tsx. */
 export type BadgeIconId =
@@ -11,7 +11,8 @@ export type BadgeIconId =
   | "star"
   | "pen"
   | "trophy"
-  | "college";
+  | "college"
+  | "rosette";
 export type BadgeMetric = "formals" | "reviews";
 
 export type MilestoneBadgeDefinition = {
@@ -33,7 +34,19 @@ export type CollegeBadgeDefinition = {
   description: string;
 };
 
-export type BadgeDefinition = MilestoneBadgeDefinition | CollegeBadgeDefinition;
+/** Handed out, not earned: only ever shown to people who hold it. */
+export type SpecialBadgeDefinition = {
+  id: string;
+  family: "special";
+  name: string;
+  icon: BadgeIconId;
+  description: string;
+};
+
+export type BadgeDefinition =
+  | MilestoneBadgeDefinition
+  | CollegeBadgeDefinition
+  | SpecialBadgeDefinition;
 
 const COLLEGE_BADGE_ICON: BadgeIconId = "college";
 
@@ -118,12 +131,32 @@ export const COLLEGE_BADGES: CollegeBadgeDefinition[] = OXFORD_COLLEGES.map(
   }),
 );
 
+/** For everyone who signed up in Oxformals' first term. */
+export const FOUNDING_BADGE_ID = "founding-guest";
+
+export const SPECIAL_BADGES: SpecialBadgeDefinition[] = [
+  {
+    id: FOUNDING_BADGE_ID,
+    family: "special",
+    name: "Founding Guest",
+    icon: "rosette",
+    description: "Joined Oxformals in its first term.",
+  },
+];
+
 export const BADGE_DEFINITIONS: BadgeDefinition[] = [
+  ...SPECIAL_BADGES,
   ...MILESTONE_BADGES,
   ...COLLEGE_BADGES,
 ];
 
-export const TOTAL_BADGE_COUNT = BADGE_DEFINITIONS.length;
+/** Badges anyone can still earn; special ones sit outside the "x of y" count. */
+export const TOTAL_BADGE_COUNT = MILESTONE_BADGES.length + COLLEGE_BADGES.length;
+
+/** How many of the earnable badges these rows cover. */
+export function earnableCount(rows: { badgeId: string }[]): number {
+  return rows.filter((r) => !SPECIAL_BADGES.some((b) => b.id === r.badgeId)).length;
+}
 
 export function badgeById(id: string): BadgeDefinition | undefined {
   return BADGE_DEFINITIONS.find((b) => b.id === id);

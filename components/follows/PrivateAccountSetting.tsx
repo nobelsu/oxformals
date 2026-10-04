@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Skeleton } from "@/components/ui/Loading";
 
 /** Settings row: switch the account to private (approve followers). */
 export function PrivateAccountSetting() {
@@ -10,14 +11,19 @@ export function PrivateAccountSetting() {
   const setPrivate = useMutation(api.follows.setPrivate);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (!privacy) return null;
+  if (!privacy) return <Skeleton className="h-8 w-full" />;
   const on = privacy.isPrivate;
 
   return (
-    <div className="min-w-0 border-t border-[var(--ink-soft)] pt-5">
+    <div className="min-w-0">
       <div className="flex items-center justify-between gap-4">
-        <span id="settings-private-label" className="text-sm text-[var(--ink-muted)]">
-          Private account
+        <span className="min-w-0">
+          <span id="settings-private-label" className="block text-sm font-semibold">
+            Private account
+          </span>
+          <span className="block text-sm text-[var(--ink-muted)]">
+            You approve who follows you, and only they see your reviews and where you&apos;ve been.
+          </span>
         </span>
         <button
           type="button"

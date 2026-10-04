@@ -41,6 +41,7 @@ export function HeroFormalUnderline() {
     if (!length) return;
 
     if (reduced) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- follows the measured path length
       setOffset(0);
       return;
     }

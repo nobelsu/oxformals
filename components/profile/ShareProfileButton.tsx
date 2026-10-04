@@ -1,44 +1,44 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/components/auth/useAuth";
+import { SharePopup, shareViaSheet } from "@/components/share/SharePopup";
 
-/** Round share icon: the phone's share sheet, or copies the link on desktop. */
+/** Round share icon: opens the share popup for this profile's link. */
 export function ShareProfileButton({ userId, name }: { userId: string; name: string }) {
-  const [copied, setCopied] = useState(false);
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const first = name.split(" ")[0] || name;
+  const text = user?.id === userId ? "Find me on Oxformals!" : `${first} is on Oxformals`;
   return (
-    <button
-      type="button"
-      aria-label={copied ? "Link copied" : `Share ${name}'s profile`}
-      title={copied ? "Link copied" : "Share profile"}
-      onClick={async () => {
-        const url = `${window.location.origin}/profile/${userId}`;
-        if (navigator.share) {
-          try {
-            await navigator.share({ title: `${name} on Oxformals`, url });
-            return;
-          } catch {
-            // Cancelled or unsupported: fall back to copying.
-          }
+    <>
+      <button
+        type="button"
+        aria-label={`Share ${name}'s profile`}
+        title="Share profile"
+        aria-haspopup="dialog"
+        onClick={() =>
+          void shareViaSheet({ text, url: `${window.location.origin}/profile/${userId}` }).then(
+            (shared) => {
+              if (!shared) setOpen(true);
+            },
+          )
         }
-        try {
-          await navigator.clipboard.writeText(url);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
-        } catch {
-          // Nothing else to do.
-        }
-      }}
-      className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
-    >
-      {copied ? (
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M5 12l5 5 9-10" />
-        </svg>
-      ) : (
+        className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
+      >
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7" />
         </svg>
-      )}
-    </button>
+      </button>
+      {open ? (
+        <SharePopup
+          open
+          onClose={() => setOpen(false)}
+          title="Share profile"
+          url={`${window.location.origin}/profile/${userId}`}
+          text={text}
+        />
+      ) : null}
+    </>
   );
 }

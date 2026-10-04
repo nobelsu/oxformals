@@ -154,10 +154,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       document.documentElement.removeAttribute("data-ui-font");
       return;
     }
-    document.documentElement.setAttribute(
-      "data-ui-font",
-      convexUserDoc.uiFont ?? DEFAULT_UI_FONT,
-    );
+    // The old per-account themes are retired; everyone gets the default palette.
+    document.documentElement.setAttribute("data-ui-font", DEFAULT_UI_FONT);
   }, [jwtAuthenticated, convexUserDoc]);
 
   const requestCode = useCallback(

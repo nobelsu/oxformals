@@ -6,7 +6,9 @@ import { Modal } from "@/components/ui/Modal";
 import {
   COLLEGE_BADGES,
   MILESTONE_BADGES,
+  SPECIAL_BADGES,
   TOTAL_BADGE_COUNT,
+  earnableCount,
   badgeById,
   type BadgeDefinition,
   type BadgeMetric,
@@ -111,8 +113,10 @@ function Detail({
       status = `${left} more ${unit}${left === 1 ? "" : "s"} to go`;
       ratio = Math.min(1, have / m.threshold);
     }
-  } else {
+  } else if (def.family === "college") {
     status = `Attend a formal at ${def.college}`;
+  } else {
+    status = def.description;
   }
 
   return (
@@ -145,6 +149,8 @@ export function BadgeCaseModal({ open, onClose, earned, progress }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const earnedMap = new Map((earned ?? []).map((e) => [e.badgeId, e.earnedAt]));
   const selected = selectedId ? badgeById(selectedId) : undefined;
+  // Special badges are only shown to the people who hold them.
+  const specialHeld = SPECIAL_BADGES.filter((b) => earnedMap.has(b.id));
   const collegeEarned = COLLEGE_BADGES.filter((b) => earnedMap.has(b.id)).length;
   const toggle = (id: string) =>
     setSelectedId((cur) => (cur === id ? null : id));
@@ -158,10 +164,35 @@ export function BadgeCaseModal({ open, onClose, earned, progress }: Props) {
       panelClassName="!max-w-2xl"
     >
       <p className="-mt-1 mb-4 text-[0.8rem] text-[var(--ink-muted)]">
-        {earnedMap.size} of {TOTAL_BADGE_COUNT} earned
+        {earnableCount(earned ?? [])} of {TOTAL_BADGE_COUNT} earned
       </p>
 
       <section className="flex flex-col gap-5">
+        {specialHeld.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-[0.7rem] font-bold uppercase tracking-[0.08em] text-[var(--ink-muted)]">
+              Special
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {specialHeld.map((def) => (
+                <button
+                  key={def.id}
+                  type="button"
+                  onClick={() => toggle(def.id)}
+                  aria-pressed={selectedId === def.id}
+                  className={`flex w-24 cursor-pointer flex-col items-center gap-1.5 rounded-xl py-1 transition-colors ${
+                    selectedId === def.id ? "bg-[var(--bg)]" : ""
+                  }`}
+                >
+                  <BadgeArt def={def} earned size={56} />
+                  <span className="text-center text-[0.75rem] leading-tight text-[var(--ink)]">
+                    {def.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <Ladder
           metric="formals"
           count={progress?.formals}

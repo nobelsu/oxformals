@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { MinusIcon, PlusIcon } from "@/components/ui/icons";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -66,7 +67,7 @@ export function JoinRequestFlow({ target, onClose, onNavigateToRequests }: Props
   }
 
   const goToRequests =
-    onNavigateToRequests ?? (() => router.push("/?tab=requests&openList=1"));
+    onNavigateToRequests ?? (() => router.push("/?openList=1"));
 
   const myActiveListings = useMemo(
     () =>
@@ -391,7 +392,7 @@ function JoinRequestModal({
                 disabled={guests === 0}
                 onClick={() => changePeople(() => setGuests((g) => Math.max(0, g - 1)))}
               >
-                −
+                <MinusIcon />
               </StepButton>
               <span className="w-5 text-center font-bold tabular-nums">{guests}</span>
               <StepButton
@@ -399,7 +400,7 @@ function JoinRequestModal({
                 disabled={extra >= maxExtra}
                 onClick={() => changePeople(() => setGuests((g) => g + 1))}
               >
-                +
+                <PlusIcon />
               </StepButton>
             </span>
           </div>
@@ -411,7 +412,7 @@ function JoinRequestModal({
                 disabled={newPeople === 0}
                 onClick={() => changePeople(() => setNewPeople((n) => Math.max(0, n - 1)))}
               >
-                −
+                <MinusIcon />
               </StepButton>
               <span className="w-5 text-center font-bold tabular-nums">{newPeople}</span>
               <StepButton
@@ -419,7 +420,7 @@ function JoinRequestModal({
                 disabled={extra >= maxExtra}
                 onClick={() => changePeople(() => setNewPeople((n) => n + 1))}
               >
-                +
+                <PlusIcon />
               </StepButton>
             </span>
           </div>

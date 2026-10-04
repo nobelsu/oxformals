@@ -564,7 +564,7 @@ export function accountDeletionEmail({ kind, college, when }: AccountDeletionNot
         heading: "A seat is free at your formal",
         body: "A guest left Oxformals, so their seat is open again.",
         ticket,
-        cta: { href: `${siteUrl()}/?tab=requests&section=listings`, label: "See your formal" },
+        cta: { href: `${siteUrl()}/`, label: "See your formal" },
       };
 }
 
@@ -681,7 +681,7 @@ export function formalNoticeEmail(n: FormalNoticeEmailInput): EmailContent {
       ? { cta: { href: home, label: "I'm in" }, secondary: { href: home, label: "Not me" } }
       : n.cta === "browse"
         ? { cta: { href: `${siteUrl()}/?tab=browse`, label: "Find another formal" } }
-        : { cta: { href: `${siteUrl()}/?tab=requests&section=listings`, label: "See your formals" } };
+        : { cta: { href: `${siteUrl()}/`, label: "See your formals" } };
   return {
     eyebrow:
       n.eyebrow ?? (n.cta === "invites" ? "Group invite" : n.cta === "browse" ? "Change of plans" : "Your formal"),

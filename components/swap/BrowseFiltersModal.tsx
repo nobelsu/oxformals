@@ -1,6 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
+import { CloseIcon, MinusIcon, PlusIcon } from "@/components/ui/icons";
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { useIsClient } from "@/lib/hooks/useIsClient";
 import {
@@ -8,7 +9,6 @@ import {
   BROWSE_DATE_CALENDAR_INSTRUCTIONS,
 } from "./BrowseDateCalendar";
 import { formalTypeInfo } from "./FormalTypeTag";
-import { ROLE_OPTIONS } from "@/lib/data/roles";
 import {
   EMPTY_BROWSE_FILTERS,
   FORMAL_TYPES,
@@ -172,13 +172,6 @@ function FiltersSheet({
           >
             Filters
           </h2>
-          <button
-            type="button"
-            onClick={clear}
-            className="cursor-pointer text-[13px] text-[var(--ink-muted)] underline underline-offset-2 hover:text-[var(--ink)]"
-          >
-            Clear
-          </button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3">
@@ -223,7 +216,7 @@ function FiltersSheet({
                 >
                   {c}
                   <span aria-hidden className="ml-1 opacity-60">
-                    ×
+                    <CloseIcon />
                   </span>
                 </Chip>
               ))}
@@ -294,7 +287,7 @@ function FiltersSheet({
                 onClick={() => set({ guests: Math.max(0, draft.guests - 1) })}
                 className={stepBtn}
               >
-                &minus;
+                <MinusIcon />
               </button>
               <b className="min-w-[4.5rem] text-center text-sm" aria-live="polite">
                 {guestsLabel(draft.guests)}
@@ -306,7 +299,7 @@ function FiltersSheet({
                 onClick={() => set({ guests: Math.min(maxGuests, draft.guests + 1) })}
                 className={stepBtn}
               >
-                +
+                <PlusIcon />
               </button>
             </div>
           </Section>
@@ -320,20 +313,6 @@ function FiltersSheet({
                   onClick={() => set({ types: toggle(draft.types, t) })}
                 >
                   {formalTypeInfo(t).label}
-                </Chip>
-              ))}
-            </div>
-          </Section>
-
-          <Section title="Role">
-            <div className="flex flex-wrap gap-[7px]">
-              {ROLE_OPTIONS.map((r) => (
-                <Chip
-                  key={r}
-                  on={draft.role === r}
-                  onClick={() => set({ role: draft.role === r ? null : r })}
-                >
-                  {r}
                 </Chip>
               ))}
             </div>

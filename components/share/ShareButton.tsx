@@ -1,11 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { SharePopup, shareViaSheet } from "./SharePopup";
 import { shareCard, type ShareKind } from "@/lib/share/shareCard";
 
 type Props = {
   kind: ShareKind;
   id: string;
+  /**
+   * Page to link to (e.g. `/college/keble`). Listings default to their own
+   * deep link. With a link the button opens the share popup; without one it
+   * goes straight to the story image.
+   */
+  path?: string;
+  /** Sentence sent along with the link. */
+  text?: string;
   /** "icon" for action rows; "pill" for a labelled button. */
   variant?: "icon" | "pill";
   className?: string;
@@ -30,9 +39,18 @@ function ShareIcon() {
   );
 }
 
-/** Share an Instagram story card for a listing or review. */
-export function ShareButton({ kind, id, variant = "icon", className = "" }: Props) {
+/** Share a listing, review or badge: by link, or as an Instagram story card. */
+export function ShareButton({
+  kind,
+  id,
+  path,
+  text = "Join me on Oxformals!",
+  variant = "icon",
+  className = "",
+}: Props) {
   const [state, setState] = useState<"idle" | "busy" | "error">("idle");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const linkPath = path ?? (kind === "listing" ? `/?tab=browse&listing=${encodeURIComponent(id)}` : null);
 
   async function onShare() {
     if (state === "busy") return;
@@ -44,27 +62,52 @@ export function ShareButton({ kind, id, variant = "icon", className = "" }: Prop
     }
   }
 
-  const label =
-    state === "error" ? "Couldn't make the image. Try again" : "Share to your story";
+  const label = state === "error" ? "Couldn't make the image. Try again" : "Share";
+  const onPress = () => {
+    if (!linkPath) {
+      void onShare();
+      return;
+    }
+    void shareViaSheet({ text, url: window.location.origin + linkPath }).then((shared) => {
+      if (!shared) setMenuOpen(true);
+    });
+  };
+
+  const menu =
+    linkPath && menuOpen ? (
+      <SharePopup
+        open
+        onClose={() => setMenuOpen(false)}
+        url={window.location.origin + linkPath}
+        text={text}
+        onStoryImage={() => shareCard(kind, id)}
+      />
+    ) : null;
 
   if (variant === "pill") {
     return (
+      <>
       <button
         type="button"
-        onClick={() => void onShare()}
+        onClick={onPress}
+        aria-haspopup={linkPath ? "dialog" : undefined}
         disabled={state === "busy"}
         className={`inline-flex cursor-pointer items-center gap-2 rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-60 ${className}`}
       >
         <ShareIcon />
         {state === "busy" ? "Making image…" : state === "error" ? "Try again" : "Share"}
       </button>
+      {menu}
+      </>
     );
   }
 
   return (
+    <>
     <button
       type="button"
-      onClick={() => void onShare()}
+      onClick={onPress}
+      aria-haspopup={linkPath ? "dialog" : undefined}
       disabled={state === "busy"}
       aria-label={label}
       title={label}
@@ -76,5 +119,7 @@ export function ShareButton({ kind, id, variant = "icon", className = "" }: Prop
     >
       <ShareIcon />
     </button>
+    {menu}
+    </>
   );
 }

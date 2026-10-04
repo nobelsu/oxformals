@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { CloseIcon } from "@/components/ui/icons";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -207,7 +208,7 @@ export function CollegeReviewEditor({ review, onSaved, onCancel }: Props) {
                 aria-label={`Remove photo ${index + 1}`}
                 className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] text-xs leading-none disabled:opacity-50"
               >
-                ×
+                <CloseIcon />
               </button>
             </div>
           ))}

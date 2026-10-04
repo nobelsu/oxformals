@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { shareOrCopy } from "@/lib/invites/share";
+import { SharePopup, shareViaSheet } from "@/components/share/SharePopup";
+
+const SEAT_TEXT = "A seat for you on Oxformals";
 
 /** After sending: one link per new person, to share. */
 export function SeatLinksModal({ tokens, onClose }: { tokens: string[]; onClose: () => void }) {
-  const [copied, setCopied] = useState<string | null>(null);
+  const [sharing, setSharing] = useState<string | null>(null);
   const origin = typeof window === "undefined" ? "" : window.location.origin;
 
   return (
+    <>
     <Modal
       open={tokens.length > 0}
       onClose={onClose}
@@ -30,13 +33,14 @@ export function SeatLinksModal({ tokens, onClose }: { tokens: string[]; onClose:
               </span>
               <button
                 type="button"
-                onClick={async () => {
-                  const result = await shareOrCopy(url, "A seat for you on Oxformals");
-                  if (result === "copied") setCopied(token);
-                }}
+                onClick={() =>
+                  void shareViaSheet({ text: SEAT_TEXT, url }).then((shared) => {
+                    if (!shared) setSharing(url);
+                  })
+                }
                 className="shrink-0 cursor-pointer rounded-full border-2 border-[var(--ink)] bg-[var(--paper)] px-3 py-1 text-xs font-bold text-[var(--ink)]"
               >
-                {copied === token ? "Copied" : "Share"}
+                Share
               </button>
             </li>
           );
@@ -53,5 +57,15 @@ export function SeatLinksModal({ tokens, onClose }: { tokens: string[]; onClose:
         </button>
       </div>
     </Modal>
+      {sharing ? (
+        <SharePopup
+          open
+          onClose={() => setSharing(null)}
+          title="Send their link"
+          url={sharing}
+          text={SEAT_TEXT}
+        />
+      ) : null}
+    </>
   );
 }

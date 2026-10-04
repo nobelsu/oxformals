@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useOnChange } from "@/lib/hooks/useOnChange";
 import Link from "next/link";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -14,10 +15,12 @@ import {
   formatShortDate,
 } from "@/lib/data/format";
 import { collegeToSlug } from "@/lib/data/collegeSlug";
+import { listingShareText } from "@/lib/share/format";
 import type { Listing } from "@/lib/data/types";
 import type { User } from "@/lib/auth/types";
 import type { FeedItem } from "@/lib/data/feed";
 import { FeedComments } from "./FeedComments";
+import { FeedListingStatus } from "./FeedListingStatus";
 import { FeedImageLightbox } from "./FeedImageLightbox";
 
 type Props = {
@@ -135,12 +138,15 @@ export function FeedRow({ item, onOpenListing }: Props) {
   const [favourited, setFavourited] = useState(item.onWishlist);
 
   // Re-sync once the reactive query catches up with each optimistic toggle.
-  useEffect(() => {
-    setLiked(item.viewerLiked);
-    setLikeCount(item.likeCount);
-    setBookmarked(item.viewerBookmarked);
-    setFavourited(item.onWishlist);
-  }, [item.viewerLiked, item.likeCount, item.viewerBookmarked, item.onWishlist]);
+  useOnChange(
+    `${item.viewerLiked}|${item.likeCount}|${item.viewerBookmarked}|${item.onWishlist}`,
+    () => {
+      setLiked(item.viewerLiked);
+      setLikeCount(item.likeCount);
+      setBookmarked(item.viewerBookmarked);
+      setFavourited(item.onWishlist);
+    },
+  );
 
   const college = item.kind === "listing" ? item.listing.college : item.college;
 
@@ -224,6 +230,10 @@ export function FeedRow({ item, onOpenListing }: Props) {
             owner={item.actor}
             card
             onPress={() => onOpenListing(item.listing, item.actor)}
+          />
+          <FeedListingStatus
+            listing={item.listing}
+            onReview={() => onOpenListing(item.listing, item.actor)}
           />
         </div>
       ) : item.kind === "review" ? (
@@ -314,7 +324,20 @@ export function FeedRow({ item, onOpenListing }: Props) {
         </div>
         <div className="flex items-center gap-4">
           {shareTarget ? (
-            <ShareButton kind={shareTarget.kind} id={shareTarget.id} />
+            <ShareButton
+              kind={shareTarget.kind}
+              id={shareTarget.id}
+              path={
+                shareTarget.kind === "review"
+                  ? `/college/${collegeToSlug(college)}`
+                  : undefined
+              }
+              text={
+                item.kind === "listing"
+                  ? listingShareText(item.listing)
+                  : `My verdict on ${college} formal is in`
+              }
+            />
           ) : null}
           <button
             type="button"

@@ -107,15 +107,17 @@ test("'went to' items only reach people who follow them", async () => {
   expect(attended.flatMap((i) => (i.kind === "attended" ? i.actors.map((a) => a._id) : []))).toEqual([s.friend]);
 });
 
-test("For you narrows to your wishlist colleges once you have some", async () => {
+test("For you shows everything, wishlist colleges and people you follow first", async () => {
   const t = convexTest(schema, modules);
   const s = await seed(t);
   await t.run((ctx) => ctx.db.patch(s.me, { wishlistColleges: ["Magdalen"] }));
   const feed = await as(t, s.me).query(api.feed.getCampusFeed, {});
   expect(feed.wishlistEmpty).toBe(false);
-  // Magdalen (wishlist) + the friend's Keble listing (people you follow).
-  expect(feed.items.map((i) => (i.kind === "listing" ? i.listing.college : i.kind)).sort()).toEqual([
-    "Keble",
-    "Magdalen",
-  ]);
+  const label = (i: (typeof feed.items)[number]) =>
+    i.kind === "listing" ? `${i.listing.college}:${i.actor._id}` : i.kind;
+  expect(feed.items).toHaveLength(4);
+  // Magdalen (wishlist) + the friend's Keble listing (people you follow) lead.
+  expect(feed.items.slice(0, 2).map(label).sort()).toEqual(
+    [`Keble:${s.friend}`, `Magdalen:${s.stranger}`].sort(),
+  );
 });

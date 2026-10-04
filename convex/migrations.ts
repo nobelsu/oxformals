@@ -3,7 +3,11 @@ import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { collectBadgeInputs } from "./badges";
-import { COLLEGE_BADGES, MILESTONE_BADGES } from "../lib/data/badges";
+import {
+  COLLEGE_BADGES,
+  FOUNDING_BADGE_ID,
+  MILESTONE_BADGES,
+} from "../lib/data/badges";
 
 /**
  * One-off backfill: stamp every existing listing that predates the
@@ -109,6 +113,57 @@ export const backfillUserBadges = internalMutation({
           numItems: pageSize,
           cursor: page.continueCursor,
         },
+      });
+    }
+    return { awarded, scanned: page.page.length, done };
+  },
+});
+
+/**
+ * One-off: give the Founding Guest badge to everyone who signed up before
+ * `signedUpBefore` (ms since epoch: the end of the first term). Skips deleted
+ * accounts and anyone who already holds it, so re-running awards nothing new.
+ * Stamped with the run time, so holders get the celebration on their next
+ * visit. Batched like backfillUserBadges.
+ *
+ * Run with: npx convex run migrations:awardFoundingBadge '{"signedUpBefore":<ms>,"paginationOpts":{"numItems":100,"cursor":null}}'
+ */
+export const awardFoundingBadge = internalMutation({
+  args: { signedUpBefore: v.number(), paginationOpts: paginationOptsValidator },
+  returns: v.object({
+    awarded: v.number(),
+    scanned: v.number(),
+    done: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const pageSize = Math.min(args.paginationOpts.numItems, 100);
+    const page = await ctx.db
+      .query("users")
+      .paginate({ ...args.paginationOpts, numItems: pageSize });
+    const now = Date.now();
+    let awarded = 0;
+    for (const user of page.page) {
+      if (user._creationTime >= args.signedUpBefore) continue;
+      if (user.deletedAt !== undefined) continue;
+      const held = await ctx.db
+        .query("userBadges")
+        .withIndex("by_userId_and_badgeId", (q) =>
+          q.eq("userId", user._id).eq("badgeId", FOUNDING_BADGE_ID),
+        )
+        .first();
+      if (held) continue;
+      await ctx.db.insert("userBadges", {
+        userId: user._id,
+        badgeId: FOUNDING_BADGE_ID,
+        earnedAt: now,
+      });
+      awarded += 1;
+    }
+    const done = page.isDone;
+    if (!done) {
+      await ctx.scheduler.runAfter(0, internal.migrations.awardFoundingBadge, {
+        signedUpBefore: args.signedUpBefore,
+        paginationOpts: { numItems: pageSize, cursor: page.continueCursor },
       });
     }
     return { awarded, scanned: page.page.length, done };

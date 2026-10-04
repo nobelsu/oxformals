@@ -1,12 +1,12 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { ArrowLeftIcon } from "@/components/ui/icons";
+import { useOnChange } from "@/lib/hooks/useOnChange";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState } from "react";
 import { UnreadBadge } from "@/components/chat/UnreadBadge";
-import { DeleteAccountModal } from "@/components/DeleteAccountModal";
-import { SettingsModal } from "@/components/SettingsModal";
 import { Avatar } from "@/components/ui/Avatar";
 import { Drawer } from "@/components/ui/Drawer";
 import { CreditsChip } from "@/components/credits/CreditsChip";
@@ -106,15 +106,10 @@ const TABS = [
  *  chips) rather than the visible tab bar, but still needing a mobile title. */
 const OFF_BAR_LABELS: Record<string, string> = {
   mine: "Me",
-  requests: "Your formals",
+  requests: "Your listing",
 };
 
 export function Nav() {
-  const pathname = usePathname();
-  if (pathname?.startsWith("/letter")) {
-    return null;
-  }
-
   return (
     <Suspense fallback={<NavShell />}>
       <NavInner />
@@ -133,8 +128,6 @@ function NavShell() {
 function NavInner() {
   const { status, isAuthenticated, user, signOut } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const { navRef, inverted, hidden } = useNavTheme();
   const [landingScrolled, setLandingScrolled] = useState(false);
   // The feed's own For you / Following tabs have scrolled under the nav.
@@ -177,21 +170,15 @@ function NavInner() {
       isAuthenticated ? {} : "skip",
     ) ?? 0;
 
-  useEffect(() => {
-    setDrawerOpen(false);
-  }, [pathname, searchParams]);
+  // Navigating anywhere closes the drawer.
+  useOnChange(`${pathname}?${searchParams.toString()}`, () => setDrawerOpen(false));
 
-  // Emails' "Email settings" link lands on ?settings=1, which opens Settings
-  // once signed in; closing it drops the param.
+  // Older emails' "Email settings" link lands on ?settings=1; send it to the
+  // settings page.
   const settingsFromLink = isAuthenticated && searchParams.get("settings") === "1";
-  const closeSettings = () => {
-    setSettingsOpen(false);
-    if (!settingsFromLink) return;
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("settings");
-    const qs = params.toString();
-    window.history.replaceState(null, "", `${pathname ?? "/"}${qs ? `?${qs}` : ""}`);
-  };
+  useEffect(() => {
+    if (settingsFromLink) router.replace("/settings?section=notifications");
+  }, [settingsFromLink, router]);
 
   // Landing page and signed-in app alike collapse once you scroll.
   useEffect(() => {
@@ -285,7 +272,7 @@ function NavInner() {
                 href="/"
                 className="inline-flex items-center gap-1.5 underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
               >
-                <span aria-hidden>←</span>
+                <ArrowLeftIcon />
                 Return
               </Link>
             </div>
@@ -406,7 +393,7 @@ function NavInner() {
               href="/"
               className="inline-flex items-center gap-1.5 underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
             >
-              <span aria-hidden>←</span>
+              <ArrowLeftIcon />
               Return
             </Link>
           </div>
@@ -438,7 +425,7 @@ function NavInner() {
         <div className="flex items-center justify-start">
           <Link
             href="/"
-            className={`hidden font-display uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)] transition-[font-size] duration-300 sm:block ${collapsed ? "text-base" : "text-xl"}`}
+            className="hidden font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)] sm:block"
           >
             Oxformals
           </Link>
@@ -465,11 +452,26 @@ function NavInner() {
           </button>
         </div>
 
-        <div className="flex min-w-0 items-center justify-center sm:col-start-2">
-          {feedTabsInNav ? (
+        {/* Both layers share one cell and cross-fade, like the landing nav. */}
+        <div className="grid min-w-0 items-center justify-items-center sm:col-start-2">
+          <div
+            inert={!feedTabsInNav}
+            className={`col-start-1 row-start-1 transition-all duration-300 ease-out ${
+              feedTabsInNav
+                ? "translate-y-0 opacity-100"
+                : "pointer-events-none translate-y-1 opacity-0"
+            }`}
+          >
             <FeedScopeTabs following={feedFollowing} />
-          ) : (
-          <>
+          </div>
+          <div
+            inert={feedTabsInNav}
+            className={`col-start-1 row-start-1 flex min-w-0 max-w-full items-center justify-center transition-all duration-300 ease-out ${
+              feedTabsInNav
+                ? "pointer-events-none -translate-y-1 opacity-0"
+                : "translate-y-0 opacity-100"
+            }`}
+          >
           <p className="min-w-0 truncate text-center font-display text-lg uppercase tracking-[0.2em] text-[var(--nav-ink)] sm:hidden">
             {isCollegeDetail
               ? "Colleges"
@@ -492,8 +494,7 @@ function NavInner() {
               />
             ))}
           </ul>
-          </>
-          )}
+          </div>
         </div>
 
         <div className="flex min-w-0 items-center justify-end gap-2 text-sm whitespace-nowrap sm:gap-3">
@@ -508,7 +509,6 @@ function NavInner() {
               name={user.name}
               avatar={user.avatar}
               onProfile={activeTab === "mine"}
-              onOpenSettings={() => setSettingsOpen(true)}
               onSignOut={() => {
                 void signOut().then(() => router.push("/"));
               }}
@@ -568,22 +568,12 @@ function NavInner() {
                 </span>
               </Link>
               <Link
-                href="/?tab=requests&section=overview"
+                href="/settings"
                 onClick={() => setDrawerOpen(false)}
                 className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
               >
-                Your formals
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  setDrawerOpen(false);
-                  setSettingsOpen(true);
-                }}
-                className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-              >
                 Settings
-              </button>
+              </Link>
               <button
                 type="button"
                 onClick={() => {
@@ -607,19 +597,6 @@ function NavInner() {
         </div>
       </Drawer>
 
-      {isAuthenticated && user ? (
-        <>
-          <SettingsModal
-            open={settingsOpen || settingsFromLink}
-            onClose={closeSettings}
-            onDeleteAccount={() => setDeleteAccountOpen(true)}
-          />
-          <DeleteAccountModal
-            open={deleteAccountOpen}
-            onClose={() => setDeleteAccountOpen(false)}
-          />
-        </>
-      ) : null}
     </nav>
   );
 }
@@ -630,13 +607,11 @@ function AccountMenu({
   name,
   avatar,
   onProfile,
-  onOpenSettings,
   onSignOut,
 }: {
   name: string;
   avatar?: AvatarSource;
   onProfile: boolean;
-  onOpenSettings: () => void;
   onSignOut: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -717,24 +692,13 @@ function AccountMenu({
             Profile
           </Link>
           <Link
-            href="/?tab=requests&section=overview"
+            href="/settings"
             role="menuitem"
             onClick={() => setOpen(false)}
             className={itemClass}
           >
-            Your formals
-          </Link>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onOpenSettings();
-            }}
-            className={itemClass}
-          >
             Settings
-          </button>
+          </Link>
           <div aria-hidden className="mx-2 my-1 border-t border-[var(--ink)]/15" />
           <button
             type="button"
@@ -780,20 +744,21 @@ function NavTabLink({
       href={href}
       data-onboarding={onboardingId}
       onClick={onNavigate}
-      className={`inline-flex items-center gap-2 font-display uppercase tracking-[0.2em] whitespace-nowrap pb-0.5 transition-opacity ${
+      className={`group/tab inline-flex items-center gap-2 font-display uppercase tracking-[0.2em] whitespace-nowrap pb-0.5 transition-colors duration-300 ${
         isActive
           ? "text-[var(--nav-ink)]"
           : "text-[var(--nav-ink-muted)] hover:text-[var(--nav-ink)]"
       } ${className}`}
     >
-      <span
-        className={
-          isActive
-            ? "underline underline-offset-[8px] decoration-[2.5px]"
-            : undefined
-        }
-      >
+      {/* The underline draws in from the left on hover and stays for the active tab. */}
+      <span className="relative pb-[6px]">
         {tab.label}
+        <span
+          aria-hidden
+          className={`absolute inset-x-0 bottom-0 h-[2.5px] origin-left rounded-full bg-current transition-transform duration-300 ease-out motion-reduce:transition-none ${
+            isActive ? "scale-x-100" : "scale-x-0 group-hover/tab:scale-x-100"
+          }`}
+        />
       </span>
       {showUnread ? (
         <UnreadBadge count={totalUnread} className="translate-y-px" />

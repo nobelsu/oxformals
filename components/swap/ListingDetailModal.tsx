@@ -2,6 +2,7 @@
 
 import { formatYearRole } from "@/lib/data/roles";
 import Link from "next/link";
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { BioText } from "@/components/profile/BioText";
@@ -25,6 +26,9 @@ import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
 import { FormalTypeTag } from "@/components/swap/FormalTypeTag";
 import { useAuth } from "@/components/auth/useAuth";
+import { useData } from "@/components/data/useData";
+import { IncomingRequests } from "@/components/swap/IncomingRequests";
+import { pendingIncomingRequestsForListing } from "@/lib/data/requestFilters";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
   formatListingMetaLine,
@@ -37,6 +41,7 @@ import {
   listingIsPast,
 } from "@/lib/data/collegeReviewEligibility";
 import { useNowMs } from "@/lib/hooks/useNowMs";
+import { listingShareText } from "@/lib/share/format";
 
 type Props = {
   open: boolean;
@@ -61,6 +66,12 @@ export function ListingDetailModal({
 }: Props) {
   const { user, isAuthenticated } = useAuth();
   const nowMs = useNowMs();
+  const { requests } = useData();
+  // Which tab the host picked, remembered per listing.
+  const [picked, setPicked] = useState<{
+    listingId: string;
+    tab: "details" | "requests";
+  } | null>(null);
 
   const reviewState = useQuery(
     api.collegeReviews.getListingReviewState,
@@ -91,6 +102,26 @@ export function ListingDetailModal({
     .join(" · ");
 
   const isPast = listingIsPast(listing.dateTime, nowMs);
+
+  // Hosts get their requests in the popup; it opens there when some are waiting.
+  const isHost = !!(isAuthenticated && user && user.id === listing.ownerUserId);
+  const pendingCount = isHost
+    ? pendingIncomingRequestsForListing(requests, user.id, listing.id).length
+    : 0;
+  const showTabs = isHost && !isPast;
+  const tab = !showTabs
+    ? "details"
+    : picked?.listingId === listing.id
+      ? picked.tab
+      : pendingCount > 0
+        ? "requests"
+        : "details";
+  const tabCls = (on: boolean) =>
+    `-mb-[1.5px] cursor-pointer border-b-[2.5px] py-2 text-sm transition-colors ${
+      on
+        ? "border-[var(--ink)] font-bold text-[var(--ink)]"
+        : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"
+    }`;
   const canConfirmAttendance = !!(
     isGuestMember &&
     reviewState?.canConfirmAttendance &&
@@ -133,6 +164,7 @@ export function ListingDetailModal({
             <ShareButton
               kind="listing"
               id={listing.id}
+              text={listingShareText(listing)}
               className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-[2px] border-[var(--ink)] hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
             />
           ) : null}
@@ -167,6 +199,36 @@ export function ListingDetailModal({
           ) : null}
         </header>
 
+        {showTabs ? (
+          <div className="flex shrink-0 items-center gap-5 border-b-[1.5px] border-[color-mix(in_srgb,var(--ink)_12%,transparent)]">
+            <button
+              type="button"
+              className={tabCls(tab === "details")}
+              onClick={() => setPicked({ listingId: listing.id, tab: "details" })}
+            >
+              Details
+            </button>
+            <button
+              type="button"
+              className={tabCls(tab === "requests")}
+              onClick={() => setPicked({ listingId: listing.id, tab: "requests" })}
+            >
+              Requests{pendingCount > 0 ? ` · ${pendingCount}` : ""}
+            </button>
+            <Link
+              href={`/requests/${listing.id}`}
+              onClick={onClose}
+              className="ml-auto py-2 text-sm text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
+            >
+              Manage
+            </Link>
+          </div>
+        ) : null}
+
+        {tab === "requests" ? (
+          <IncomingRequests listing={listing} />
+        ) : (
+          <>
         <div className="flex shrink-0 items-center gap-4">
           <Link href={`/profile/${owner.id}`} onClick={onClose}>
             <Avatar name={owner.name} size="xl" source={owner.avatar} />
@@ -294,6 +356,8 @@ export function ListingDetailModal({
             )
           ) : null}
         </div>
+          </>
+        )}
       </div>
     </Modal>
   );

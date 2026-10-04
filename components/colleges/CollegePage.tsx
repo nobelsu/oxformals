@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowLeftIcon } from "@/components/ui/icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
@@ -90,7 +91,7 @@ export function CollegePage({ college }: Props) {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       <div>
         <Link href="/?tab=colleges" className="text-sm text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]">
-          ← Colleges
+          <ArrowLeftIcon /> Colleges
         </Link>
 
         <div className="mt-3 overflow-hidden rounded-[22px] border-[2px] border-[var(--ink)] bg-[var(--paper)]">

@@ -20,7 +20,7 @@ import { FeedRow } from "./FeedRow";
 import { FeedHeader } from "./FeedHeader";
 import { PartyInvites } from "./PartyInvites";
 import { FeedSidebar, NextFormalCard, whenLabel, type NextFormal } from "./FeedSidebar";
-import { NeedsAttention } from "./NeedsAttention";
+import { YourFormalsCard } from "./YourFormalsCard";
 import { WeekFormals } from "./WeekFormals";
 import { BackToTop } from "@/components/ui/BackToTop";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -62,10 +62,8 @@ export function FeedTab() {
     };
   }, [user, listings, nowMs, getUser]);
 
-  const attentionCount =
-    hub.listingsNeedingRequests.length +
-    hub.listingsNeedingReview.length +
-    hub.listingsNeedingAttendance.length;
+  const openListing = (listing: Listing) =>
+    setOpen({ listing, owner: getUser(listing.ownerUserId) ?? null });
 
   const items: FeedItem[] | undefined = useMemo(() => {
     if (!raw) return undefined;
@@ -119,7 +117,8 @@ export function FeedTab() {
         <div className="flex justify-center">
           <InviteFriendsButton variant="ink" />
         </div>
-        <PeopleYouMayKnow limit={10} />
+        {/* Desktop already has this in the sidebar */}
+        <PeopleYouMayKnow limit={10} className="lg:hidden" />
       </div>
     ) : items.length === 0 ? (
       <EmptyState
@@ -172,14 +171,11 @@ export function FeedTab() {
 
           {user ? <PartyInvites /> : null}
 
-          {/* Phones: next formal (with what needs you) above the stream */}
-          {nextFormal ? (
-            <div className="lg:hidden">
-              <NextFormalCard nextFormal={nextFormal} attentionCount={attentionCount} />
-            </div>
-          ) : attentionCount > 0 ? (
-            <div className="lg:hidden">
-              <NeedsAttention hub={hub} />
+          {/* Phones: next formal and your formals above the stream */}
+          {user ? (
+            <div className="flex flex-col gap-3 empty:hidden lg:hidden">
+              {nextFormal ? <NextFormalCard nextFormal={nextFormal} /> : null}
+              <YourFormalsCard hub={hub} onOpen={openListing} collapsible />
             </div>
           ) : null}
 
@@ -209,7 +205,7 @@ export function FeedTab() {
 
         {user ? (
           <aside className="hidden lg:sticky lg:top-[calc(var(--app-nav-height)+1rem)] lg:block">
-            <FeedSidebar hub={hub} nextFormal={nextFormal} />
+            <FeedSidebar hub={hub} nextFormal={nextFormal} onOpenListing={openListing} />
           </aside>
         ) : null}
       </div>

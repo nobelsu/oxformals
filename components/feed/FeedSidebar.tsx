@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { formatListingTime } from "@/lib/data/format";
 import type { useListingsHubData } from "@/components/swap/listings-hub/useListingsHubData";
 import type { Listing } from "@/lib/data/types";
 import { PeopleYouMayKnow } from "@/components/invites/PeopleYouMayKnow";
-import { NeedsAttention } from "./NeedsAttention";
+import { YourFormalsCard } from "./YourFormalsCard";
 
 type Hub = ReturnType<typeof useListingsHubData>;
 
@@ -43,56 +42,41 @@ const ClockIcon = () => (
   </svg>
 );
 
-/**
- * "Tomorrow · WORCESTER". On phones it also carries a dot with how many
- * things need you, linking to Your formals.
- */
-export function NextFormalCard({
-  nextFormal,
-  attentionCount = 0,
-}: {
-  nextFormal: NextFormal;
-  attentionCount?: number;
-}) {
+/** "Tomorrow · WORCESTER": your next formal; opens its popup. */
+export function NextFormalCard({ nextFormal }: { nextFormal: NextFormal }) {
   return (
-    <div className={`${CARD} flex items-center gap-3 p-4`}>
-      <button type="button" onClick={nextFormal.onView} className="min-w-0 flex-1 cursor-pointer text-left">
-        <span className="inline-flex items-center gap-1.5 text-[0.75rem] font-bold text-[var(--accent)]">
-          <ClockIcon />
-          {nextFormal.whenLabel} · {formatListingTime(nextFormal.listing.dateTime)}
-        </span>
-        <span className="mt-1 block truncate font-display text-[1.7rem] uppercase leading-none tracking-wide">
-          {nextFormal.listing.college}
-        </span>
-      </button>
-      {attentionCount > 0 ? (
-        <Link
-          href="/?tab=requests&section=overview"
-          aria-label={`${attentionCount} thing${attentionCount === 1 ? "" : "s"} need you`}
-          className="flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-sm font-bold hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
-        >
-          <span className="h-2 w-2 rounded-full bg-[var(--accent)]" />
-          {attentionCount}
-        </Link>
-      ) : null}
-    </div>
+    <button
+      type="button"
+      onClick={nextFormal.onView}
+      className={`${CARD} block w-full cursor-pointer p-4 text-left`}
+    >
+      <span className="inline-flex items-center gap-1.5 text-[0.75rem] font-bold text-[var(--accent)]">
+        <ClockIcon />
+        {nextFormal.whenLabel} · {formatListingTime(nextFormal.listing.dateTime)}
+      </span>
+      <span className="mt-1 block truncate font-display text-[1.7rem] uppercase leading-none tracking-wide">
+        {nextFormal.listing.college}
+      </span>
+    </button>
   );
 }
 
 /**
- * The feed's desktop sidebar: your next formal and what needs you.
+ * The feed's desktop sidebar: your next formal, your formals and people to follow.
  */
 export function FeedSidebar({
   hub,
   nextFormal,
+  onOpenListing,
 }: {
   hub: Hub;
   nextFormal: NextFormal | null;
+  onOpenListing: (listing: Listing) => void;
 }) {
   return (
     <div className="flex flex-col gap-3">
       {nextFormal ? <NextFormalCard nextFormal={nextFormal} /> : null}
-      {hub.hasNeedsAttention ? <NeedsAttention hub={hub} /> : null}
+      <YourFormalsCard hub={hub} onOpen={onOpenListing} />
       <PeopleYouMayKnow />
     </div>
   );

@@ -60,6 +60,13 @@ const ICON_PATHS: Record<BadgeIconId, ReactNode> = {
       <path d="M3 9.5 12 4l9 5.5M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18" />
     </g>
   ),
+  rosette: (
+    <g {...STROKE}>
+      <circle cx="12" cy="9" r="5.5" />
+      <path d="M12 6.8l.8 1.6 1.7.2-1.2 1.2.3 1.7-1.6-.8-1.6.8.3-1.7-1.2-1.2 1.7-.2z" />
+      <path d="M8.6 13.6 7 21l5-2.6 5 2.6-1.6-7.4" />
+    </g>
+  ),
 };
 
 export function BadgeIcon({
@@ -76,20 +83,27 @@ export function BadgeIcon({
   );
 }
 
-/** Milestone medal: rose disc with an ink outline and offset shadow when earned. */
+/**
+ * Milestone medal: rose disc with an ink outline and offset shadow when earned.
+ * Special badges invert it: an ink disc with a rose shadow.
+ */
 export function Medal({
   icon,
   earned,
   size = 56,
+  special = false,
 }: {
   icon: BadgeIconId;
   earned: boolean;
   size?: number;
+  special?: boolean;
 }) {
   return (
     <span
       className={`flex shrink-0 items-center justify-center rounded-full border-[2px] ${
-        earned
+        earned && special
+          ? "border-[var(--ink)] bg-[var(--ink)] text-[var(--accent-wash)] shadow-[3px_3px_0_var(--accent)]"
+          : earned
           ? "border-[var(--ink)] bg-[var(--accent-wash)] text-[var(--ink)] shadow-[3px_3px_0_var(--ink)]"
           : "border-[color-mix(in_srgb,var(--ink)_22%,transparent)] bg-[var(--paper)] text-[color-mix(in_srgb,var(--ink)_28%,transparent)]"
       }`}
@@ -164,6 +178,6 @@ export function BadgeArt({
   return def.family === "college" ? (
     <Stamp college={def.college} earned={earned} size={size} />
   ) : (
-    <Medal icon={def.icon} earned={earned} size={size} />
+    <Medal icon={def.icon} earned={earned} size={size} special={def.family === "special"} />
   );
 }

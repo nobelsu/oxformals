@@ -32,7 +32,7 @@ import {
 import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
 import type { GroupSize, Listing } from "@/lib/data/types";
-import { TOTAL_BADGE_COUNT, badgeById } from "@/lib/data/badges";
+import { TOTAL_BADGE_COUNT, badgeById, earnableCount } from "@/lib/data/badges";
 import type { ProfileActivityItem } from "@/lib/data/groupActivityByDay";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton, SkeletonRows } from "@/components/ui/Loading";
@@ -301,7 +301,7 @@ export function ProfileView({
           }
         : item,
   );
-  const earnedCount = earnedBadges?.length ?? 0;
+  const earnedCount = earnableCount(earnedBadges ?? []);
   // Most recent first; up to three sit next to the name.
   const recentBadges = [...(earnedBadges ?? [])]
     .sort((x, y) => y.earnedAt - x.earnedAt)
@@ -524,7 +524,7 @@ export function ProfileView({
             icon="calendar"
             title={isOwnProfile ? "No activity yet" : "Nothing here yet"}
             {...(isOwnProfile
-              ? { action: { label: "List a formal", href: "/?tab=requests&openList=1" } }
+              ? { action: { label: "List a formal", href: "/?openList=1" } }
               : {})}
           />
         ) : (

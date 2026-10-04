@@ -99,7 +99,7 @@ export function CreditsInfoModal({
 
       <div className="mt-6 flex justify-end">
         <Link
-          href="/?tab=requests&openList=1"
+          href="/?openList=1"
           onClick={onClose}
           className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]"
         >

@@ -164,6 +164,7 @@ export function BrowseTab({
     const listing = getListing(listingParam);
     if (!listing) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- consumes the ?listing= deep link alongside the URL rewrite below
     setDetailListing(listing);
     clearedListingParamRef.current = listingParam;
 
@@ -332,7 +333,7 @@ export function BrowseTab({
               <EmptyState
                 icon="ticket"
                 title="No open formals here"
-                action={{ label: "List yours", href: "/?tab=requests&openList=1" }}
+                action={{ label: "List yours", href: "/?tab=browse&openList=1" }}
               />
             )}
           </div>

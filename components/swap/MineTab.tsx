@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronLeftIcon } from "@/components/ui/icons";
+import { useOnChange } from "@/lib/hooks/useOnChange";
+import { useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { ProfileEditor } from "./ProfileEditor";
@@ -28,9 +30,7 @@ export function MineTab() {
     null,
   );
 
-  useEffect(() => {
-    setEditing(urlEditing);
-  }, [urlEditing]);
+  useOnChange(String(urlEditing), () => setEditing(urlEditing));
 
   const setEditingMode = useCallback(
     (next: boolean) => {
@@ -102,34 +102,18 @@ export function MineTab() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 pb-16">
-      <div className="sticky top-[4.25rem] z-30 -mx-2 flex items-center justify-between gap-3 rounded-full bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] px-2 py-2 backdrop-blur-md">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 pb-24">
+      <div>
         <button
           type="button"
           onClick={exitEditMode}
-          className="cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+          className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
         >
-          Back
+          <ChevronLeftIcon /> Back to profile
         </button>
-        <div className="flex items-center gap-2">
-          {profileDirty && !saving ? (
-            <button
-              type="button"
-              onClick={() => profileCancel?.()}
-              className="cursor-pointer rounded-full px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]"
-            >
-              Cancel
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => void handleSaveAll()}
-            disabled={saving || !hasUnsavedChanges}
-            className="inline-flex min-w-[5.5rem] cursor-pointer items-center justify-center rounded-full bg-[var(--accent)] px-5 py-1.5 text-sm font-semibold text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving ? <LoadingDots /> : saved ? "Saved" : "Save"}
-          </button>
-        </div>
+        <h1 className="mt-2 font-display text-3xl uppercase tracking-wide sm:text-4xl">
+          Edit profile
+        </h1>
       </div>
       <ProfileEditor
         onDirtyChange={setProfileDirty}
@@ -143,6 +127,36 @@ export function MineTab() {
         onDirtyChange={setWishlistDirty}
         registerSave={registerWishlistSave}
       />
+
+      {/* Solid bar pinned to the bottom, only while there is something to save. */}
+      {hasUnsavedChanges || saving || saved ? (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--bg)]">
+          <div className="mx-auto flex w-full max-w-xl items-center justify-between gap-3 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-0">
+            <p className="text-sm text-[var(--ink-muted)]">
+              {saved && !hasUnsavedChanges ? "All changes saved" : "Unsaved changes"}
+            </p>
+            <div className="flex items-center gap-2">
+              {profileDirty && !saving ? (
+                <button
+                  type="button"
+                  onClick={() => profileCancel?.()}
+                  className="cursor-pointer rounded-full px-3 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                >
+                  Cancel
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void handleSaveAll()}
+                disabled={saving || !hasUnsavedChanges}
+                className="inline-flex min-w-[5.5rem] cursor-pointer items-center justify-center rounded-full bg-[var(--accent)] px-5 py-1.5 text-sm font-semibold text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving ? <LoadingDots /> : saved ? "Saved" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

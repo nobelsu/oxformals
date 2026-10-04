@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from "@/components/ui/icons";
 import { createPortal } from "react-dom";
 
 type Props = {
@@ -54,7 +55,7 @@ export function FeedImageLightbox({
         aria-label="Close"
         className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-2xl text-white transition-colors hover:bg-white/20"
       >
-        ×
+        <CloseIcon />
       </button>
 
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -76,7 +77,7 @@ export function FeedImageLightbox({
             }}
             className="absolute left-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-3xl text-white transition-colors hover:bg-white/20"
           >
-            ‹
+            <ChevronLeftIcon />
           </button>
           <button
             type="button"
@@ -87,7 +88,7 @@ export function FeedImageLightbox({
             }}
             className="absolute right-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-3xl text-white transition-colors hover:bg-white/20"
           >
-            ›
+            <ChevronRightIcon />
           </button>
           <span className="absolute bottom-5 z-10 rounded-full bg-white/10 px-3 py-1 text-sm text-white">
             {index + 1} / {count}

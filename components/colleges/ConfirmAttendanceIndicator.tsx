@@ -1,5 +1,7 @@
 "use client";
 
+import { CheckIcon } from "@/components/ui/icons";
+
 type Props = {
   className?: string;
 };
@@ -20,7 +22,7 @@ export function ConfirmAttendanceIndicator({ className }: Props) {
         className="flex h-4 w-4 items-center justify-center rounded-full border-[2px] border-current text-[0.6rem] font-bold leading-none"
         aria-hidden
       >
-        ✓
+        <CheckIcon />
       </span>
       <span>Confirm attendance</span>
     </span>

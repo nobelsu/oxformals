@@ -14,6 +14,8 @@ const DEFAULT_LIMIT = 40;
 const MAX_LIMIT = 50;
 const FOLLOW_SCAN = 500;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+/** For you ranks wishlist colleges and people you follow as if this much newer. */
+const PRIORITY_BOOST_MS = 3 * 24 * 60 * 60 * 1000;
 
 type PublicActor = ReturnType<typeof sanitizePublicUser>;
 
@@ -21,8 +23,8 @@ type PublicActor = ReturnType<typeof sanitizePublicUser>;
  * The campus feed (follows-free v1). Merges recent non-anonymous reviews, newly
  * listed upcoming formals, and attended formals from across Oxford, newest
  * first, each tagged with its actor. Lightly personalised: items at a college
- * on the viewer's wishlist are flagged `onWishlist` for a badge (no re-ranking
- * yet).
+ * on the viewer's wishlist are flagged `onWishlist` for a badge, and For you
+ * ranks them (and people you follow) above the rest.
  *
  * Bounded reads (SOURCE_SCAN per source) and a MAX_LIMIT cap — no pagination.
  * Revisit both when a follow graph narrows the source set and real volume
@@ -32,8 +34,9 @@ export const getCampusFeed = query({
   args: {
     limit: v.optional(v.number()),
     /**
-     * "forYou" (default): listings and reviews at colleges on your wishlist
-     * (everything, if your wishlist is empty). "following": people you follow.
+     * "forYou" (default): listings and reviews from everywhere, with your
+     * wishlist colleges and people you follow first. "following": people you
+     * follow.
      * Either way, "went to" items only ever show people you follow.
      */
     scope: v.optional(
@@ -65,11 +68,9 @@ export const getCampusFeed = query({
     }
     const wishlistEmpty = wishlist.size === 0;
 
-    // Listings and reviews: by college (For you) or by person (Following).
-    const inScope = (userId: Id<"users">, college: string) =>
-      scope === "following"
-        ? followed.has(userId)
-        : wishlistEmpty || wishlist.has(college) || followed.has(userId);
+    // Listings and reviews: everything (For you) or by person (Following).
+    const inScope = (userId: Id<"users">) =>
+      scope === "following" ? followed.has(userId) : true;
 
     // Cache actor lookups: many items share an author/owner.
     const actorCache = new Map<string, PublicActor | null>();
@@ -130,7 +131,7 @@ export const getCampusFeed = query({
       .order("desc")
       .take(SOURCE_SCAN);
     for (const listing of listingDocs) {
-      if (!inScope(listing.ownerUserId, listing.college)) continue;
+      if (!inScope(listing.ownerUserId)) continue;
       if (listing.dateTime <= nowIso) continue;
       const actor = await getActor(listing.ownerUserId);
       if (!actor) continue;
@@ -150,7 +151,7 @@ export const getCampusFeed = query({
       .order("desc")
       .take(SOURCE_SCAN);
     for (const review of reviewDocs) {
-      if (!inScope(review.userId, review.college)) continue;
+      if (!inScope(review.userId)) continue;
       if (review.isAnonymous) continue;
       if (!(await canSee(review.userId))) continue;
       const actor = await getActor(review.userId);
@@ -226,7 +227,19 @@ export const getCampusFeed = query({
       });
     }
 
-    items.sort((a, b) => b.ts - a.ts);
+    // Newest first; For you bumps wishlist colleges and people you follow.
+    const rank = (item: FeedItem) => {
+      if (scope === "following") return item.ts;
+      const mine =
+        item.kind === "attended"
+          ? true
+          : item.onWishlist ||
+            followed.has(
+              item.kind === "listing" ? item.listing.ownerUserId : item.actor._id,
+            );
+      return mine ? item.ts + PRIORITY_BOOST_MS : item.ts;
+    };
+    items.sort((a, b) => rank(b) - rank(a));
     const sliced = items.slice(0, limit);
 
     // Attach comment + like counts only for the items we return.

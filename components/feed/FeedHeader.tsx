@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
+import { ListFormalModal } from "@/components/swap/ListFormalModal";
 
 function greetingWord(): string {
   const h = new Date().getHours();
@@ -15,24 +16,27 @@ const PlusIcon = () => (
   </svg>
 );
 
-/** Greeting, plus "List a formal". */
+/** Greeting, plus "List a formal" (opens the form over the feed). */
 export function FeedHeader({ firstName }: { firstName: string }) {
+  const [listFormalOpen, setListFormalOpen] = useState(false);
   return (
     <div className="flex items-center justify-between gap-3">
       <h1 className="text-[1.5rem] font-semibold leading-tight">
         <span className="font-display font-normal">{greetingWord()},</span> {firstName}
       </h1>
       <div className="flex shrink-0 items-center gap-2">
-        <Link
-          href="/?tab=requests&openList=1"
+        <button
+          type="button"
+          onClick={() => setListFormalOpen(true)}
           data-onboarding="list"
           aria-label="List a formal"
-          className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--ink)] px-3 py-2 text-[0.84rem] font-medium text-[var(--bg)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_88%,var(--accent))] sm:px-4"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--ink)] px-3 py-2 text-[0.84rem] font-medium text-[var(--bg)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_88%,var(--accent))] sm:px-4"
         >
           <PlusIcon />
           <span className="hidden sm:inline">List a formal</span>
-        </Link>
+        </button>
       </div>
+      <ListFormalModal open={listFormalOpen} onClose={() => setListFormalOpen(false)} />
     </div>
   );
 }

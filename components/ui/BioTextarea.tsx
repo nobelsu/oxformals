@@ -56,7 +56,7 @@ export function BioTextarea({
         onChange={(e) => onChange(e.target.value)}
         rows={3}
         disabled={disabled}
-        placeholder="What you study, what you're into."
+        placeholder="What you're into, in a line or two."
         className={`resize-none ${className}`}
       />
       {hideCounter ? null : (

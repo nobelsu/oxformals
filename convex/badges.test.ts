@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { COLLEGE_BADGES, stampLabel } from "../lib/data/badges";
 
@@ -77,4 +77,37 @@ describe("badge share card", () => {
 test("every college has its own stamp label", () => {
   const labels = COLLEGE_BADGES.map((b) => stampLabel(b.college));
   expect(new Set(labels).size).toBe(labels.length);
+});
+
+describe("founding badge", () => {
+  test("goes to everyone who signed up before the cutoff, once", async () => {
+    const t = convexTest(schema, modules);
+    const { early, gone } = await t.run(async (ctx) => {
+      const early = await ctx.db.insert("users", { name: "Early", email: "e@ox.ac.uk" });
+      const gone = await ctx.db.insert("users", {
+        name: "Gone",
+        email: "g@ox.ac.uk",
+        deletedAt: 1,
+      });
+      return { early, gone };
+    });
+    const args = {
+      signedUpBefore: Date.now() + 1000,
+      paginationOpts: { numItems: 100, cursor: null },
+    };
+    const first = await t.mutation(internal.migrations.awardFoundingBadge, args);
+    expect(first.awarded).toBe(1);
+    const again = await t.mutation(internal.migrations.awardFoundingBadge, args);
+    expect(again.awarded).toBe(0);
+    const rows = await t.run((ctx) => ctx.db.query("userBadges").collect());
+    expect(rows.map((r) => [r.userId, r.badgeId])).toEqual([[early, "founding-guest"]]);
+    expect(rows.some((r) => r.userId === gone)).toBe(false);
+
+    // Nobody who signs up after the cutoff gets it.
+    const none = await t.mutation(internal.migrations.awardFoundingBadge, {
+      ...args,
+      signedUpBefore: 0,
+    });
+    expect(none.awarded).toBe(0);
+  });
 });

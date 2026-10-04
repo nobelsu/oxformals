@@ -6,7 +6,8 @@ import type { NotificationData, NotificationKind } from "./notificationKinds";
  * kinds that email — the email copy. Pure, so the client can import it too.
  */
 
-export const FORMALS_URL = "/?tab=requests&section=overview";
+/** Your formals live in the feed now. */
+export const FORMALS_URL = "/";
 export const BROWSE_URL = "/?tab=browse";
 
 export type NotificationView = {

@@ -7,16 +7,14 @@ import { useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Avatar } from "@/components/ui/Avatar";
-import { IncomingRequestRow } from "@/components/swap/IncomingRequestRow";
+import { IncomingRequests } from "@/components/swap/IncomingRequests";
 import { ListingMenu } from "@/components/swap/ListingMenu";
 import { ListFormalForm } from "@/components/swap/ListFormalForm";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
 import { EditListingBlockedModal } from "@/components/swap/EditListingBlockedModal";
 import { SentRequestRow } from "@/components/swap/SentRequestRow";
 import { SignInGate } from "@/components/swap/SignInGate";
-import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
 import { GuestCountLabel, guestCountFor } from "@/components/swap/GuestSeatsNote";
-import { partySuffix, requestSeatCount } from "@/lib/data/party";
 import { ListingGroupChatButton } from "@/components/chat/ListingGroupChatButton";
 import { ReviewFormalSection } from "@/components/colleges/ReviewFormalSection";
 import { ListingFormalBadges } from "@/components/colleges/ListingFormalBadges";
@@ -30,13 +28,11 @@ import {
 } from "@/lib/data/format";
 import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import {
-  incomingRequestsForListing,
   pendingIncomingRequestsForListing,
   resolveRequestType,
   sentRequestsForListing,
 } from "@/lib/data/requestFilters";
 import { placeholderUser } from "@/lib/data/users";
-import type { Listing, RequestType } from "@/lib/data/types";
 import { listingIsPast } from "@/lib/data/collegeReviewEligibility";
 import { useNowMs } from "@/lib/hooks/useNowMs";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -50,8 +46,6 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     requests,
     getUser,
     getListing,
-    acceptRequest,
-    declineRequest,
     withdrawRequest,
     removeMember,
     updateListing,
@@ -67,16 +61,6 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
   const isMember = !!(user && listing && listing.members.includes(user.id));
   const canViewListing = isOwner || isMember;
 
-
-  const incoming = useMemo(
-    () =>
-      user && listing
-        ? incomingRequestsForListing(requests, user.id, listing.id).sort(
-            (a, b) => b.createdAt - a.createdAt,
-          )
-        : [],
-    [requests, user, listing],
-  );
 
   const pendingIncoming = useMemo(
     () =>
@@ -109,19 +93,12 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editBlockedOpen, setEditBlockedOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [confirmed, setConfirmed] = useState<{
-    requestType: RequestType;
-    mine: Listing | null;
-    theirs: Listing | null;
-    otherUserId: string | null;
-  } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     message: string;
     variant?: "default" | "destructive";
     confirmLabel?: string;
     onConfirm: () => void | Promise<void>;
   } | null>(null);
-  const [acceptError, setAcceptError] = useState<string | null>(null);
 
   const handleWithdraw = useCallback(
     (requestId: string) => {
@@ -158,10 +135,10 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
             It&apos;s gone, or you&apos;re not in this group.
           </p>
           <Link
-            href="/?tab=requests"
+            href="/"
             className="mt-5 inline-flex w-fit self-start rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
           >
-            Back to Activity
+            Back to feed
           </Link>
         </SketchCard>
       </main>
@@ -173,10 +150,10 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6">
         <div className="flex items-center gap-3">
           <Link
-            href="/?tab=requests"
+            href="/"
             className="rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
           >
-            Back to listings
+            Back to feed
           </Link>
         </div>
         <SketchCard seed={listing.id.length} className="p-6">
@@ -206,10 +183,10 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6">
       <div className="flex items-center gap-3">
         <Link
-          href="/?tab=requests"
+          href="/"
           className="rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
         >
-          Back to active listings
+          Back to feed
         </Link>
       </div>
 
@@ -356,94 +333,9 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
           <h2 className="font-display text-3xl uppercase tracking-wide">
             Incoming requests
           </h2>
-          {acceptError ? (
-            <p className="mt-2 text-sm text-[var(--danger)]">{acceptError}</p>
-          ) : null}
-          {incoming.length === 0 ? (
-            <EmptyState className="mt-4" icon="inbox" title="No requests yet" />
-          ) : (
-            <div className="mt-4 flex flex-col gap-3">
-              {incoming.map((r) => {
-                const fromUser =
-                  getUser(r.fromUserId) ?? placeholderUser(r.fromUserId);
-                return (
-                  <IncomingRequestRow
-                    key={r.id}
-                    request={r}
-                    fromUser={fromUser}
-                    offeringListing={
-                      r.offeringListingId
-                        ? getListing(r.offeringListingId)
-                        : undefined
-                    }
-                    targetListing={listing}
-                    onAccept={() => {
-                      const kind = resolveRequestType(r);
-                      const isPay = kind !== "swap";
-                      const who =
-                        requestSeatCount(r) > 1
-                          ? `${fromUser.name} ${partySuffix(r, (id) => getUser(id)?.name)} (${requestSeatCount(r)} seats)`
-                          : fromUser.name;
-                      setAcceptError(null);
-                      setConfirmDialog({
-                        message:
-                          kind === "credit"
-                            ? `Accept ${who}?`
-                            : kind === "pay"
-                              ? `Accept ${who}?`
-                              : `Accept this swap with ${who}?`,
-                        confirmLabel: "Accept",
-                        onConfirm: async () => {
-                          setConfirmDialog(null);
-                          try {
-                            const updated = await acceptRequest(r.id);
-                            if (!updated) return;
-                            if (isPay) {
-                              setConfirmed({
-                                requestType: kind,
-                                mine: listing,
-                                theirs: null,
-                                otherUserId: r.fromUserId,
-                              });
-                            } else {
-                              setConfirmed({
-                                requestType: "swap",
-                                mine: getListing(r.targetListingId) ?? null,
-                                theirs: r.offeringListingId
-                                  ? (getListing(r.offeringListingId) ?? null)
-                                  : null,
-                                otherUserId: r.fromUserId,
-                              });
-                            }
-                          } catch (err) {
-                            setAcceptError(
-                              err instanceof Error
-                                ? err.message
-                                : "Could not accept request.",
-                            );
-                          }
-                        },
-                      });
-                    }}
-                    onDecline={() => {
-                      setConfirmDialog({
-                        message:
-                          resolveRequestType(r) === "swap"
-                            ? "Decline this swap request?"
-                            : "Decline this request?",
-                        variant: "destructive",
-                        confirmLabel: "Decline",
-                        onConfirm: () => {
-                          setConfirmDialog(null);
-                          declineRequest(r.id);
-                        },
-                      });
-                    }}
-                  />
-                );
-              })}
-            </div>
-          )}
+          <div className="mt-4">
+            <IncomingRequests listing={listing} />
+          </div>
         </section>
 
         <section className="min-w-0">
@@ -470,19 +362,6 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
           )}
         </section>
       </div>
-
-      <SwapConfirmedModal
-        open={!!confirmed}
-        onClose={() => setConfirmed(null)}
-        requestType={confirmed?.requestType ?? "swap"}
-        myListing={confirmed?.mine ?? null}
-        theirListing={confirmed?.theirs ?? null}
-        otherUser={
-          confirmed?.otherUserId ? (getUser(confirmed.otherUserId) ?? null) : null
-        }
-        otherUserId={confirmed?.otherUserId ?? null}
-      />
-
 
       <EditListingBlockedModal
         open={editBlockedOpen}
@@ -576,7 +455,7 @@ export function ListingRequestsView({ listingId }: { listingId: string }) {
         onConfirm={() => {
           if (listing) {
             deleteListing(listing.id);
-            router.push("/?tab=requests");
+            router.push("/");
           }
           setDeleteDialogOpen(false);
         }}

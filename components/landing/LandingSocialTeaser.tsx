@@ -65,6 +65,7 @@ function ReviewsMockup({
   useEffect(() => {
     if (!active || reduced) {
       playedRef.current = false;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- rewinds the animation
       setUpvoted(false);
       setSparkle(false);
       return;
@@ -190,6 +191,7 @@ function WishlistAlertsMockup({ animate = false }: { animate?: boolean }) {
 
   useEffect(() => {
     if (!animate || reduced) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- rewinds the animation
       setVisible(false);
       setTyped(message);
       setSent(false);
@@ -283,6 +285,7 @@ function ActivityFeedMockup({ animate = false }: { animate?: boolean }) {
 
   useEffect(() => {
     if (!animate || reduced) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- rewinds the animation
       setVisible(false);
       setPulse(false);
       return;

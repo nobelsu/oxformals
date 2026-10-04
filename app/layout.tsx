@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Script from "next/script";
+import { APPEARANCE_BOOT_SCRIPT } from "@/lib/appearance";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -87,9 +89,14 @@ export default function RootLayout({
     <ConvexAuthNextjsServerProvider>
       <html
         lang="en"
+        // The appearance script sets data-theme before React hydrates.
+        suppressHydrationWarning
         className={`${schoolbell.variable} ${spaceGrotesk.variable} ${inter.variable} ${dmSans.variable} ${lora.variable} h-full antialiased`}
       >
         <body className="min-h-full flex flex-col">
+          <Script id="appearance" strategy="beforeInteractive">
+            {APPEARANCE_BOOT_SCRIPT}
+          </Script>
           <ConvexClientProvider>
             <AuthProvider>
               <DataProvider>

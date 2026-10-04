@@ -15,7 +15,6 @@ const isPublicRoute = createRouteMatcher([
   "/login",
   "/privacy",
   "/terms",
-  "/letter",
   "/colleges",
   "/college/:slug",
   "/i/:code",

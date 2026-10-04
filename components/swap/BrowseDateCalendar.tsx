@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/icons";
 
 type Props = {
   value: string[];
@@ -177,7 +178,7 @@ export function BrowseDateCalendar({
           }
           aria-label="Previous month"
         >
-          ‹
+          <ChevronLeftIcon />
         </button>
         <h3
           className={
@@ -198,7 +199,7 @@ export function BrowseDateCalendar({
           }
           aria-label="Next month"
         >
-          ›
+          <ChevronRightIcon />
         </button>
       </div>
 

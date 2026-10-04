@@ -54,7 +54,7 @@ describe("renderEmail", () => {
     const html = renderEmail(base);
     expect(html).toContain(`${EMAIL_SITE_URL}/email/logo.png`);
     expect(html).toContain(`${EMAIL_SITE_URL}/email/squiggle.png`);
-    expect(html).toContain(`href="${EMAIL_SITE_URL}/?tab=mine&amp;settings=1"`);
+    expect(html).toContain(`href="${EMAIL_SITE_URL}/settings?section=notifications"`);
     expect(html).toContain(">Email settings</a>");
     expect(html).toContain('href="mailto:team@oxformals.com"');
     expect(html).not.toContain("fonts.googleapis.com");
@@ -95,7 +95,7 @@ describe("renderEmailText", () => {
     expect(text).toContain("Keble · Thu 9 Oct · 7:15pm");
     expect(text).toContain('"Happy to host you at Worcester & more"');
     expect(text).toContain("Review request: https://oxformals.vercel.app/requests/1");
-    expect(text).toContain("Email settings: https://oxformals.vercel.app/?tab=mine&settings=1");
+    expect(text).toContain("Email settings: https://oxformals.vercel.app/settings?section=notifications");
   });
 
   test("review reminder copy", () => {

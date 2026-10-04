@@ -1,9 +1,10 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
+import { useOnChange } from "@/lib/hooks/useOnChange";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChatUserPickRow } from "@/components/chat/ChatUserPickRow";
 import { useAuth } from "@/components/auth/useAuth";
 import { Avatar } from "@/components/ui/Avatar";
@@ -46,9 +47,9 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
   const leaveGroup = useMutation(api.chat.leaveGroupConversation);
   const renameGroup = useMutation(api.chat.renameGroupConversation);
 
-  useEffect(() => {
+  useOnChange(`${open}|${conversation.name ?? ""}`, () => {
     if (open) setGroupName(conversation.name ?? "");
-  }, [open, conversation.name]);
+  });
 
   const trimmedGroupName = groupName.trim();
   const nameDirty =

@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import { Avatar } from "@/components/ui/Avatar";
+import { SkeletonRows } from "@/components/ui/Loading";
 import type { AvatarSource } from "@/lib/auth/types";
 
 type Person = FunctionReturnType<typeof api.peopleYouMayKnow.getPeopleYouMayKnow>[number];
@@ -24,16 +25,18 @@ export function PeopleYouMayKnow({ limit = 5, className = "" }: { limit?: number
   const people = useQuery(api.peopleYouMayKnow.getPeopleYouMayKnow, { limit });
   const follow = useMutation(api.follows.follow);
   const [busy, setBusy] = useState<string | null>(null);
-  if (!people || people.length === 0) return null;
+  if (people && people.length === 0) return null;
 
   return (
     <section
       aria-label="People you may know"
+      aria-busy={!people}
       className={`rounded-[16px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-4 shadow-[0_2px_14px_-10px_rgba(0,0,0,0.35)] ${className}`}
     >
       <p className="text-sm font-bold text-[var(--ink)]">People you may know</p>
+      {!people ? <SkeletonRows count={Math.min(limit, 4)} className="mt-3 pb-2" /> : null}
       <ul className="mt-1 flex flex-col">
-        {people.map((p) => (
+        {people?.map((p) => (
           <li key={p.user._id} className="flex items-center gap-3 py-2">
             <Link href={`/profile/${p.user._id}`} className="flex min-w-0 flex-1 items-center gap-3">
               <Avatar name={p.user.name ?? "Someone"} size="sm" source={p.user.avatar as AvatarSource | undefined} />

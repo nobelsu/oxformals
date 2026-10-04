@@ -207,11 +207,12 @@ export function ListingRow({
             href={`/profile/${owner.id}`}
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
-            className="mt-auto flex min-w-0 items-center gap-2.5 pt-1 hover:underline"
+            // Only as wide as the avatar and name, so the rest of the row opens the listing.
+            className="group/host mt-auto flex w-fit max-w-full min-w-0 items-center gap-2.5 self-start pt-1"
           >
             <Avatar name={owner.name} size="md" source={owner.avatar} />
             <span className="flex min-w-0 flex-col">
-              <span className="truncate font-semibold">
+              <span className="truncate font-semibold group-hover/host:underline">
                 {owner.name.split(" ")[0]}
               </span>
               {profileLine ? (

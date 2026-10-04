@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CloseIcon } from "@/components/ui/icons";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -256,7 +257,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
                 aria-label={`Remove photo ${index + 1}`}
                 className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] text-xs leading-none disabled:opacity-50"
               >
-                ×
+                <CloseIcon />
               </button>
             </div>
           ))}

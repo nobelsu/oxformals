@@ -27,3 +27,14 @@ export function excerpt(text: string, max: number): string {
   const lastSpace = cut.lastIndexOf(" ");
   return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
+
+/** "Formal at Keble on Fri 9 Oct. Want to come?": the line sent with a listing's link. */
+export function listingShareText(listing: { college: string; dateTime: string }): string {
+  const day = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(listing.dateTime));
+  return `Formal at ${listing.college} on ${day}. Want to come?`;
+}

@@ -77,6 +77,27 @@ export function BadgeCelebration() {
     );
   }
 
+  if (def.family === "special") {
+    return (
+      <Modal open onClose={dismiss} compact panelClassName="!max-w-sm">
+        <div className="flex flex-col items-center gap-3 py-2 text-center">
+          <BadgeArt def={def} earned size={120} />
+          <p className="mt-3 font-display text-3xl">{def.name}</p>
+          <p className="text-sm text-[var(--ink-muted)]">
+            You were here from the start. Thanks for being one of the first.
+          </p>
+          <button
+            type="button"
+            onClick={dismiss}
+            className="mt-2 cursor-pointer rounded-full bg-[var(--accent)] px-5 py-1.5 text-sm font-semibold text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]"
+          >
+            Nice
+          </button>
+        </div>
+      </Modal>
+    );
+  }
+
   const collegesVisited = (earned ?? []).filter((b) =>
     b.badgeId.startsWith("college-"),
   ).length;
