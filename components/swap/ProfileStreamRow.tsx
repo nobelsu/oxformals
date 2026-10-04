@@ -60,7 +60,10 @@ export function ProfileStreamRow({
           {item.kind === "attended" ? "Attended" : item.kind}
         </span>
         <span className="text-[0.7rem] text-[var(--ink-muted)]">
-          {formatRelativeTime(item.ts)}
+          {/* A formal you went to is dated by its night, not by when you confirmed. */}
+          {formatRelativeTime(
+            item.kind === "attended" ? Date.parse(item.dateTime) : item.ts,
+          )}
         </span>
       </div>
 
