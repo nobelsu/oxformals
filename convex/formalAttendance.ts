@@ -5,6 +5,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import {
   canConfirmAttendanceCollegeListing,
   listingIsPast,
+  isGuestForCollegeListing,
 } from "../lib/data/collegeReviewEligibility";
 import { normalizeCollegeName } from "../lib/data/colleges";
 import {
@@ -142,7 +143,14 @@ export const confirmAttendance = mutation({
       args.nowMs,
     );
     await awardNewBadges(ctx, userId, args.nowMs);
-    await earnReferralOnAttendance(ctx, listing._id, userId);
+    // The invite reward is for visiting a formal, not for hosting your own or
+    // dining at home.
+    if (
+      listing.ownerUserId !== userId &&
+      isGuestForCollegeListing({ id: userId, college: user.college }, listing.college)
+    ) {
+      await earnReferralOnAttendance(ctx, listing._id, userId);
+    }
     return confirmationId;
   },
 });
@@ -209,17 +217,12 @@ export const getPendingAttendanceListingIds = query({
     const user = await ctx.db.get(userId);
     if (!user) return [];
 
-    const home = normalizeCollegeName(user.college ?? "");
     const listings = await ctx.db.query("listings").collect();
     const pending: Id<"listings">[] = [];
 
     for (const listing of listings) {
       if (!listing.members.includes(userId)) continue;
-      if (listing.ownerUserId === userId) continue;
       if (!listingIsPast(listing.dateTime, args.nowMs)) continue;
-
-      const host = normalizeCollegeName(listing.college);
-      if (home && host && home === host) continue;
 
       if (await hasRespondedToAttendance(ctx, listing._id, userId)) continue;
 

@@ -125,7 +125,7 @@ export function ListingDetailModal({
         : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"
     }`;
   const canConfirmAttendance = !!(
-    isGuestMember &&
+    isListingMember &&
     reviewState?.canConfirmAttendance &&
     !reviewState.hasConfirmedAttendance
   );
@@ -320,7 +320,7 @@ export function ListingDetailModal({
           menuFileContentType={listing.menuFileContentType}
         />
 
-        {isGuestMember || reviewState?.existingReview ? (
+        {isListingMember || reviewState?.existingReview ? (
           <ReviewFormalSection listingId={listing.id} college={listing.college} />
         ) : null}
 
