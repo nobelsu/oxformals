@@ -52,7 +52,12 @@ export function FeedSkeleton({ count = 2 }: { count?: number }) {
 
 export function LoadingDots({ className = "" }: { className?: string }) {
   return (
-    <span role="status" aria-label="Loading" className={`inline-flex items-center gap-1.5 ${className}`}>
+    // One line tall, so a button that swaps its label for the dots keeps its height.
+    <span
+      role="status"
+      aria-label="Loading"
+      className={`inline-flex h-[1lh] items-center gap-1.5 ${className}`}
+    >
       {[0, 1, 2].map((i) => (
         <span
           key={i}
