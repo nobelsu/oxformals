@@ -39,6 +39,25 @@ function ShareIcon() {
   );
 }
 
+function StoryIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-[22px] w-[22px]"
+      aria-hidden
+    >
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="M17.2 6.8h.01" />
+    </svg>
+  );
+}
+
 /** Share a listing, review or badge: by link, or as an Instagram story card. */
 export function ShareButton({
   kind,
@@ -62,7 +81,7 @@ export function ShareButton({
     }
   }
 
-  const label = state === "error" ? "Couldn't make the image. Try again" : "Share";
+  const label = "Share";
   const onPress = () => {
     if (!linkPath) {
       void onShare();
@@ -119,6 +138,25 @@ export function ShareButton({
     >
       <ShareIcon />
     </button>
+    {/* Touch devices: share sends the link, so the story card gets its own button. */}
+    {linkPath ? (
+      <span className="hidden pointer-coarse:contents">
+        <button
+          type="button"
+          onClick={() => void onShare()}
+          disabled={state === "busy"}
+          aria-label={state === "error" ? "Couldn't make the image. Try again" : "Share to your story"}
+          title="Share to your story"
+          className={`transition-colors disabled:opacity-50 ${
+            state === "error"
+              ? "text-[var(--danger)]"
+              : "text-[var(--ink)] hover:text-[var(--accent)]"
+          } ${className}`}
+        >
+          <StoryIcon />
+        </button>
+      </span>
+    ) : null}
     {menu}
     </>
   );
