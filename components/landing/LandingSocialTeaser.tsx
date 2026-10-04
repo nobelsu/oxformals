@@ -435,10 +435,8 @@ export function LandingSocialTeaser() {
   if (reduced) {
     return (
       <section className="py-16">
-        <h2 className="font-display text-3xl uppercase tracking-wide">
-          Follow people, not just formals
-        </h2>
-        <div className="mt-10 grid gap-8 md:grid-cols-2">
+        <h2 className="sr-only">Follow people, not just formals</h2>
+        <div className="grid gap-8 md:grid-cols-2">
           {FEED_FEATURES.map((f) => (
             <div key={f.tag}>
               <span className="inline-block rounded-full bg-[var(--accent-wash)] px-3 py-1 text-xs font-bold uppercase tracking-wide text-[var(--accent-wash-ink)]">
@@ -466,13 +464,9 @@ export function LandingSocialTeaser() {
         <div className="mx-auto flex h-full max-w-5xl flex-col items-center justify-center gap-6 px-4 sm:px-6 md:grid md:grid-cols-2 md:gap-10">
           {/* Left side: text that changes per feature */}
           <div className="flex w-full flex-col justify-center">
-            <span className="font-display text-sm uppercase tracking-[0.2em] text-[var(--ink-muted)]">
-              Follow people, not just formals
-            </span>
-
             {/* All slides share one grid cell, so the block is as tall as the
                 longest one and nothing spills into the mockup below. */}
-            <div className="mt-4 grid sm:mt-6">
+            <div className="grid">
               {FEED_FEATURES.map((feature, i) => {
                 const state = active === i ? 0 : active > i ? -1 : 1;
                 return (
