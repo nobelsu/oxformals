@@ -13,10 +13,14 @@ import {
 const isPublicRoute = createRouteMatcher([
   "/",
   "/login",
-  "/letter",
+  "/privacy",
+  "/terms",
   "/colleges",
   "/college/:slug",
+  "/i/:code",
+  "/s/:token",
   "/api/auth(.*)",
+  "/api/share(.*)",
 ]);
 
 export default convexAuthNextjsMiddleware(

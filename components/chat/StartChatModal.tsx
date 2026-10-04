@@ -41,10 +41,6 @@ export function StartChatModal({ open, onClose }: Props) {
       title="New message"
       panelClassName="max-w-md"
     >
-      <p className="text-sm text-[var(--ink-muted)]">
-        Search for someone to message.
-      </p>
-
       <OutlineTextField
         type="search"
         value={search}
@@ -53,13 +49,12 @@ export function StartChatModal({ open, onClose }: Props) {
         clearable
         placeholder="Search by name or college…"
         autoFocus
-        className="mt-4"
       />
 
       <div className="mt-4 max-h-[45vh] overflow-y-auto">
         {trimmed.length < 2 ? (
           <p className="text-sm text-[var(--ink-soft)]">
-            Type at least 2 characters to search.
+            Type 2+ letters.
           </p>
         ) : searchResults === undefined ? (
           <p className="text-sm text-[var(--ink-soft)]">Searching…</p>

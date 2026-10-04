@@ -7,7 +7,7 @@ export function listingSupportsSwap(listingType: ListingType): boolean {
 export function listingRequestCta(listingType: ListingType): string {
   if (listingType === "pay") return "Request to join!";
   if (listingType === "both") return "Send request!";
-  return "Request swap!";
+  return "Request!";
 }
 
 export function listingAllowsRequest(

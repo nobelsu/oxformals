@@ -27,6 +27,55 @@ export function formatListingSeatsSuffix(
   return `${seatsAvailable} ${unit} left`;
 }
 
+/** `Group of 3 · 2 seats left · £28` — no date; the day rail carries it. */
+export function formatListingRowMeta(args: {
+  groupSize: number;
+  seatsAvailable: number;
+  isPast: boolean;
+  price?: number;
+}): string {
+  const parts: string[] = [`Group of ${args.groupSize}`];
+  const seats = formatListingSeatsSuffix(args.seatsAvailable, args.isPast);
+  if (seats) parts.push(seats);
+  if (args.price !== undefined) parts.push(formatPrice(args.price));
+  return parts.join(" · ");
+}
+
+/**
+ * Clamp `seatsAvailable` into `[0, groupSize]` so every consumer that derives
+ * seat state — pips, tail text, anything else — agrees on the same number
+ * even when the source data is invalid (negative, or exceeding the group
+ * size from a stale cache or a race).
+ */
+export function clampSeatsAvailable(
+  seatsAvailable: number,
+  groupSize: number,
+): number {
+  const safeGroupSize = Math.max(0, Math.trunc(groupSize));
+  return Math.min(Math.max(0, Math.trunc(seatsAvailable)), safeGroupSize);
+}
+
+/**
+ * `2 left · £28` — the text beside the seat pips. Seats are dropped once
+ * past. `seatsAvailable` is expected to already be clamped to
+ * `[0, groupSize]` (see `clampSeatsAvailable`) so this stays in agreement
+ * with the pips rendered alongside it.
+ */
+export function formatRowTail(args: {
+  seatsAvailable: number;
+  isPast: boolean;
+  price?: number;
+}): string {
+  const parts: string[] = [];
+  if (!args.isPast) {
+    parts.push(
+      args.seatsAvailable === 0 ? "Group full" : `${args.seatsAvailable} left`,
+    );
+  }
+  if (args.price !== undefined) parts.push(formatPrice(args.price));
+  return parts.join(" · ");
+}
+
 /** `Thu 8 May · 7:15pm · Group of 3 · …` — drops seat availability for past formals. */
 export function formatListingMetaLine(args: {
   dateTime: string;
@@ -35,48 +84,138 @@ export function formatListingMetaLine(args: {
   isPast: boolean;
   price?: number;
 }): string {
-  const parts: string[] = [
-    formatListingDate(args.dateTime),
-    `Group of ${args.groupSize}`,
-  ];
-  const seats = formatListingSeatsSuffix(args.seatsAvailable, args.isPast);
-  if (seats) parts.push(seats);
-  if (args.price !== undefined) parts.push(formatPrice(args.price));
-  return parts.join(" · ");
+  return `${formatListingDate(args.dateTime)} · ${formatListingRowMeta(args)}`;
+}
+
+/**
+ * Formals happen in Oxford, so their dates and times are always shown in
+ * Oxford time — never the viewer's timezone (and the server-rendered landing
+ * page matches the browser).
+ */
+const OXFORD_TIME_ZONE = "Europe/London";
+
+const oxfordClock = new Intl.DateTimeFormat("en-GB", {
+  timeZone: OXFORD_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** `7:15pm`, or `7pm` on the hour. */
+export function formatListingTime(iso: string): string {
+  const parts = oxfordClock.formatToParts(new Date(iso));
+  let hours = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  const minutes = parts.find((p) => p.type === "minute")?.value ?? "00";
+  const suffix = hours >= 12 ? "pm" : "am";
+  hours = hours % 12 || 12;
+  return minutes === "00" ? `${hours}${suffix}` : `${hours}:${minutes}${suffix}`;
+}
+
+/** `{ day: "8 May", weekday: "Friday" }` for the day rail. */
+export function formatDayLabel(iso: string): { day: string; weekday: string } {
+  const d = new Date(iso);
+  return {
+    day: new Intl.DateTimeFormat("en-GB", {
+      timeZone: OXFORD_TIME_ZONE,
+      day: "numeric",
+      month: "short",
+    }).format(d),
+    weekday: new Intl.DateTimeFormat("en-GB", {
+      timeZone: OXFORD_TIME_ZONE,
+      weekday: "long",
+    }).format(d),
+  };
 }
 
 // "Thu 8 May · 7:15pm"
 export function formatListingDate(iso: string): string {
-  const d = new Date(iso);
   const day = new Intl.DateTimeFormat("en-GB", {
+    timeZone: OXFORD_TIME_ZONE,
     weekday: "short",
     day: "numeric",
     month: "short",
-  }).format(d);
-  let hours = d.getHours();
-  const minutes = d.getMinutes().toString().padStart(2, "0");
-  const suffix = hours >= 12 ? "pm" : "am";
-  hours = hours % 12 || 12;
-  const time =
-    minutes === "00" ? `${hours}${suffix}` : `${hours}:${minutes}${suffix}`;
-  return `${day} · ${time}`;
+  }).format(new Date(iso));
+  return `${day} · ${formatListingTime(iso)}`;
+}
+
+/** `Thu 9 Oct` — the day on its own, in Oxford time. */
+export function formatWeekdayDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: OXFORD_TIME_ZONE,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(iso));
 }
 
 export function formatShortDate(iso: string): string {
   const d = new Date(iso);
   return new Intl.DateTimeFormat("en-GB", {
+    timeZone: OXFORD_TIME_ZONE,
     day: "numeric",
     month: "short",
   }).format(d);
 }
 
-/** `YYYY-MM-DD` in the user's local timezone (for `<input type="date">` comparison). */
-export function isoToLocalDateKey(iso: string): string {
-  const d = new Date(iso);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+/** `YYYY-MM-DD` of the Oxford day (for grouping by day and `<input type="date">` comparison). */
+export function isoToOxfordDateKey(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: OXFORD_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
+}
+
+/** Oxford wall-clock parts of an instant. */
+function oxfordParts(ms: number) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: OXFORD_TIME_ZONE,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(new Date(ms));
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return {
+    y: get("year"),
+    mo: get("month"),
+    d: get("day"),
+    h: get("hour"),
+    mi: get("minute"),
+  };
+}
+
+/** An instant as an Oxford `YYYY-MM-DDTHH:mm` for `<input type="datetime-local">`. */
+export function isoToOxfordInput(iso: string): string {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return "";
+  const { y, mo, d, h, mi } = oxfordParts(ms);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${y}-${p(mo)}-${p(d)}T${p(h)}:${p(mi)}`;
+}
+
+/**
+ * A `datetime-local` value read as Oxford time, whatever the browser's own
+ * timezone, as an ISO instant. Returns "" for an unparseable value.
+ */
+export function oxfordInputToIso(local: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(local);
+  if (!m) return "";
+  const [y, mo, d, h, mi] = m.slice(1).map(Number);
+  const wall = Date.UTC(y, mo - 1, d, h, mi);
+  // Guess, then correct by the Oxford offset at that instant (twice, so a
+  // guess that lands across a clock change settles).
+  let ms = wall;
+  for (let i = 0; i < 2; i++) {
+    const o = oxfordParts(ms);
+    const shown = Date.UTC(o.y, o.mo - 1, o.d, o.h, o.mi);
+    ms += wall - shown;
+  }
+  return new Date(ms).toISOString();
 }
 
 export function formatRelativeTime(ts: number): string {

@@ -1,5 +1,6 @@
 "use client";
 
+import { roleNeedsYear } from "@/lib/data/roles";
 import {
   createContext,
   useCallback,
@@ -11,10 +12,11 @@ import { useAuth } from "@/components/auth/useAuth";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import type { User } from "@/lib/auth/types";
-import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import { type NewListingInput } from "@/lib/data/dataClient";
 import { normalizeCollegeName } from "@/lib/data/colleges";
+import { mapListing, mapUser } from "@/lib/data/mapConvex";
 import type {
+  FormalType,
   GroupSize,
   Listing,
   ListingType,
@@ -40,7 +42,13 @@ export type DataContextValue = {
     message: string;
     /** When the target listing is not in the cached global listings slice (e.g. profile-only view). */
     targetOwnerUserId?: string;
-  }) => Promise<SwapRequest | null>;
+    /** Unnamed "+N" guests. */
+    guests?: number;
+    guestMethods?: RequestType[];
+    friends?: { userId: string; paysOwn: boolean; method: RequestType }[];
+    /** People not on Oxformals yet: each gets a seat link. */
+    links?: { paysOwn: boolean; method: RequestType }[];
+  }) => Promise<(SwapRequest & { links: string[] }) | null>;
   /** @deprecated Use sendRequest */
   requestSwap: (args: {
     targetListingId: string;
@@ -60,6 +68,7 @@ export type DataContextValue = {
       menuPdfId?: string;
       clearMenuPdf?: boolean;
       listingType?: ListingType;
+      formalType?: FormalType;
       price?: number;
     },
   ) => void;
@@ -70,67 +79,6 @@ export type DataContextValue = {
 };
 
 export const DataContext = createContext<DataContextValue | null>(null);
-
-type PublicUserDoc = {
-  _id: Id<"users">;
-  name?: string;
-  email?: string;
-  college?: string;
-  year?: string;
-  role?: string;
-  interests?: string[];
-  subject?: string;
-  uiFont?: Doc<"users">["uiFont"];
-  instagramHandle?: string;
-  whatsappPhone?: string;
-  avatar?: Doc<"users">["avatar"];
-};
-
-function mapUser(doc: PublicUserDoc): User {
-  return {
-    id: doc._id,
-    email: doc.email ?? "",
-    name: doc.name ?? "",
-    college: doc.college ?? "",
-    year: doc.year ?? "",
-    role: doc.role ?? "",
-    interests: doc.interests ?? [],
-    subject: doc.subject ?? "",
-    uiFont: doc.uiFont ?? DEFAULT_UI_FONT,
-    ...(doc.instagramHandle ? { instagramHandle: doc.instagramHandle } : {}),
-    ...(doc.whatsappPhone ? { whatsappPhone: doc.whatsappPhone } : {}),
-    ...(doc.avatar ? { avatar: doc.avatar } : {}),
-  };
-}
-
-type ConvexListingDoc = Doc<"listings"> & {
-  menuPdfUrl?: string | null;
-  menuFileContentType?: string | null;
-};
-
-function mapListing(doc: ConvexListingDoc): Listing {
-  return {
-    id: doc._id,
-    ownerUserId: doc.ownerUserId,
-    college: doc.college,
-    dateTime: doc.dateTime,
-    groupSize: doc.groupSize,
-    seatsAvailable: doc.seatsAvailable,
-    members: doc.members,
-    year: doc.year,
-    role: doc.role,
-    message: doc.message,
-    menu: doc.menu ?? "",
-    ...(doc.menuPdfUrl ? { menuPdfUrl: doc.menuPdfUrl } : {}),
-    ...(doc.menuFileContentType
-      ? { menuFileContentType: doc.menuFileContentType }
-      : {}),
-    listingType: doc.listingType ?? "swap",
-    ...(doc.price !== undefined ? { price: doc.price } : {}),
-    status: doc.status,
-    createdAt: doc._creationTime,
-  };
-}
 
 function mapRequest(doc: Doc<"requests">): SwapRequest {
   const requestType =
@@ -147,6 +95,7 @@ function mapRequest(doc: Doc<"requests">): SwapRequest {
     message: doc.message,
     status: doc.status,
     createdAt: doc._creationTime,
+    ...(doc.party && doc.party.length > 0 ? { party: doc.party } : {}),
   };
 }
 
@@ -165,25 +114,36 @@ export function DataProvider({ children }: { children: ReactNode }) {
     user ? {} : "skip",
   );
 
-  const requestPartyIds = useMemo(() => {
-    if (incomingRequests === undefined && outgoingRequests === undefined) {
-      return [] as Id<"users">[];
-    }
+  // People on requests and listings who aren't in `listPublic` (it leaves out
+  // private accounts you don't follow, and stops at 500).
+  const missingUserIds = useMemo(() => {
+    if (convexUsers === undefined) return [] as Id<"users">[];
+    const known = new Set<string>(convexUsers.map((u) => u._id));
     const ids = new Set<Id<"users">>();
-    for (const req of incomingRequests ?? []) {
-      ids.add(req.fromUserId);
-      ids.add(req.toUserId);
+    const add = (id: Id<"users">) => {
+      if (!known.has(id)) ids.add(id);
+    };
+    for (const req of [...(incomingRequests ?? []), ...(outgoingRequests ?? [])]) {
+      add(req.fromUserId);
+      add(req.toUserId);
     }
-    for (const req of outgoingRequests ?? []) {
-      ids.add(req.fromUserId);
-      ids.add(req.toUserId);
+    for (const listing of convexListings ?? []) {
+      add(listing.ownerUserId);
+      for (const member of listing.members) add(member);
     }
-    return [...ids];
-  }, [incomingRequests, outgoingRequests]);
+    return [...ids].slice(0, 100);
+  }, [convexUsers, convexListings, incomingRequests, outgoingRequests]);
 
   const requestPartyUsers = useQuery(
     api.users.getPublicByIds,
-    ready && requestPartyIds.length > 0 ? { userIds: requestPartyIds } : "skip",
+    ready && user && missingUserIds.length > 0
+      ? { userIds: missingUserIds }
+      : "skip",
+  );
+  // Signed out, the user directory is empty, so load listing hosts directly.
+  const signedOutHosts = useQuery(
+    api.listings.listActiveHosts,
+    ready && !user ? {} : "skip",
   );
   const wishlist = useQuery(api.users.myWishlist, user ? {} : "skip");
 
@@ -206,13 +166,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     for (const doc of convexUsers) {
       byId.set(doc._id, mapUser(doc));
     }
-    for (const doc of requestPartyUsers ?? []) {
+    for (const doc of [...(requestPartyUsers ?? []), ...(signedOutHosts ?? [])]) {
       if (!byId.has(doc._id)) {
         byId.set(doc._id, mapUser(doc));
       }
     }
     return [...byId.values()];
-  }, [ready, convexUsers, requestPartyUsers]);
+  }, [ready, convexUsers, requestPartyUsers, signedOutHosts]);
 
   const listings = useMemo<Listing[]>(() => {
     if (!ready || convexListings === undefined) return [];
@@ -251,7 +211,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const college = normalizeCollegeName(user.college);
       const year = user.year.trim();
       const role = user.role.trim();
-      if (!college || !year || !role) return null;
+      if (!college || !role || (roleNeedsYear(role) && !year)) return null;
       void college;
       void year;
       void role;
@@ -261,6 +221,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         message: input.message,
         menu: input.menu,
         listingType: input.listingType,
+        formalType: input.formalType,
         ...(input.menuPdfId !== undefined
           ? { menuPdfId: input.menuPdfId as Id<"_storage"> }
           : {}),
@@ -279,6 +240,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         message: input.message,
         menu: input.menu,
         listingType: input.listingType,
+        formalType: input.formalType,
         ...(input.price !== undefined ? { price: input.price } : {}),
         status: "active",
         createdAt: Date.now(),
@@ -294,7 +256,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       offeringListingId?: string;
       message: string;
       targetOwnerUserId?: string;
-    }): Promise<SwapRequest | null> => {
+      guests?: number;
+      guestMethods?: RequestType[];
+      friends?: { userId: string; paysOwn: boolean; method: RequestType }[];
+      links?: { paysOwn: boolean; method: RequestType }[];
+    }): Promise<(SwapRequest & { links: string[] }) | null> => {
       if (!user) return null;
       const targetFromCache = listings.find((l) => l.id === args.targetListingId);
       const toUserId =
@@ -309,6 +275,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
             ? { offeringListingId: args.offeringListingId as Id<"listings"> }
             : {}),
           message: args.message,
+          ...(args.guests ? { guests: args.guests } : {}),
+          ...(args.guestMethods ? { guestMethods: args.guestMethods } : {}),
+          ...(args.friends
+            ? {
+                friends: args.friends.map((f) => ({
+                  ...f,
+                  userId: f.userId as Id<"users">,
+                })),
+              }
+            : {}),
+          ...(args.links && args.links.length > 0 ? { links: args.links } : {}),
         });
       } catch (err) {
         const message =
@@ -340,6 +317,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         message: args.message,
         status: result.autoAccepted ? "accepted" : "pending",
         createdAt: Date.now(),
+        links: ("links" in result ? result.links : undefined) ?? [],
       };
     },
     [user, listings, createRequestMut, getOrCreateConversationMut, sendChatMessageMut],
@@ -407,6 +385,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         menuPdfId?: string;
         clearMenuPdf?: boolean;
         listingType?: ListingType;
+        formalType?: FormalType;
         price?: number;
       },
     ) => {
@@ -424,6 +403,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
             : {}),
         ...(patch.listingType !== undefined
           ? { listingType: patch.listingType }
+          : {}),
+        ...(patch.formalType !== undefined
+          ? { formalType: patch.formalType }
           : {}),
         ...(patch.price !== undefined ? { price: patch.price } : {}),
       });

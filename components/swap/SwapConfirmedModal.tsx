@@ -9,6 +9,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { User } from "@/lib/auth/types";
 import { formatListingDate } from "@/lib/data/format";
 import type { Listing, RequestType } from "@/lib/data/types";
+import { LoadingDots } from "@/components/ui/Loading";
 
 type Props = {
   open: boolean;
@@ -30,7 +31,7 @@ export function SwapConfirmedModal({
   otherUser,
   otherUserId,
 }: Props) {
-  const isPay = requestType === "pay";
+  const isPay = requestType !== "swap";
   const gatedProfile = useQuery(
     api.users.getPublicProfile,
     open && otherUserId ? { userId: otherUserId as Id<"users"> } : "skip",
@@ -96,13 +97,13 @@ export function SwapConfirmedModal({
         {otherUser && (
           <div className="mt-5 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--paper)] p-4 text-left">
             <p className="text-sm text-[var(--ink)]">
-              Please reach out to this person to process the rest of your formal.
+              Message them to sort out the details.
             </p>
             <div className="mt-3 flex flex-col gap-2 text-sm">
               <p className="text-[var(--ink-muted)]">
                 <span className="text-[var(--ink)]">Instagram:</span>{" "}
                 {contactLoading ? (
-                  <span className="text-[var(--ink-soft)]">Loading…</span>
+                  <LoadingDots className="text-[var(--ink-soft)]" />
                 ) : normalizedInstagram ? (
                   <a
                     href={`https://instagram.com/${normalizedInstagram}`}
@@ -119,7 +120,7 @@ export function SwapConfirmedModal({
               <p className="text-[var(--ink-muted)]">
                 <span className="text-[var(--ink)]">WhatsApp:</span>{" "}
                 {contactLoading ? (
-                  <span className="text-[var(--ink-soft)]">Loading…</span>
+                  <LoadingDots className="text-[var(--ink-soft)]" />
                 ) : whatsappPhone ? (
                   <a
                     href={`https://wa.me/${whatsappPhone.replace(/[^\d+]/g, "")}`}
@@ -148,7 +149,7 @@ export function SwapConfirmedModal({
               otherUserId={otherUserId as Id<"users">}
               label="Message in app"
               onBeforeNavigate={onClose}
-              className="rounded-full bg-[var(--accent)] px-6 py-2 text-sm text-white transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
+              className="rounded-full bg-[var(--accent)] px-6 py-2 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
             />
             <button
               type="button"
@@ -162,7 +163,7 @@ export function SwapConfirmedModal({
           <button
             type="button"
             onClick={onClose}
-            className="mt-6 rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-6 py-2 text-sm"
+            className="mt-6 rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] px-6 py-2 text-sm"
           >
             Done
           </button>

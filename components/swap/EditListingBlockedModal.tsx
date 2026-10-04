@@ -25,8 +25,7 @@ export function EditListingBlockedModal({
       panelClassName="max-w-sm"
     >
       <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">
-        You have {pendingCount} pending {label} on this listing. Accept or
-        decline them before editing.
+        Answer {pendingCount} pending {label} before editing.
       </p>
       <button
         type="button"
@@ -34,7 +33,7 @@ export function EditListingBlockedModal({
           onClose();
           onViewRequests();
         }}
-        className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+        className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
       >
         View incoming requests
       </button>

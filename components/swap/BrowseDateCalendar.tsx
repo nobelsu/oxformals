@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/icons";
 
 type Props = {
   value: string[];
@@ -10,7 +11,7 @@ type Props = {
 };
 
 export const BROWSE_DATE_CALENDAR_INSTRUCTIONS =
-  "Tap days to filter. Shift+tap two days to include every day between them. With none selected, all dates show.";
+  "Tap days to filter. Shift-tap for a range.";
 
 const WEEK_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -177,7 +178,7 @@ export function BrowseDateCalendar({
           }
           aria-label="Previous month"
         >
-          ‹
+          <ChevronLeftIcon />
         </button>
         <h3
           className={
@@ -198,7 +199,7 @@ export function BrowseDateCalendar({
           }
           aria-label="Next month"
         >
-          ›
+          <ChevronRightIcon />
         </button>
       </div>
 

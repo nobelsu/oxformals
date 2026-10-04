@@ -1,9 +1,10 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
+import { useOnChange } from "@/lib/hooks/useOnChange";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChatUserPickRow } from "@/components/chat/ChatUserPickRow";
 import { useAuth } from "@/components/auth/useAuth";
 import { Avatar } from "@/components/ui/Avatar";
@@ -16,6 +17,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { MAX_GROUP_SIZE } from "@/lib/chat/constants";
 import { chatsTabUrl } from "@/lib/chat/navigation";
 import type { GroupConversationPreview } from "@/lib/chat/types";
+import { SkeletonRows } from "@/components/ui/Loading";
 
 type Props = {
   open: boolean;
@@ -45,9 +47,9 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
   const leaveGroup = useMutation(api.chat.leaveGroupConversation);
   const renameGroup = useMutation(api.chat.renameGroupConversation);
 
-  useEffect(() => {
+  useOnChange(`${open}|${conversation.name ?? ""}`, () => {
     if (open) setGroupName(conversation.name ?? "");
-  }, [open, conversation.name]);
+  });
 
   const trimmedGroupName = groupName.trim();
   const nameDirty =
@@ -121,7 +123,7 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
               onChange={(e) => setGroupName(e.target.value)}
               placeholder="e.g. Trinity formal crew"
               maxLength={80}
-              hint="Leave blank to show member names instead."
+              hint="Blank shows member names."
             />
             <OutlineButton
               variant="primary"
@@ -136,7 +138,7 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
 
         <ul className="mt-4 max-h-[40vh] space-y-2 overflow-y-auto">
           {members === undefined ? (
-            <li className="text-sm text-[var(--ink-soft)]">Loading…</li>
+            <li><SkeletonRows count={3} /></li>
           ) : (
             members.map((m) => {
               const isSelf = user?.id === m.id;
@@ -238,7 +240,7 @@ export function GroupMembersSheet({ open, onClose, conversation }: Props) {
 
       <ConfirmDialog
         open={leaveConfirmOpen}
-        message="Leave this group? You won't see new messages unless someone adds you back."
+        message="Leave this group? Someone would have to add you back."
         variant="destructive"
         confirmLabel="Leave group"
         onConfirm={() => void handleLeave()}

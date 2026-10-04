@@ -1,4 +1,3 @@
-import type { UiFontId } from "@/convex/uiFont";
 
 export type AvatarSource =
   | { kind: "image"; dataUrl: string }
@@ -13,13 +12,18 @@ export type User = {
   /** e.g. Undergraduate, Postgraduate — shown on listings when you post. */
   role: string;
   interests: string[];
+  /** Free-form, moderated bio (max 150 chars). */
+  bio?: string;
   instagramHandle?: string;
   whatsappPhone?: string;
   dietaryRequirements?: string;
+  /**
+   * Opted in to sharing dietary requirements with formal matches
+   * (`users.dietaryConsentAt` is set). Sent to `patchProfile` as `dietaryConsent`.
+   */
+  dietaryConsent?: boolean;
   /** Degree / course subject (optional). */
   subject: string;
-  /** App UI font preference; persisted on Convex `users.uiFont`. */
-  uiFont: UiFontId;
   avatar?: AvatarSource;
   agreedToRules?: boolean;
   /** When false, user opts out of email notifications (wishlist alerts, review reminders). */
@@ -31,6 +35,10 @@ export type Session = {
   token: string;
   issuedAt: number;
 };
+
+export type SaveBioResult =
+  | { ok: true }
+  | { ok: false; reason: "tooLong" | "flagged" | "unavailable" };
 
 export type SignInResult = { status: "code-sent"; email: string };
 

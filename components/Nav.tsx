@@ -1,29 +1,114 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { ArrowLeftIcon } from "@/components/ui/icons";
+import { useOnChange } from "@/lib/hooks/useOnChange";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useId, useRef, useState } from "react";
 import { UnreadBadge } from "@/components/chat/UnreadBadge";
+import { Avatar } from "@/components/ui/Avatar";
 import { Drawer } from "@/components/ui/Drawer";
+import { CreditsChip } from "@/components/credits/CreditsChip";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { api } from "@/convex/_generated/api";
+import type { AvatarSource } from "@/lib/auth/types";
+import { BROWSE_ROUTE } from "@/lib/ui/routes";
+import { ShallowLink } from "@/components/ui/ShallowLink";
 import { useAuth } from "./auth/useAuth";
-import { NavSettingsModal } from "./NavSettingsModal";
+
+function useNavTheme() {
+  const [inverted, setInverted] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    const check = () => {
+      const navRect = nav.getBoundingClientRect();
+      const midY = navRect.top + navRect.height / 2;
+      const midX = navRect.left + navRect.width / 2;
+      nav.style.setProperty("pointer-events", "none", "important");
+      nav.style.visibility = "hidden";
+      const el = document.elementFromPoint(midX, midY);
+      nav.style.removeProperty("pointer-events");
+      nav.style.visibility = "";
+      if (!el) return;
+
+      const inFinale = !!el.closest("[data-nav-hide]");
+      setHidden(inFinale);
+      if (inFinale) return;
+
+      let r = 0, g = 0, b = 0;
+      let found = false;
+
+      if (el instanceof HTMLCanvasElement) {
+        try {
+          const rect = el.getBoundingClientRect();
+          const scaleX = el.width / rect.width;
+          const scaleY = el.height / rect.height;
+          const cx = (midX - rect.left) * scaleX;
+          const cy = (midY - rect.top) * scaleY;
+          const ctx2d = el.getContext("2d");
+          if (ctx2d) {
+            const px = ctx2d.getImageData(Math.round(cx), Math.round(cy), 1, 1).data;
+            if (px[3] > 20) {
+              r = px[0]; g = px[1]; b = px[2];
+              found = true;
+            }
+          }
+        } catch { /* tainted canvas or other error — fall through */ }
+      }
+
+      if (!found) {
+        let target: Element | null = el instanceof HTMLCanvasElement ? el.parentElement : el;
+        while (target) {
+          const bg = getComputedStyle(target).backgroundColor;
+          if (bg && bg !== "transparent" && bg !== "rgba(0, 0, 0, 0)") {
+            const match = bg.match(/\d+/g);
+            if (match) {
+              [r, g, b] = match.map(Number);
+              found = true;
+            }
+            break;
+          }
+          target = target.parentElement;
+        }
+      }
+
+      if (!found) return;
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      setInverted(luminance < 0.5);
+    };
+
+    check();
+    const id = setInterval(check, 80);
+    window.addEventListener("scroll", check, { passive: true });
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("scroll", check);
+    };
+  }, []);
+
+  return { navRef, inverted, hidden };
+}
 
 const TABS = [
+  { id: "feed", label: "Feed" },
   { id: "browse", label: "Browse" },
-  { id: "rankings", label: "Rankings" },
-  { id: "requests", label: "Activity" },
+  { id: "colleges", label: "Colleges" },
   { id: "chats", label: "Chats" },
-  { id: "mine", label: "Me" },
 ] as const;
 
-export function Nav() {
-  const pathname = usePathname();
-  if (pathname?.startsWith("/login") || pathname?.startsWith("/letter")) {
-    return null;
-  }
+/** Labels for surfaces reached from elsewhere (the avatar, or the feed's
+ *  chips) rather than the visible tab bar, but still needing a mobile title. */
+const OFF_BAR_LABELS: Record<string, string> = {
+  mine: "Me",
+};
 
+export function Nav() {
   return (
     <Suspense fallback={<NavShell />}>
       <NavInner />
@@ -33,7 +118,7 @@ export function Nav() {
 
 function NavShell() {
   return (
-    <nav className="w-full shrink-0 bg-[var(--bg)]">
+    <nav className="sticky top-0 z-50 w-full shrink-0 backdrop-blur-md bg-[var(--bg)]/80">
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 py-5" />
     </nav>
   );
@@ -41,49 +126,308 @@ function NavShell() {
 
 function NavInner() {
   const { status, isAuthenticated, user, signOut } = useAuth();
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { navRef, inverted, hidden } = useNavTheme();
+  const [landingScrolled, setLandingScrolled] = useState(false);
+  // The feed's own For you / Following tabs have scrolled under the nav.
+  const [feedTabsGone, setFeedTabsGone] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const isRequestsDetail = pathname?.startsWith("/requests/") ?? false;
   const isCollegeDetail = pathname?.startsWith("/college/") ?? false;
-  const activeTab = isRequestsDetail
-    ? "requests"
-    : isCollegeDetail
-      ? "rankings"
-      : searchParams.get("tab") ?? "browse";
-  const onTabbedPage = pathname === "/" || isRequestsDetail;
+  const isLegalPage =
+    pathname?.startsWith("/privacy") || pathname?.startsWith("/terms");
+  const isLoginPage = pathname?.startsWith("/login") ?? false;
+  const isBareRoot =
+    pathname === "/" && !searchParams.get("tab") && !searchParams.get("listing");
+  const activeTab = isCollegeDetail ? "colleges" : (searchParams.get("tab") ?? "feed");
+  // Mirrors HomeClient's landing-page condition: logged-out visitors on "/"
+  // with no ?tab= and no ?listing= (email deep links bypass landing) see the
+  // marketing page, not BrowseTab, so Browse shouldn't be marked active
+  // there. Gate on `status === "ready"` too — isAuthenticated is false while
+  // auth is still hydrating, which previously made this flip true for
+  // signed-in users too and caused the Browse highlight to flicker in on
+  // hydration instead of showing immediately.
+  const isLandingPage =
+    isBareRoot &&
+    status === "ready" &&
+    !isAuthenticated;
+
+  const onTabbedPage = pathname === "/" && !isLandingPage;
   const activeTabLabel =
-    TABS.find((t) => t.id === activeTab)?.label ?? "Browse";
+    TABS.find((t) => t.id === activeTab)?.label ??
+    OFF_BAR_LABELS[activeTab] ??
+    "Browse";
   const totalUnread =
     useQuery(
       api.chat.getTotalUnreadCount,
       isAuthenticated ? {} : "skip",
     ) ?? 0;
 
+  // Navigating anywhere closes the drawer.
+  useOnChange(`${pathname}?${searchParams.toString()}`, () => setDrawerOpen(false));
+
+  // Older emails' "Email settings" link lands on ?settings=1; send it to the
+  // settings page.
+  const settingsFromLink = isAuthenticated && searchParams.get("settings") === "1";
   useEffect(() => {
-    setDrawerOpen(false);
-  }, [pathname, searchParams]);
+    if (settingsFromLink) router.replace("/settings?section=notifications");
+  }, [settingsFromLink, router]);
+
+  // Landing page and signed-in app alike collapse once you scroll.
+  useEffect(() => {
+    const onScroll = () => {
+      setLandingScrolled(window.scrollY > 56);
+      const tabs = document.querySelector("[data-feed-tabs]");
+      const navBottom = navRef.current?.getBoundingClientRect().bottom ?? 0;
+      setFeedTabsGone(
+        tabs ? tabs.getBoundingClientRect().bottom <= navBottom : true,
+      );
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isLandingPage, navRef]);
+  // Signed-in slim bar: on the feed, the For you / Following tabs move up
+  // into it.
+  const collapsed = landingScrolled;
+  const onFeed = pathname === "/" && activeTab === "feed";
+  // Only once the page's own tabs are out of sight, so they never show twice.
+  const feedTabsInNav = collapsed && onFeed && feedTabsGone;
+  const feedFollowing = searchParams?.get("feed") === "following";
+
+  if (isLoginPage) {
+    return (
+      <nav className="sticky top-0 z-50 w-full shrink-0 relative isolate backdrop-blur-md">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-bg/95 via-bg/70 to-transparent"
+        />
+        <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+            <div className="flex items-center justify-start">
+              <Link
+                href="/"
+                className="font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)]"
+              >
+                Oxformals
+              </Link>
+            </div>
+            <div className="col-start-2 flex items-center justify-center gap-4 whitespace-nowrap text-sm text-[var(--nav-ink-muted)]">
+              <Link
+                href="/privacy"
+                className="underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
+              >
+                Privacy
+              </Link>
+              <span aria-hidden>·</span>
+              <Link
+                href="/terms"
+                className="underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
+              >
+                Terms
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
+  if (isLegalPage) {
+    return (
+      <nav
+        ref={navRef}
+        className={`sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${
+          hidden
+            ? "pointer-events-none opacity-0"
+            : inverted
+              ? "nav-inverted pointer-events-none"
+              : "relative isolate backdrop-blur-md"
+        }`}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-bg/95 via-bg/70 to-transparent"
+        />
+        <div className="pointer-events-auto mx-auto w-full max-w-5xl px-4 py-5 sm:px-6">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+            <div className="flex items-center justify-start">
+              <Link
+                href="/"
+                className="font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)]"
+              >
+                Oxformals
+              </Link>
+            </div>
+            <div className="flex items-center justify-center whitespace-nowrap text-sm text-[var(--nav-ink-muted)]">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
+              >
+                <ArrowLeftIcon />
+                Return
+              </Link>
+            </div>
+            <div className="flex items-center justify-end">
+              <Link
+                href="/login"
+                className="rounded-full bg-[var(--accent)] px-4 py-1 font-medium text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
+              >
+                Sign in
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
+  if (isLandingPage) {
+    return (
+      <nav
+        ref={navRef}
+        className={`sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${
+          hidden
+            ? "pointer-events-none opacity-0"
+            : inverted
+              ? "nav-inverted pointer-events-none"
+              : "relative isolate backdrop-blur-md"
+        }`}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-bg/95 via-bg/70 to-transparent"
+        />
+        <div className="pointer-events-auto mx-auto w-full max-w-5xl px-4 py-5 sm:px-6">
+          <div className="relative grid grid-cols-[1fr_auto_1fr] items-center">
+            <div
+              className={`col-start-2 flex items-center justify-center gap-5 whitespace-nowrap text-sm text-[var(--nav-ink-muted)] transition-all duration-300 ${
+                landingScrolled
+                  ? "pointer-events-none -translate-y-1 opacity-0"
+                  : "translate-y-0 opacity-100"
+              }`}
+            >
+              <Link
+                href="/privacy"
+                className="underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
+              >
+                Privacy
+              </Link>
+              <span aria-hidden>·</span>
+              <Link
+                href="/terms"
+                className="underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
+              >
+                Terms
+              </Link>
+            </div>
+            <div
+              className={`absolute top-1/2 z-10 transition-[left,transform] duration-300 ease-out ${
+                landingScrolled
+                  ? "left-1/2 -translate-x-1/2 -translate-y-1/2 scale-110"
+                  : "left-0 -translate-y-1/2"
+              }`}
+            >
+              <Link
+                href="/"
+                className="block font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)] transition-transform duration-300 ease-out"
+              >
+                Oxformals
+              </Link>
+            </div>
+            <div className="col-start-3 flex items-center justify-end">
+              <Link
+                href="/login"
+                className="rounded-full bg-[var(--accent)] px-4 py-1 font-medium text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
+              >
+                Sign in
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
+
+  // Logged-out visitors who followed "Browse formals" off the landing page get
+  // a stripped-back nav (brand · Return · Sign in) instead of the full tab bar —
+  // the tabs are useless to them, and Return takes them back to the marketing
+  // page, mirroring the legal-page nav.
+  if (
+    onTabbedPage &&
+    status === "ready" &&
+    !isAuthenticated &&
+    activeTab === "browse"
+  ) {
+    return (
+      <nav
+        ref={navRef}
+        className={`sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${
+          hidden
+            ? "pointer-events-none opacity-0"
+            : inverted
+              ? "nav-inverted pointer-events-none"
+              : "backdrop-blur-md bg-[var(--nav-bg)]/80"
+        }`}
+      >
+        <div className="pointer-events-auto mx-auto grid w-full max-w-5xl grid-cols-[1fr_auto_1fr] items-center px-4 py-5 sm:px-6">
+          <div className="flex items-center justify-start">
+            <Link
+              href="/"
+              className="font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)]"
+            >
+              Oxformals
+            </Link>
+          </div>
+          <div className="flex items-center justify-center whitespace-nowrap text-sm text-[var(--nav-ink-muted)]">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 underline-offset-4 transition-colors hover:text-[var(--nav-ink)] hover:underline"
+            >
+              <ArrowLeftIcon />
+              Return
+            </Link>
+          </div>
+          <div className="flex items-center justify-end">
+            <Link
+              href="/login"
+              className="rounded-full bg-[var(--accent)] px-4 py-1 font-medium text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
+            >
+              Sign in
+            </Link>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   function hrefFor(tab: string): string {
-    if (tab === "browse") return "/";
+    if (tab === "feed") return "/";
+    if (tab === "browse") return BROWSE_ROUTE;
     return `/?tab=${tab}`;
   }
 
-  function openSettings() {
-    setDrawerOpen(false);
-    setSettingsOpen(true);
-  }
-
   return (
-    <nav className="w-full shrink-0 bg-[var(--bg)]">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-5 sm:grid-cols-[1fr_auto_1fr] sm:gap-4 sm:px-6">
+    // The signed-in app nav always keeps its background: the "inverted" state
+    // is for the landing page's dark sections, and on dark app pages it would
+    // leave the nav transparent over scrolling content.
+    <nav ref={navRef} className={`sticky top-0 z-50 w-full shrink-0 transition-[colors,opacity] duration-300 ${hidden ? "pointer-events-none opacity-0" : "backdrop-blur-md bg-[var(--nav-bg)]/80"}`}>
+      <div className={`pointer-events-auto mx-auto grid w-full max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 transition-[padding] duration-300 sm:grid-cols-[1fr_auto_1fr] sm:gap-4 sm:px-6 ${collapsed ? "py-2.5" : "py-5"}`}>
         <div className="flex items-center justify-start">
+          <Link
+            href="/"
+            className="hidden font-display text-xl uppercase leading-none tracking-[0.12em] text-[var(--nav-ink)] sm:block"
+          >
+            Oxformals
+          </Link>
           <button
             type="button"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] sm:hidden"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--nav-ink)] text-[var(--nav-ink)] transition-colors hover:bg-[var(--nav-ink)] hover:text-[var(--nav-bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)] sm:hidden"
             aria-label="Open menu"
+            data-onboarding="menu"
             aria-expanded={drawerOpen}
             aria-controls="nav-drawer-panel"
             onClick={() => setDrawerOpen(true)}
@@ -102,10 +446,29 @@ function NavInner() {
           </button>
         </div>
 
-        <div className="flex min-w-0 items-center justify-center sm:col-start-2">
-          <p className="min-w-0 truncate text-center font-display text-lg uppercase tracking-[0.2em] text-[var(--ink)] sm:hidden">
+        {/* Both layers share one cell and cross-fade, like the landing nav. */}
+        <div className="grid min-w-0 items-center justify-items-center sm:col-start-2">
+          <div
+            inert={!feedTabsInNav}
+            className={`col-start-1 row-start-1 transition-all duration-300 ease-out ${
+              feedTabsInNav
+                ? "translate-y-0 opacity-100"
+                : "pointer-events-none translate-y-1 opacity-0"
+            }`}
+          >
+            <FeedScopeTabs following={feedFollowing} />
+          </div>
+          <div
+            inert={feedTabsInNav}
+            className={`col-start-1 row-start-1 flex min-w-0 max-w-full items-center justify-center transition-all duration-300 ease-out ${
+              feedTabsInNav
+                ? "pointer-events-none -translate-y-1 opacity-0"
+                : "translate-y-0 opacity-100"
+            }`}
+          >
+          <p className="min-w-0 truncate text-center font-display text-lg uppercase tracking-[0.2em] text-[var(--nav-ink)] sm:hidden">
             {isCollegeDetail
-              ? "Rankings"
+              ? "Colleges"
               : onTabbedPage
                 ? activeTabLabel
                 : "Oxformals"}
@@ -118,61 +481,36 @@ function NavInner() {
                 href={hrefFor(t.id)}
                 isActive={
                   (onTabbedPage && activeTab === t.id) ||
-                  (isCollegeDetail && t.id === "rankings")
+                  (isCollegeDetail && t.id === "colleges")
                 }
                 totalUnread={totalUnread}
+                onboardingId={t.id === "browse" ? "browse" : undefined}
               />
             ))}
           </ul>
+          </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 text-sm whitespace-nowrap">
-          {status !== "ready" ? null : isAuthenticated && user ? (
+        <div className="flex min-w-0 items-center justify-end gap-2 text-sm whitespace-nowrap sm:gap-3">
+          {status === "ready" && isAuthenticated && user ? (
             <>
-              <span className="hidden sm:inline whitespace-nowrap text-[var(--ink-muted)]">
-                {user.name.split(" ")[0]}
-                <span className="text-[var(--ink-soft)]"> · {user.college}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  void signOut().then(() => router.push("/"));
-                }}
-                className="hidden whitespace-nowrap rounded-full border-[2px] border-[var(--ink)] px-3 py-0.5 text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] transition-colors sm:inline-block"
-              >
-                Sign out
-              </button>
-              <button
-                type="button"
-                aria-label="Settings"
-                aria-expanded={settingsOpen}
-                aria-controls="nav-settings-panel"
-                onClick={() => setSettingsOpen(true)}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2px] border-[var(--ink)] text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-              >
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4"
-                >
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-                </svg>
-              </button>
-              <NavSettingsModal
-                open={settingsOpen}
-                onClose={() => setSettingsOpen(false)}
-              />
+              <NotificationBell />
+              <CreditsChip compact />
             </>
+          ) : null}
+          {status !== "ready" ? null : isAuthenticated && user ? (
+            <AccountMenu
+              name={user.name}
+              avatar={user.avatar}
+              onProfile={activeTab === "mine"}
+              onSignOut={() => {
+                void signOut().then(() => router.push("/"));
+              }}
+            />
           ) : (
             <Link
               href="/login"
-              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-4 py-1"
+              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] px-4 py-1 font-medium"
             >
               Sign in
             </Link>
@@ -194,7 +532,7 @@ function NavInner() {
                   href={hrefFor(t.id)}
                   isActive={
                     (onTabbedPage && activeTab === t.id) ||
-                    (isCollegeDetail && t.id === "rankings")
+                    (isCollegeDetail && t.id === "colleges")
                   }
                   totalUnread={totalUnread}
                   onNavigate={() => setDrawerOpen(false)}
@@ -206,24 +544,37 @@ function NavInner() {
 
           {status === "ready" && isAuthenticated && user ? (
             <div className="flex flex-col gap-4 border-t-[2px] border-[var(--ink)]/15 pt-6">
-              <p className="text-sm text-[var(--ink-muted)]">
-                {user.name}
-                <span className="text-[var(--ink-soft)]"> · {user.college}</span>
-              </p>
-              <button
-                type="button"
-                onClick={openSettings}
-                className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+              <Link
+                href="/?tab=mine"
+                onClick={() => setDrawerOpen(false)}
+                data-onboarding="me"
+                aria-current={activeTab === "mine" ? "page" : undefined}
+                className="-mx-1 flex items-center gap-3 rounded-xl px-1 py-1 transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
+              >
+                <Avatar name={user.name} source={user.avatar} size="md" />
+                <span className="min-w-0">
+                  <span className="block truncate text-base font-semibold text-[var(--ink)]">
+                    {user.name}
+                  </span>
+                  <span className="block truncate text-sm text-[var(--ink-muted)]">
+                    {user.college} · View profile
+                  </span>
+                </span>
+              </Link>
+              <Link
+                href="/settings"
+                onClick={() => setDrawerOpen(false)}
+                className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
               >
                 Settings
-              </button>
+              </Link>
               <button
                 type="button"
                 onClick={() => {
                   setDrawerOpen(false);
                   void signOut().then(() => router.push("/"));
                 }}
-                className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+                className="w-full rounded-full border-[2px] border-[var(--ink)] px-4 py-2 text-left font-medium text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
               >
                 Sign out
               </button>
@@ -232,14 +583,131 @@ function NavInner() {
             <Link
               href="/login"
               onClick={() => setDrawerOpen(false)}
-              className="block rounded-full bg-[var(--accent)] px-4 py-2 text-center text-white hover:bg-[var(--accent-hover)]"
+              className="block rounded-full bg-[var(--accent)] px-4 py-2 text-center font-medium text-[var(--accent-ink)] hover:bg-[var(--accent-hover)]"
             >
               Sign in
             </Link>
           ) : null}
         </div>
       </Drawer>
+
     </nav>
+  );
+}
+
+/** Desktop account entry point: the avatar opens a Profile / Settings /
+ *  Sign out menu (mobile reaches the same actions through the drawer). */
+function AccountMenu({
+  name,
+  avatar,
+  onProfile,
+  onSignOut,
+}: {
+  name: string;
+  avatar?: AvatarSource;
+  onProfile: boolean;
+  onSignOut: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Close on navigation (e.g. choosing Profile).
+  const [lastLocation, setLastLocation] = useState({ pathname, searchParams });
+  if (
+    lastLocation.pathname !== pathname ||
+    lastLocation.searchParams !== searchParams
+  ) {
+    setLastLocation({ pathname, searchParams });
+    if (open) setOpen(false);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const itemClass =
+    "block w-full rounded-xl px-3 py-2 text-left text-sm text-[var(--ink)] transition-colors hover:bg-[var(--paper)] focus:outline-none focus-visible:bg-[var(--paper)]";
+
+  return (
+    <div ref={rootRef} className="relative hidden min-w-0 sm:block">
+      <button
+        type="button"
+        aria-label="Account menu"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        data-onboarding="me"
+        onClick={() => setOpen((o) => !o)}
+        className="group inline-flex min-w-0 cursor-pointer items-center gap-2.5 rounded-full transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)]"
+      >
+        <span className="min-w-0 truncate whitespace-nowrap text-[var(--nav-ink-muted)] group-hover:text-[var(--nav-ink)]">
+          {name.split(" ")[0]}
+        </span>
+        <span
+          className={`shrink-0 rounded-full transition-shadow ${
+            onProfile || open
+              ? "ring-2 ring-[var(--nav-ink)] ring-offset-2 ring-offset-[var(--nav-bg)]"
+              : ""
+          }`}
+        >
+          <Avatar name={name} source={avatar} size="sm" />
+        </span>
+      </button>
+
+      {open ? (
+        <div
+          id={menuId}
+          role="menu"
+          aria-label="Account"
+          className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-48 rounded-2xl border-[2px] border-[var(--ink)] bg-[var(--bg)] p-2 shadow-sm"
+        >
+          <Link
+            href="/?tab=mine"
+            role="menuitem"
+            aria-current={onProfile ? "page" : undefined}
+            onClick={() => setOpen(false)}
+            className={itemClass}
+          >
+            Profile
+          </Link>
+          <Link
+            href="/settings"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className={itemClass}
+          >
+            Settings
+          </Link>
+          <div aria-hidden className="mx-2 my-1 border-t border-[var(--ink)]/15" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onSignOut();
+            }}
+            className={itemClass}
+          >
+            Sign out
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -252,6 +720,7 @@ function NavTabLink({
   totalUnread,
   onNavigate,
   className = "",
+  onboardingId,
 }: {
   tab: NavTab;
   href: string;
@@ -259,39 +728,55 @@ function NavTabLink({
   totalUnread: number;
   onNavigate?: () => void;
   className?: string;
+  /** Target for the first-run tour (`data-onboarding`). */
+  onboardingId?: string;
 }) {
   const showUnread = tab.id === "chats" && totalUnread > 0;
 
   return (
-    <Link
+    <ShallowLink
       href={href}
+      data-onboarding={onboardingId}
       onClick={onNavigate}
-      className={`inline-flex items-center gap-2 font-display uppercase tracking-[0.2em] whitespace-nowrap pb-0.5 transition-opacity ${
+      className={`group/tab inline-flex items-center gap-2 font-display uppercase tracking-[0.2em] whitespace-nowrap pb-0.5 transition-colors duration-300 ${
         isActive
-          ? "text-[var(--ink)]"
-          : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+          ? "text-[var(--nav-ink)]"
+          : "text-[var(--nav-ink-muted)] hover:text-[var(--nav-ink)]"
       } ${className}`}
     >
-      <span
-        className={
-          isActive
-            ? "underline underline-offset-[8px] decoration-[2.5px]"
-            : undefined
-        }
-      >
+      {/* The underline draws in from the left on hover and stays for the active tab. */}
+      <span className="relative pb-[6px]">
         {tab.label}
-      </span>
-      {tab.id === "rankings" ? (
         <span
-          className="rounded-full border border-[var(--accent)] px-1.5 py-px text-[0.55rem] font-semibold normal-case tracking-normal text-[var(--accent)]"
-          aria-hidden="true"
-        >
-          new
-        </span>
-      ) : null}
+          aria-hidden
+          className={`absolute inset-x-0 bottom-0 h-[2.5px] origin-left rounded-full bg-current transition-transform duration-300 ease-out motion-reduce:transition-none ${
+            isActive ? "scale-x-100" : "scale-x-0 group-hover/tab:scale-x-100"
+          }`}
+        />
+      </span>
       {showUnread ? (
         <UnreadBadge count={totalUnread} className="translate-y-px" />
       ) : null}
-    </Link>
+    </ShallowLink>
+  );
+}
+
+/** For you / Following, shown in the slim nav once the feed scrolls. */
+function FeedScopeTabs({ following }: { following: boolean }) {
+  const cls = (on: boolean) =>
+    `border-b-2 pb-0.5 text-sm transition-colors ${
+      on
+        ? "border-[var(--nav-ink)] font-bold text-[var(--nav-ink)]"
+        : "border-transparent text-[var(--nav-ink-muted)] hover:text-[var(--nav-ink)]"
+    }`;
+  return (
+    <div className="flex items-center gap-6">
+      <ShallowLink href="/" scroll={false} className={cls(!following)}>
+        For you
+      </ShallowLink>
+      <ShallowLink href="/?feed=following" scroll={false} className={cls(following)}>
+        Following
+      </ShallowLink>
+    </div>
   );
 }

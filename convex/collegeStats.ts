@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import {
+  applyReviewDelete,
   applyReviewInsert,
   applyReviewUpdate,
   averagesFromSums,
@@ -56,6 +57,25 @@ export async function recordReviewInsert(
 ): Promise<void> {
   const doc = await getOrCreateCollegeStatsDoc(ctx, college, nowMs);
   const next = applyReviewInsert(
+    {
+      reviewCount: doc.reviewCount,
+      ratingSums: doc.ratingSums,
+      attendanceCount: doc.attendanceCount,
+      completedFormalCount: doc.completedFormalCount,
+    },
+    ratings,
+  );
+  await ctx.db.patch(doc._id, { ...next, updatedAt: nowMs });
+}
+
+export async function recordReviewDelete(
+  ctx: MutationCtx,
+  college: string,
+  ratings: ReviewRatings,
+  nowMs: number,
+): Promise<void> {
+  const doc = await getOrCreateCollegeStatsDoc(ctx, college, nowMs);
+  const next = applyReviewDelete(
     {
       reviewCount: doc.reviewCount,
       ratingSums: doc.ratingSums,

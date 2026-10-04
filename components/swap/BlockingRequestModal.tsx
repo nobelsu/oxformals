@@ -24,8 +24,8 @@ export function BlockingRequestModal({
     >
       <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">
         {hasAccepted
-          ? "You already have an accepted request for this listing. Finish that swap before sending another."
-          : "You already have a request waiting for a reply on this listing. Withdraw it before sending another."}
+          ? "You're already in for this formal."
+          : "You already asked. Withdraw it to send another."}
       </p>
       <button
         type="button"
@@ -33,7 +33,7 @@ export function BlockingRequestModal({
           onClose();
           onViewRequests();
         }}
-        className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+        className="w-full cursor-pointer rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
       >
         View my requests
       </button>

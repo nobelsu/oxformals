@@ -10,7 +10,7 @@ type Props = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "className"> & {
 };
 
 const TEXTAREA_CLS =
-  "w-full min-w-0 resize-y rounded-lg border-[2px] border-[var(--ink)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none focus:border-[var(--accent-hover)]";
+  "w-full min-w-0 resize-y rounded-lg border-[2px] border-[var(--ink)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none focus:bg-[var(--paper)]";
 
 export function OutlineTextArea({
   label,

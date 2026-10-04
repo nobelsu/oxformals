@@ -1,6 +1,8 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useEffect, type ReactNode } from "react";
+import { useIsClient } from "@/lib/hooks/useIsClient";
 
 type Props = {
   open: boolean;
@@ -18,6 +20,8 @@ export function Drawer({
   side = "left",
   children,
 }: Props) {
+  // The portal target (document.body) only exists in the browser.
+  const isClient = useIsClient();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -32,16 +36,18 @@ export function Drawer({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !isClient) return null;
 
   const panelPosition =
     side === "left"
       ? "left-0 border-r-[2.5px]"
       : "right-0 border-l-[2.5px]";
 
-  return (
+  // Render on <body> so a parent with a transform/filter (e.g. the blurred
+  // nav) can't trap this full-screen layer inside its own box.
+  return createPortal(
     <div
-      className="fixed inset-0 z-50"
+      className="fixed inset-0 z-[100]"
       role="dialog"
       aria-modal="true"
       aria-label={title ?? "Navigation menu"}
@@ -64,6 +70,7 @@ export function Drawer({
           {children}
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }

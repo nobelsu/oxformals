@@ -8,6 +8,14 @@ import { formatListingDate, formatPrice, formatRelativeTime } from "@/lib/data/f
 import { ListingTag } from "@/components/swap/ListingTag";
 import type { Listing, SwapRequest } from "@/lib/data/types";
 import { resolveRequestType } from "@/lib/data/requestFilters";
+import {
+  partySuffix,
+  paymentSummary,
+  requestSeatCount,
+  unconfirmedPayers,
+  unjoinedLinks,
+} from "@/lib/data/party";
+import { useData } from "@/components/data/useData";
 import { MessageUserButton } from "@/components/chat/MessageUserButton";
 import { RequestMessage } from "@/components/swap/RequestMessage";
 import { RequestTypeTag } from "@/components/swap/RequestTypeTag";
@@ -30,8 +38,13 @@ export function IncomingRequestRow({
   onAccept,
   onDecline,
 }: Props) {
+  const { getUser } = useData();
+  const nameOf = (id: string) => getUser(id)?.name;
   const requestType = resolveRequestType(request);
   const isPending = request.status === "pending";
+  const seatCount = requestSeatCount(request);
+  const waitingOn = isPending ? unconfirmedPayers(request) : [];
+  const waitingToJoin = isPending ? unjoinedLinks(request) : 0;
   const statusLabel =
     request.status === "pending"
       ? "Pending"
@@ -50,18 +63,43 @@ export function IncomingRequestRow({
         </Link>
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-            <Link
-              href={`/profile/${fromUser.id}`}
-              className="min-w-0 text-lg leading-tight hover:underline break-words"
-            >
-              {fromUser.name}
-            </Link>
+            <span className="min-w-0 text-lg leading-tight break-words">
+              <Link href={`/profile/${fromUser.id}`} className="hover:underline">
+                {fromUser.name}
+              </Link>
+              {request.party?.length ? (
+                <span className="text-[var(--ink-muted)]"> {partySuffix(request, nameOf)}</span>
+              ) : null}
+            </span>
             <div className="flex shrink-0 flex-wrap items-center gap-1.5">
               <RequestTypeTag requestType={requestType} />
               <ListingTag className="whitespace-nowrap">{statusLabel}</ListingTag>
             </div>
           </div>
-          {requestType === "pay" ? (
+          {seatCount > 1 ? (
+            <div className="text-sm font-bold leading-snug text-[var(--ink)]">
+              {seatCount} seats · {paymentSummary(request, targetListing?.price)}
+            </div>
+          ) : null}
+          {waitingOn.length > 0 ? (
+            <div className="text-xs leading-snug text-[var(--accent)]">
+              Waiting for{" "}
+              {waitingOn.map((id) => nameOf(id)?.split(" ")[0] ?? "a friend").join(" and ")}{" "}
+              to confirm they&apos;re coming
+            </div>
+          ) : null}
+          {waitingToJoin > 0 ? (
+            <div className="text-xs leading-snug text-[var(--accent)]">
+              Waiting for {waitingToJoin === 1 ? "1 person" : `${waitingToJoin} people`} to join
+            </div>
+          ) : null}
+          {requestType === "credit" ? (
+            <div className="text-sm leading-snug text-[var(--ink-muted)]">
+              {requestSeatCount(request) > 1
+                ? `${requestSeatCount(request)} credits · yours after they come`
+                : "1 credit · yours after they come"}
+            </div>
+          ) : requestType === "pay" ? (
             <div className="text-sm leading-snug text-[var(--ink-muted)]">
               Pay request
               {targetListing?.price !== undefined
@@ -95,7 +133,7 @@ export function IncomingRequestRow({
             <button
               type="button"
               onClick={onAccept}
-              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-4 py-1 text-sm"
+              className="rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] px-4 py-1 text-sm"
             >
               Accept
             </button>

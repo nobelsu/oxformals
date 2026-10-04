@@ -193,7 +193,7 @@ export function ChatComposer({
         <button
           type="button"
           onClick={acceptLinkSuggestion}
-          className="mb-2 flex w-full items-center gap-2 rounded-xl border border-dashed border-[var(--ink)]/25 bg-[var(--paper)] px-3 py-2 text-left text-xs text-[var(--ink-muted)] transition-colors hover:border-[var(--ink)]/40 hover:bg-[var(--ink)]/5"
+          className="mb-2 flex w-full items-center gap-2 rounded-xl border border-[var(--ink)]/25 bg-[var(--paper)] px-3 py-2 text-left text-xs text-[var(--ink-muted)] transition-colors hover:border-[var(--ink)]/40 hover:bg-[var(--ink)]/5"
         >
           <span className="shrink-0 rounded bg-[var(--ink)]/10 px-1.5 py-0.5 font-mono text-[0.65rem] text-[var(--ink)]">
             ⇧ Tab
@@ -273,7 +273,7 @@ export function ChatComposer({
         <button
           type="submit"
           disabled={editorEmpty && !pendingRef}
-          className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] px-5 text-sm text-white transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
+          className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] px-5 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
         >
           Send
         </button>

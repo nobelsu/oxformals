@@ -6,6 +6,8 @@ import { ListingReferenceCard } from "@/components/chat/ListingReferenceCard";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { ListingSummary } from "@/lib/chat/types";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SkeletonRows } from "@/components/ui/Loading";
 
 type Props = {
   open: boolean;
@@ -28,16 +30,13 @@ export function ListingReferencePicker({
   return (
     <Modal open={open} onClose={onClose} panelClassName="max-w-md">
       <h2 className="font-display text-2xl uppercase tracking-wide">
-        Refer to a listing
+        Share a listing
       </h2>
-      <p className="mt-2 text-sm text-[var(--ink-muted)]">
-        Attach a formal listing to your message.
-      </p>
-      <div className="mt-5 flex max-h-[50vh] flex-col gap-2 overflow-y-auto">
+      <div className="mt-4 flex max-h-[50vh] flex-col gap-2 overflow-y-auto">
         {listings === undefined ? (
-          <p className="text-sm text-[var(--ink-soft)]">Loading…</p>
+          <SkeletonRows count={3} avatar={false} />
         ) : listings.length === 0 ? (
-          <p className="text-sm text-[var(--ink-soft)]">No listings available.</p>
+          <EmptyState compact icon="ticket" title="No listings to share" />
         ) : (
           listings.map((listing) => (
             <ListingReferenceCard

@@ -4,15 +4,19 @@ import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import {
   createContext,
   useCallback,
-  useEffect,
   useMemo,
   type ReactNode,
 } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
-import type { SignInResult, SignupInput, User } from "@/lib/auth/types";
-import { DEFAULT_UI_FONT } from "@/convex/uiFont";
+import type {
+  SaveBioResult,
+  SignInResult,
+  SignupInput,
+  User,
+} from "@/lib/auth/types";
+import { roleNeedsYear } from "@/convex/roles";
 
 type Status = "hydrating" | "ready";
 const ADMIN_EMAIL = "admin@ox.ac.uk";
@@ -22,8 +26,8 @@ function profileComplete(doc: Doc<"users"> | null | undefined): boolean {
   return !!(
     doc.name?.trim() &&
     doc.college?.trim() &&
-    doc.year?.trim() &&
-    doc.role?.trim()
+    doc.role?.trim() &&
+    (doc.year?.trim() || !roleNeedsYear(doc.role))
   );
 }
 
@@ -36,11 +40,12 @@ function mapDocToUser(doc: Doc<"users">): User {
     year: doc.year ?? "",
     role: doc.role ?? "",
     interests: doc.interests ?? [],
+    bio: doc.bio ?? "",
     instagramHandle: doc.instagramHandle ?? "",
     whatsappPhone: doc.whatsappPhone ?? "",
     dietaryRequirements: doc.dietaryRequirements ?? "",
+    dietaryConsent: doc.dietaryConsentAt !== undefined,
     subject: doc.subject ?? "",
-    uiFont: doc.uiFont ?? DEFAULT_UI_FONT,
     ...(doc.avatar ? { avatar: doc.avatar } : {}),
     agreedToRules: doc.agreedToRules ?? false,
     ...(doc.emailNotifications !== undefined
@@ -66,6 +71,17 @@ export type AuthContextValue = {
   requestCode: (email: string) => Promise<SignInResult>;
   /** Step 2: verify the code and establish the session. */
   verifyCode: (email: string, code: string) => Promise<void>;
+  /** Sign in with an already-set password. */
+  signInWithPassword: (email: string, password: string) => Promise<void>;
+  /**
+   * Whether the signed-in user has a password set.
+   * `undefined` while loading or when signed out.
+   */
+  hasPassword: boolean | undefined;
+  /** Attach a password to the current (OTP-verified) account. */
+  setPassword: (password: string) => Promise<void>;
+  /** Save the bio after a moderation check; an empty bio clears it. */
+  saveBio: (bio: string) => Promise<SaveBioResult>;
   completeSignup: (input: SignupInput) => Promise<User>;
   signOut: () => Promise<void>;
   updateProfile: (
@@ -83,10 +99,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useAuthActions();
 
   const convexUserDoc = useQuery(api.users.current);
+  const hasPassword = useQuery(
+    api.password.hasPassword,
+    jwtAuthenticated ? {} : "skip",
+  );
 
   const completeOnboardingMut = useMutation(api.users.completeOnboarding);
   const patchProfileMut = useMutation(api.users.patchProfile);
   const agreeToRulesMut = useMutation(api.users.agreeToRules);
+  const setPasswordAction = useAction(api.password.setPassword);
+  const saveBioAction = useAction(api.bio.saveBio);
 
   const status: Status =
     authLoading || (jwtAuthenticated && convexUserDoc === undefined)
@@ -116,24 +138,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     jwtAuthenticated && convexUserDoc != null && convexUserDoc.email
       ? convexUserDoc.email
       : null;
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (!jwtAuthenticated || convexUserDoc === undefined) {
-      if (!jwtAuthenticated) {
-        document.documentElement.removeAttribute("data-ui-font");
-      }
-      return;
-    }
-    if (convexUserDoc === null) {
-      document.documentElement.removeAttribute("data-ui-font");
-      return;
-    }
-    document.documentElement.setAttribute(
-      "data-ui-font",
-      convexUserDoc.uiFont ?? DEFAULT_UI_FONT,
-    );
-  }, [jwtAuthenticated, convexUserDoc]);
 
   const requestCode = useCallback(
     async (email: string) => {
@@ -168,6 +172,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [signInWithProvider],
   );
 
+  const signInWithPassword = useCallback(
+    async (email: string, password: string) => {
+      const formData = new FormData();
+      formData.set("email", email.trim());
+      formData.set("password", password);
+      formData.set("flow", "signIn");
+      await signInWithProvider("password", formData);
+    },
+    [signInWithProvider],
+  );
+
+  const setPassword = useCallback(
+    async (password: string) => {
+      await setPasswordAction({ password });
+    },
+    [setPasswordAction],
+  );
+
+  const saveBio = useCallback(
+    (bio: string) => saveBioAction({ bio }),
+    [saveBioAction],
+  );
+
   const completeSignup = useCallback(
     async (input: SignupInput) => {
       const userId = await completeOnboardingMut({
@@ -192,7 +219,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         whatsappPhone: input.whatsappPhone?.trim() ?? "",
         dietaryRequirements: "",
         subject: "",
-        uiFont: DEFAULT_UI_FONT,
         agreedToRules: false,
       } satisfies User;
     },
@@ -218,8 +244,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         instagramHandle?: string;
         whatsappPhone?: string;
         dietaryRequirements?: string;
+        dietaryConsent?: boolean;
         subject?: string;
-        uiFont?: User["uiFont"];
         avatar?: User["avatar"] | null;
         emailNotifications?: boolean;
       } = {};
@@ -238,11 +264,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (patch.dietaryRequirements !== undefined) {
         payload.dietaryRequirements = patch.dietaryRequirements;
       }
+      if (patch.dietaryConsent !== undefined) {
+        payload.dietaryConsent = patch.dietaryConsent;
+      }
       if (patch.subject !== undefined) {
         payload.subject = patch.subject;
-      }
-      if (patch.uiFont !== undefined) {
-        payload.uiFont = patch.uiFont;
       }
       if (Object.prototype.hasOwnProperty.call(patch, "avatar")) {
         payload.avatar = patch.avatar ?? null;
@@ -261,7 +287,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...user,
         ...patch,
         interests: patch.interests ?? user.interests,
-        uiFont: patch.uiFont ?? user.uiFont,
         avatar: Object.prototype.hasOwnProperty.call(patch, "avatar")
           ? patch.avatar
           : user.avatar,
@@ -286,6 +311,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authEmail,
       requestCode,
       verifyCode,
+      signInWithPassword,
+      hasPassword,
+      setPassword,
+      saveBio,
       completeSignup,
       signOut,
       updateProfile,
@@ -300,6 +329,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authEmail,
       requestCode,
       verifyCode,
+      signInWithPassword,
+      hasPassword,
+      setPassword,
+      saveBio,
       completeSignup,
       signOut,
       updateProfile,

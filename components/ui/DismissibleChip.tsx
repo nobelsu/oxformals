@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { CloseIcon } from "@/components/ui/icons";
 
 type Props = {
   children: ReactNode;
@@ -19,7 +20,7 @@ export function DismissibleChip({ children, onDismiss, dismissLabel }: Props) {
         className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
         aria-label={dismissLabel}
       >
-        ×
+        <CloseIcon />
       </button>
     </span>
   );

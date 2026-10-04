@@ -6,7 +6,10 @@ export type ListingStatus = "active" | "confirmed" | "closed" | "expired";
 
 export type ListingType = "swap" | "pay" | "both";
 
-export type RequestType = "swap" | "pay";
+/** The "vibe" of a formal, shown as a small hand-drawn tag on listings. */
+export type FormalType = "matchmaking" | "social" | "networking";
+
+export type RequestType = "swap" | "pay" | "credit";
 
 export type Listing = {
   id: string;
@@ -25,9 +28,12 @@ export type Listing = {
   menuPdfUrl?: string;
   menuFileContentType?: string;
   listingType: ListingType;
+  formalType: FormalType;
   price?: number;
   status: ListingStatus;
   createdAt: number;
+  /** Unnamed "+N" guests, keyed by the member who brought them. */
+  guestSeats?: { userId: string; count: number }[];
 };
 
 export type SwapRequestStatus = "pending" | "accepted" | "declined";
@@ -42,6 +48,20 @@ export type SwapRequest = {
   message: string;
   status: SwapRequestStatus;
   createdAt: number;
+  /** Extra seats beyond the requester's own. */
+  party?: PartySeat[];
+};
+
+export type PartySeat = {
+  kind: "guest" | "friend" | "link";
+  userId?: string;
+  payerId: string;
+  method: RequestType;
+  response?: "pending" | "in" | "out";
+  /** Link seats only. */
+  token?: string;
+  expiresAt?: number;
+  paysOwn?: boolean;
 };
 
 export type Wishlists = Record<string, string[]>;

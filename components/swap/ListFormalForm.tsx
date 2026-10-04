@@ -1,5 +1,6 @@
 "use client";
 
+import { roleNeedsYear } from "@/lib/data/roles";
 import { useMutation } from "convex/react";
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { Chip } from "@/components/ui/Chip";
@@ -9,7 +10,14 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { normalizeCollegeName } from "@/lib/data/colleges";
 import type { NewListingInput } from "@/lib/data/dataClient";
-import { GROUP_SIZES, type GroupSize, type ListingType } from "@/lib/data/types";
+import {
+  GROUP_SIZES,
+  type FormalType,
+  type GroupSize,
+  type ListingType,
+} from "@/lib/data/types";
+import { formalTypeInfo } from "@/components/swap/FormalTypeTag";
+import { isoToOxfordInput, oxfordInputToIso } from "@/lib/data/format";
 import {
   isMenuImageContentType,
   MENU_FILE_ACCEPT,
@@ -36,6 +44,7 @@ export type ListingFormValues = {
   menuPdfUrl?: string;
   menuFileContentType?: string;
   listingType: ListingType;
+  formalType?: FormalType;
   price?: number;
 };
 
@@ -48,20 +57,14 @@ type Props = {
   initialValues?: ListingFormValues;
   /** Minimum allowed group size (e.g. current member count). Sizes below this are disabled. */
   minGroupSize?: number;
+  /** The date can't move once people have joined (they'd lose their plans). */
+  dateLocked?: boolean;
   onSubmit: (input: NewListingInput) => void;
 };
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
-
-function isoToLocalInput(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
-
 function defaultDateTime(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T19:00`;
+  // Today at 7pm, Oxford time.
+  return `${isoToOxfordInput(new Date().toISOString()).slice(0, 10)}T19:00`;
 }
 
 export function ListFormalForm({
@@ -69,6 +72,7 @@ export function ListFormalForm({
   embedded = false,
   initialValues,
   minGroupSize = 1,
+  dateLocked = false,
   onSubmit,
 }: Props) {
   const editMode = !!initialValues;
@@ -81,7 +85,7 @@ export function ListFormalForm({
   );
 
   const [dateTime, setDateTime] = useState(
-    initialValues ? isoToLocalInput(initialValues.dateTime) : defaultDateTime(),
+    initialValues ? isoToOxfordInput(initialValues.dateTime) : defaultDateTime(),
   );
   const [groupSize, setGroupSize] = useState<GroupSize>(
     initialValues?.groupSize ?? 2,
@@ -90,6 +94,9 @@ export function ListFormalForm({
   const [menu, setMenu] = useState(initialValues?.menu ?? "");
   const [listingType, setListingType] = useState<ListingType>(
     initialValues?.listingType ?? "swap",
+  );
+  const [formalType, setFormalType] = useState<FormalType>(
+    initialValues?.formalType ?? "social",
   );
   const [price, setPrice] = useState(
     initialValues?.price !== undefined ? String(initialValues.price) : "",
@@ -174,9 +181,11 @@ export function ListFormalForm({
 
     const year = profile.year.trim();
     const role = profile.role.trim();
-    if (!resolvedCollege || !year || !role) {
+    if (!resolvedCollege || !role || (roleNeedsYear(role) && !year)) {
       setError(
-        "Set college, year, and role in My profile (Me tab), save, then try again.",
+        roleNeedsYear(role)
+          ? "Add your college, year and role to your profile first."
+          : "Add your college and role to your profile first.",
       );
       return;
     }
@@ -188,17 +197,22 @@ export function ListFormalForm({
     if (needsPrice) {
       priceNum = Number.parseInt(price.trim(), 10);
       if (!Number.isFinite(priceNum) || priceNum < 1) {
-        setError("Enter a whole number of pounds (at least £1).");
+        setError("Whole pounds, £1 or more.");
         return;
       }
     }
-    const iso = new Date(dateTime).toISOString();
+    const iso = oxfordInputToIso(dateTime);
+    if (!iso) {
+      setError("Pick a date and time.");
+      return;
+    }
     onSubmit({
       dateTime: iso,
       groupSize,
       message: message.trim(),
       menu: menu.trim(),
       listingType,
+      formalType,
       ...(menuPdfStorageId !== undefined ? { menuPdfId: menuPdfStorageId } : {}),
       ...(clearMenuPdf ? { clearMenuPdf: true } : {}),
       ...(priceNum !== undefined ? { price: priceNum } : {}),
@@ -214,6 +228,7 @@ export function ListFormalForm({
       setPendingMenuPreviewUrl(null);
       setClearMenuPdf(false);
       setListingType("swap");
+      setFormalType("social");
       setPrice("");
     }
   }
@@ -234,11 +249,15 @@ export function ListFormalForm({
             type="datetime-local"
             value={dateTime}
             onChange={(e) => setDateTime(e.target.value)}
-            className={fieldCls}
+            disabled={dateLocked}
+            className={`${fieldCls} disabled:cursor-not-allowed disabled:opacity-60`}
           />
+          {dateLocked ? (
+            <span className="text-xs text-[var(--ink-soft)]">Locked once people join</span>
+          ) : null}
         </label>
 
-        <label className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <span className="text-sm text-[var(--ink-muted)]">Listing type</span>
           <OutlineCombobox
             open={listingTypePickerOpen}
@@ -253,7 +272,7 @@ export function ListFormalForm({
             }}
             placeholder="Choose listing type"
           />
-        </label>
+        </div>
       </div>
 
       <div
@@ -290,6 +309,29 @@ export function ListFormalForm({
                 {s}
               </Chip>
             ))}
+          </div>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-2 sm:col-span-2">
+          <span className="text-sm text-[var(--ink-muted)]">Formal type</span>
+          <div className="flex flex-wrap gap-2">
+            {(["matchmaking", "social", "networking"] as FormalType[]).map(
+              (t) => {
+                const { label, Icon } = formalTypeInfo(t);
+                return (
+                  <Chip
+                    key={t}
+                    variant={formalType === t ? "filled" : "outline"}
+                    onClick={() => setFormalType(t)}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icon className="h-4 w-4" />
+                      {label}
+                    </span>
+                  </Chip>
+                );
+              },
+            )}
           </div>
         </div>
       </div>
@@ -385,7 +427,7 @@ export function ListFormalForm({
       <button
         type="submit"
         disabled={menuPdfUploading}
-        className="self-start rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-5 py-2 text-base transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+        className="self-start rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-ink)] px-5 py-2 text-base transition-colors disabled:cursor-not-allowed disabled:opacity-60"
       >
         {editMode ? "Save changes" : "Post listing"}
       </button>

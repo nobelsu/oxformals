@@ -1,33 +1,42 @@
 "use client";
 
+import { formatYearRole } from "@/lib/data/roles";
+import { BioText } from "@/components/profile/BioText";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import type { ListingWithMenuPdfUrl } from "@/convex/listingHelpers";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
 import { Avatar, PRESET_AVATARS, PresetAvatarIcon, initialsFor } from "@/components/ui/Avatar";
-import { Chip } from "@/components/ui/Chip";
-import { Modal } from "@/components/ui/Modal";
 import { SketchCard } from "@/components/ui/SketchCard";
-import { CollegeReviewCard } from "@/components/colleges/CollegeReviewCard";
-import { ListingCard } from "@/components/swap/ListingCard";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
-import { BlockingRequestModal } from "@/components/swap/BlockingRequestModal";
-import { RequestPayModal } from "@/components/swap/RequestPayModal";
-import { RequestSwapModal } from "@/components/swap/RequestSwapModal";
-import { RequestTypeChooserModal } from "@/components/swap/RequestTypeChooserModal";
+import { JoinRequestFlow } from "@/components/swap/JoinRequestFlow";
 import { MessageUserButton } from "@/components/chat/MessageUserButton";
-import { SwapConfirmedModal } from "@/components/swap/SwapConfirmedModal";
-import { DEFAULT_UI_FONT } from "@/convex/uiFont";
+import { ProfileActivityStream } from "./ProfileActivityStream";
+import { BadgeCaseModal } from "./BadgeCaseModal";
+import { BadgeArt } from "@/components/badges/BadgeArt";
+import { CollegeCrest } from "@/components/colleges/CollegeCrest";
+import { BlockButton, UnblockButton } from "@/components/profile/BlockControls";
+import { ShareProfileButton } from "@/components/profile/ShareProfileButton";
+import { collegeToSlug } from "@/lib/data/collegeSlug";
+import {
+  FollowButton,
+  FollowTags,
+  PrivateActivityNotice,
+  ProfileCounts,
+} from "@/components/follows/FollowControls";
 import type { AvatarSource } from "@/lib/auth/types";
-import { listingSupportsSwap } from "@/lib/data/listingType";
-import { findBlockingOutgoingRequestForTarget } from "@/lib/data/requestFilters";
-import type { GroupSize, Listing, RequestType } from "@/lib/data/types";
-import { formatYearLabel } from "@/lib/data/format";
+import type { GroupSize, Listing } from "@/lib/data/types";
+import { badgeById, badgeTally } from "@/lib/data/badges";
+import type { ProfileActivityItem } from "@/lib/data/groupActivityByDay";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton, SkeletonRows } from "@/components/ui/Loading";
+import { InviteFriendsButton } from "@/components/invites/InviteFriendsButton";
 
 function mapProfileListing(doc: {
   _id: string;
@@ -45,6 +54,7 @@ function mapProfileListing(doc: {
   menuPdfUrl?: string | null;
   menuFileContentType?: string | null;
   listingType?: "swap" | "pay" | "both";
+  formalType?: "matchmaking" | "social" | "networking";
   price?: number;
   status: "active" | "confirmed" | "closed" | "expired";
 }): Listing {
@@ -65,6 +75,7 @@ function mapProfileListing(doc: {
       ? { menuFileContentType: doc.menuFileContentType }
       : {}),
     listingType: doc.listingType ?? "swap",
+    formalType: doc.formalType ?? "social",
     ...(doc.price !== undefined ? { price: doc.price } : {}),
     status: doc.status,
     createdAt: doc._creationTime,
@@ -136,8 +147,11 @@ type ProfileViewProps = {
 };
 
 const STANDALONE_OUTER =
-  "mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6";
-const EMBEDDED_OUTER = "flex w-full flex-col gap-8";
+  "mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-8 sm:px-6";
+const EMBEDDED_OUTER = "mx-auto flex w-full max-w-xl flex-col gap-6";
+
+/** Crests shown before "+N": few enough to stay on one row at any width. */
+const WISHLIST_PREVIEW = 5;
 
 export function ProfileView({
   userId,
@@ -146,74 +160,34 @@ export function ProfileView({
 }: ProfileViewProps) {
   const router = useRouter();
   const { user: currentUser, isAuthenticated } = useAuth();
-  const { getUser, listings, requests, sendRequest, getListing } = useData();
+  const { getUser } = useData();
   const [detailListing, setDetailListing] = useState<Listing | null>(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
-  const [requestTarget, setRequestTarget] = useState<Listing | null>(null);
-  const [pendingRequestType, setPendingRequestType] =
-    useState<RequestType | null>(null);
-  const [typeChooserTarget, setTypeChooserTarget] = useState<Listing | null>(
-    null,
-  );
-  const [showNoListingPrompt, setShowNoListingPrompt] = useState(false);
-  const [blockingRequestOpen, setBlockingRequestOpen] = useState(false);
-  const [blockingHasAccepted, setBlockingHasAccepted] = useState(false);
-  const [confirmed, setConfirmed] = useState<{
-    requestType: RequestType;
-    mine: Listing | null;
-    theirs: Listing | null;
-    otherUserId: string | null;
-  } | null>(null);
-  const [profileTab, setProfileTab] = useState<"listings" | "reviews">("listings");
+  const [joinTarget, setJoinTarget] = useState<Listing | null>(null);
+  const [badgeCaseOpen, setBadgeCaseOpen] = useState(false);
   const closeAvatar = useCallback(() => setAvatarOpen(false), []);
-
-  useEffect(() => {
-    setProfileTab("listings");
-  }, [userId]);
 
   const profile = useQuery(api.users.getPublicProfile, {
     userId: userId as Id<"users">,
   });
 
-  const publicReviews = useQuery(api.collegeReviews.listPublicReviewsForUser, {
+  const activity = useQuery(api.profileActivity.getProfileActivity, {
     userId: userId as Id<"users">,
   });
-
-  const myActiveListings = useMemo(
-    () =>
-      currentUser
-        ? listings.filter(
-            (l) =>
-              l.ownerUserId === currentUser.id &&
-              l.status === "active" &&
-              listingSupportsSwap(l.listingType),
-          )
-        : [],
-    [listings, currentUser],
+  const earnedBadges = useQuery(api.badges.getUserBadges, {
+    userId: userId as Id<"users">,
+  });
+  const [wishlistOpen, setWishlistOpen] = useState(false);
+  const blockState = useQuery(
+    api.blocks.getBlockState,
+    isAuthenticated ? { userId: userId as Id<"users"> } : "skip",
   );
-
-  const openRequestFlow = useCallback(
-    (listing: Listing, requestType: RequestType) => {
-      if (currentUser) {
-        const blocking = findBlockingOutgoingRequestForTarget(
-          requests,
-          currentUser.id,
-          listing.id,
-        );
-        if (blocking) {
-          setBlockingHasAccepted(blocking.status === "accepted");
-          setBlockingRequestOpen(true);
-          return;
-        }
-      }
-      if (requestType === "swap" && myActiveListings.length === 0) {
-        setShowNoListingPrompt(true);
-        return;
-      }
-      setPendingRequestType(requestType);
-      setRequestTarget(listing);
-    },
-    [currentUser, requests, myActiveListings.length],
+  const followState = useQuery(api.follows.getFollowState, {
+    userId: userId as Id<"users">,
+  });
+  const badgeProgress = useQuery(
+    api.badges.getBadgeProgress,
+    badgeCaseOpen ? { userId: userId as Id<"users"> } : "skip",
   );
 
   const handleRequestClick = useCallback(
@@ -224,27 +198,9 @@ export function ProfileView({
         );
         return;
       }
-      if (listing.listingType === "both") {
-        setTypeChooserTarget(listing);
-        return;
-      }
-      if (listing.listingType === "pay") {
-        openRequestFlow(listing, "pay");
-        return;
-      }
-      openRequestFlow(listing, "swap");
+      setJoinTarget(listing);
     },
-    [isAuthenticated, router, userId, openRequestFlow],
-  );
-
-  const handleRequestTypeChosen = useCallback(
-    (requestType: RequestType) => {
-      if (!typeChooserTarget) return;
-      const target = typeChooserTarget;
-      setTypeChooserTarget(null);
-      openRequestFlow(target, requestType);
-    },
-    [typeChooserTarget, openRequestFlow],
+    [isAuthenticated, router, userId],
   );
 
   const Outer = embedded ? "div" : "main";
@@ -256,13 +212,17 @@ export function ProfileView({
       : "mx-auto flex min-h-[50vh] w-full max-w-5xl items-center justify-center px-4 py-8 sm:px-6";
     return (
       <Outer className={loadingClass}>
-        <span className="inline-flex items-center gap-3 rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] px-6 py-3 text-base text-[var(--ink)]">
-          <span
-            aria-hidden="true"
-            className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--ink-soft)] border-t-[var(--ink)]"
-          />
-          Loading...
-        </span>
+        <div className="flex w-full flex-col gap-6">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
+            <div className="flex flex-1 flex-col gap-2">
+              <Skeleton className="h-5 w-1/2" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-full rounded-full" />
+          <SkeletonRows count={2} />
+        </div>
       </Outer>
     );
   }
@@ -277,15 +237,12 @@ export function ProfileView({
           <h2 className="font-display text-3xl uppercase tracking-wide">
             User not found
           </h2>
-          <p className="mt-2 text-[var(--ink-muted)]">
-            This profile does not exist.
-          </p>
           {!embedded ? (
             <Link
               href="/"
               className="mt-5 inline-flex rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
             >
-              Back to Browse
+              Back
             </Link>
           ) : null}
         </SketchCard>
@@ -293,7 +250,7 @@ export function ProfileView({
     );
   }
 
-  const { user: profileUser, listings: rawListings } = profile;
+  const { user: profileUser } = profile;
   const name = profileUser.name ?? "Anonymous";
   const college = profileUser.college ?? "";
   const year = profileUser.year ?? "";
@@ -304,17 +261,17 @@ export function ProfileView({
   const dietaryRequirements = (profileUser.dietaryRequirements ?? "").trim();
   const subject = (profileUser.subject ?? "").trim();
   const avatar = profileUser.avatar as AvatarSource | undefined;
+  const wishlist = (profileUser as { wishlistColleges?: string[] }).wishlistColleges ?? [];
 
   const profileLine = [
     college,
-    formatYearLabel(year) || year,
-    role,
+    formatYearRole(year, role),
+    subject,
   ]
     .filter(Boolean)
     .join(" · ");
 
   const isOwnProfile = currentUser?.id === userId;
-  const activeListings = rawListings.map(mapProfileListing);
   const listingDisabled = isOwnProfile || !isAuthenticated;
 
   const ownerAsUser = {
@@ -325,13 +282,44 @@ export function ProfileView({
     year,
     role,
     interests,
+    bio: profileUser.bio ?? "",
     subject,
-    uiFont: profileUser.uiFont ?? DEFAULT_UI_FONT,
     avatar,
   };
 
   const editProfileClass =
-    "shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-4 py-1.5 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]";
+    "flex-1 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-center text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]";
+
+  const stats = activity?.stats;
+  // The query returns raw enriched listing docs; ListingRow needs the
+  // client-mapped `Listing` shape (id/createdAt/formalType defaults), so
+  // listing items go through the existing mapProfileListing helper.
+  const streamItems = ((activity?.items ?? []) as ProfileActivityItem[]).map(
+    (item) =>
+      item.kind === "listing"
+        ? {
+            kind: "listing" as const,
+            ts: item.ts,
+            // The wire value is the enriched listing doc, not the mapped
+            // `Listing` the union type claims.
+            listing: mapProfileListing(
+              item.listing as unknown as ListingWithMenuPdfUrl,
+            ),
+          }
+        : item,
+  );
+  const badgeCount = badgeTally(earnedBadges ?? []);
+  // Most recent first; up to three sit next to the name.
+  const recentBadges = [...(earnedBadges ?? [])]
+    .sort((x, y) => y.earnedAt - x.earnedAt)
+    .map((b) => badgeById(b.badgeId))
+    .filter((def): def is NonNullable<typeof def> => def !== undefined)
+    .slice(0, 5);
+  const memberUsersFor = (l: Listing) =>
+    l.members
+      .filter((mid) => mid !== l.ownerUserId)
+      .map(getUser)
+      .filter((u): u is NonNullable<typeof u> => !!u);
 
   return (
     <Outer className={outerClass}>
@@ -346,235 +334,258 @@ export function ProfileView({
         </div>
       ) : null}
 
-      <SketchCard seed={userId.length} className="overflow-hidden p-6">
-        <div className="flex flex-col gap-5">
-          <div className="flex min-w-0 flex-1 items-start justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-4">
-          <div
-            role="button"
-            tabIndex={0}
-            className="shrink-0 cursor-pointer transition-transform hover:scale-105"
-            onClick={() => setAvatarOpen(true)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setAvatarOpen(true);
-              }
-            }}
-            aria-label={`View ${name}'s avatar`}
-          >
-            <Avatar name={name} size="xl" source={avatar} />
-          </div>
-          {avatarOpen && (
-            <AvatarLightbox source={avatar} name={name} onClose={closeAvatar} />
-          )}
-          <div className="min-w-0 flex-1">
-            <h1 className="font-display text-3xl uppercase tracking-wide">
+      {/* Header — left-aligned compact */}
+      <div className="flex items-center gap-3.5">
+        <div
+          role="button"
+          tabIndex={0}
+          className="shrink-0 cursor-pointer transition-transform hover:scale-105"
+          onClick={() => setAvatarOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setAvatarOpen(true);
+            }
+          }}
+          aria-label={`View ${name}'s avatar`}
+        >
+          <Avatar name={name} size="lg" source={avatar} />
+        </div>
+        {avatarOpen && (
+          <AvatarLightbox source={avatar} name={name} onClose={closeAvatar} />
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <h1 className="font-display text-[1.75rem] leading-tight">
               {name}
             </h1>
-            {profileLine && (
-              <p className="mt-1 text-sm leading-snug text-[var(--ink-muted)]">
-                {profileLine}
-              </p>
-            )}
-              </div>
-            </div>
-            {isOwnProfile ? (
-              onEditProfile ? (
-                <button
-                  type="button"
-                  onClick={onEditProfile}
-                  className={editProfileClass}
-                >
-                  Edit
+          </div>
+          {profileLine ? (
+            <p className="mt-0.5 text-sm text-[var(--ink-soft)]">{profileLine}</p>
+          ) : null}
+          {followState ? <FollowTags state={followState} /> : null}
+        </div>
+      </div>
+
+      <BioText
+        bio={profileUser.bio ?? ""}
+        userId={userId}
+        canReport={isAuthenticated && !isOwnProfile}
+        className="-mt-3"
+      />
+
+      {instagramHandle || whatsappPhone || dietaryRequirements ? (
+        <div className="-mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--ink-muted)]">
+          {whatsappPhone ? (
+            <a
+              href={`https://wa.me/${whatsappPhone.replace(/[^\d+]/g, "")}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 hover:text-[var(--ink)]"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden>
+                <path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z" />
+              </svg>
+              {whatsappPhone}
+            </a>
+          ) : null}
+          {instagramHandle ? (
+            <a
+              href={`https://instagram.com/${instagramHandle}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 hover:text-[var(--ink)]"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <rect x="3" y="3" width="18" height="18" rx="5" />
+                <circle cx="12" cy="12" r="4" />
+              </svg>
+              @{instagramHandle}
+            </a>
+          ) : null}
+          {dietaryRequirements ? (
+            <span className="inline-flex items-center gap-1.5">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                <path d="M7 3v8M5 3v4a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 2-2 6 0 8v10" />
+              </svg>
+              {dietaryRequirements}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="-mt-2 flex flex-col gap-3">
+        {followState ? (
+          <ProfileCounts
+            userId={userId}
+            state={followState}
+            formals={stats && !activity?.hidden ? stats.attendedCount : null}
+            reviews={stats && !activity?.hidden ? stats.reviewCount : null}
+          />
+        ) : null}
+        <div className="flex gap-2">
+          {isOwnProfile ? (
+            <>
+              {onEditProfile ? (
+                <button type="button" onClick={onEditProfile} className={editProfileClass}>
+                  Edit profile
                 </button>
               ) : (
                 <Link href="/?tab=mine&edit=1" className={editProfileClass}>
-                  Edit
+                  Edit profile
                 </Link>
-              )
-            ) : isAuthenticated ? (
+              )}
+              <InviteFriendsButton variant="plain" className="flex-1" />
+            </>
+          ) : blockState?.iBlocked ? (
+            <UnblockButton userId={userId} className="flex-1" />
+          ) : blockState?.blockedMe ? (
+            <span className="flex-1" />
+          ) : isAuthenticated ? (
+            <>
+              {followState ? (
+                <FollowButton userId={userId} name={name} state={followState} />
+              ) : null}
               <MessageUserButton
                 otherUserId={userId as Id<"users">}
-                className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
+                className="flex-1 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)] disabled:opacity-50"
               />
-            ) : (
-              <button
-                type="button"
-                onClick={() =>
-                  router.push(
-                    `/login?next=${encodeURIComponent(`/profile/${userId}`)}`,
-                  )
-                }
-                className="shrink-0 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-              >
-                Message
-              </button>
-            )}
-          </div>
-
-          {(instagramHandle || whatsappPhone) && (
-            <div className="flex w-full min-w-0 flex-wrap gap-2">
-              {instagramHandle && (
-                <a
-                  href={`https://instagram.com/${instagramHandle}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex h-9 max-w-full min-w-0 items-center gap-1.5 rounded-full border-[2px] border-[var(--ink)] px-3 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="2" width="20" height="20" rx="5" />
-                    <circle cx="12" cy="12" r="5" />
-                    <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
-                  </svg>
-                  <span className="truncate">@{instagramHandle}</span>
-                </a>
-              )}
-              {whatsappPhone && (
-                <a
-                  href={`https://wa.me/${whatsappPhone.replace(/[^\d+]/g, "")}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex h-9 max-w-full min-w-0 items-center gap-1.5 rounded-full border-[2px] border-[var(--ink)] px-3 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="currentColor">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                  </svg>
-                  <span className="truncate">{whatsappPhone}</span>
-                </a>
-              )}
-            </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                router.push(
+                  `/login?next=${encodeURIComponent(`/profile/${userId}`)}`,
+                )
+              }
+              className="flex-1 cursor-pointer rounded-full border-[2px] border-[var(--ink)] px-5 py-2 text-sm text-[var(--ink)] transition-colors hover:bg-[var(--ink)] hover:text-[var(--bg)]"
+            >
+              Message
+            </button>
           )}
+          <ShareProfileButton userId={userId} name={name} />
+          {!isOwnProfile && isAuthenticated && blockState && !blockState.iBlocked ? (
+            <BlockButton userId={userId} name={name} />
+          ) : null}
         </div>
-
-        {interests.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {interests.map((tag) => (
-              <Chip key={tag} size="md" as="span">
-                {tag}
-              </Chip>
-            ))}
-          </div>
-        )}
-
-        {dietaryRequirements && (
-          <p className="mt-3 text-sm text-[var(--ink-muted)]">
-            <span className="font-medium text-[var(--ink)]">Allergens / Dietary requirements:</span>{" "}
-            {dietaryRequirements}
+        {blockState?.iBlocked ? (
+          <p className="text-sm text-[var(--ink-muted)]">
+            You&apos;ve blocked {name.split(" ")[0] || name}. Unblock to see their formals and
+            activity again.
           </p>
-        )}
+        ) : null}
+      </div>
 
-        {subject && (
-          <p className="mt-3 text-sm text-[var(--ink-muted)]">
-            <span className="font-medium text-[var(--ink)]">Subject:</span>{" "}
-            {subject}
-          </p>
-        )}
-
-      </SketchCard>
-
-      <section>
-        <div className="flex flex-wrap items-center gap-3">
-          <div
-            className="inline-flex rounded-full border-[2px] border-[var(--ink)] p-0.5"
-            role="tablist"
-            aria-label="Profile content"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={profileTab === "listings"}
-              onClick={() => setProfileTab("listings")}
-              className={`cursor-pointer rounded-full px-4 py-1.5 text-sm transition-all duration-200 ease-out motion-reduce:transition-none ${
-                profileTab === "listings"
-                  ? "bg-[var(--ink)] text-[var(--bg)]"
-                  : "text-[var(--ink)] hover:bg-[var(--paper)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 active:scale-[0.98]"
-              }`}
-            >
-              Listings
-              {activeListings.length > 0 ? (
-                <span className="ml-1.5 opacity-80">({activeListings.length})</span>
+      <div className="grid grid-cols-1 overflow-hidden rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] sm:grid-cols-2">
+        <div className="flex flex-col gap-2.5 p-4">
+          <p className="text-sm font-bold">Wants to go</p>
+          {wishlist.length > 0 ? (
+            // Collapsed: one row of crests and the count. Expanded: all of them, wrapping.
+            <div className={`flex items-center gap-2 ${wishlistOpen ? "flex-wrap" : ""}`}>
+              {(wishlistOpen ? wishlist : wishlist.slice(0, WISHLIST_PREVIEW)).map((c) => (
+                <Link key={c} href={`/college/${collegeToSlug(c)}`} title={c} className="shrink-0">
+                  <CollegeCrest college={c} size={34} />
+                </Link>
+              ))}
+              {wishlist.length > WISHLIST_PREVIEW ? (
+                <button
+                  type="button"
+                  aria-expanded={wishlistOpen}
+                  onClick={() => setWishlistOpen((v) => !v)}
+                  className="shrink-0 cursor-pointer whitespace-nowrap rounded-full px-2 py-1 text-xs font-bold text-[var(--accent)] hover:underline"
+                >
+                  {wishlistOpen ? "Show less" : `+${wishlist.length - WISHLIST_PREVIEW}`}
+                </button>
               ) : null}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={profileTab === "reviews"}
-              onClick={() => setProfileTab("reviews")}
-              className={`cursor-pointer rounded-full px-4 py-1.5 text-sm transition-all duration-200 ease-out motion-reduce:transition-none ${
-                profileTab === "reviews"
-                  ? "bg-[var(--ink)] text-[var(--bg)]"
-                  : "text-[var(--ink)] hover:bg-[var(--paper)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 active:scale-[0.98]"
-              }`}
-            >
-              Reviews
-              {publicReviews && publicReviews.length > 0 ? (
-                <span className="ml-1.5 opacity-80">({publicReviews.length})</span>
-              ) : null}
-            </button>
-          </div>
+            </div>
+          ) : !isOwnProfile ? (
+            <p className="text-xs text-[var(--ink-muted)]">Nothing yet.</p>
+          ) : null}
+          {isOwnProfile ? (
+            <Link href="/?tab=mine&edit=1" className="text-xs font-bold text-[var(--accent)] hover:underline">
+              {wishlist.length > 0 ? "Edit" : "Add colleges"}
+            </Link>
+          ) : null}
         </div>
+        <button
+          type="button"
+          onClick={() => setBadgeCaseOpen(true)}
+          className="flex cursor-pointer flex-col gap-2.5 border-t-[1.5px] border-[color-mix(in_srgb,var(--ink)_10%,transparent)] p-4 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_3%,transparent)] sm:border-l-[1.5px] sm:border-t-0"
+        >
+          <span className="flex items-baseline justify-between gap-2">
+            <span className="text-sm font-bold">Badges</span>
+            <span className="text-xs text-[var(--ink-muted)]">
+              {badgeCount.earned} of {badgeCount.total}
+            </span>
+          </span>
+          {recentBadges.length > 0 ? (
+            <span className="flex flex-wrap items-center gap-2">
+              {recentBadges.map((def) => (
+                <span key={def.id} title={def.name} className="flex">
+                  <BadgeArt def={def} earned size={34} />
+                </span>
+              ))}
+            </span>
+          ) : (
+            <span className="text-xs text-[var(--ink-muted)]">
+              {isOwnProfile ? "Go to a formal to earn your first." : "None yet."}
+            </span>
+          )}
+        </button>
+      </div>
 
-        {profileTab === "listings" ? (
-          <>
-            {activeListings.length === 0 ? (
-              <p className="mt-4 text-[var(--ink-muted)]">
-                {isOwnProfile
-                  ? "You don\u2019t have any active listings."
-                  : `${name.split(" ")[0]} doesn\u2019t have any active listings right now.`}
-              </p>
-            ) : (
-              <div className="mt-4 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {activeListings.map((l) => {
-                  const members = l.members
-                    .filter((mid) => mid !== l.ownerUserId)
-                    .map(getUser)
-                    .filter((u): u is NonNullable<typeof u> => !!u);
-                  return (
-                    <ListingCard
-                      key={l.id}
-                      listing={l}
-                      owner={ownerAsUser}
-                      memberUsers={members}
-                      onPress={() => setDetailListing(l)}
-                      onRequest={
-                        isOwnProfile ? undefined : () => handleRequestClick(l)
-                      }
-                      disabled={listingDisabled}
-                      hideInterests
-                      disabledLabel={
-                        isOwnProfile
-                          ? "Your listing"
-                          : !isAuthenticated
-                            ? "Sign in to request"
-                            : undefined
-                      }
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </>
-        ) : publicReviews === undefined ? (
-          <p className="mt-4 text-[var(--ink-muted)]">Loading reviews…</p>
-        ) : publicReviews.length === 0 ? (
-          <p className="mt-4 text-[var(--ink-muted)]">
-            {isOwnProfile
-              ? "You haven\u2019t posted any public reviews yet. Reviews marked anonymous won\u2019t appear here."
-              : `${name.split(" ")[0]} hasn\u2019t posted any public reviews yet.`}
-          </p>
+
+
+      {/* Activity stream */}
+      <section aria-label="Activity">
+        <h2 className="text-[0.7rem] font-bold uppercase tracking-[0.08em] text-[var(--ink-muted)]">
+          Activity
+        </h2>
+        {activity === undefined ? (
+          <SkeletonRows className="mt-3" count={2} />
+        ) : activity.hidden && streamItems.length === 0 ? (
+          <PrivateActivityNotice pending={followState?.following === "pending"} />
+        ) : streamItems.length === 0 ? (
+          <EmptyState
+            className="mt-3"
+            icon="calendar"
+            title={isOwnProfile ? "No activity yet" : "Nothing here yet"}
+            {...(isOwnProfile
+              ? { action: { label: "List a formal", href: "/?openList=1" } }
+              : {})}
+          />
         ) : (
-          <div className="mt-4 flex flex-col gap-4">
-            {publicReviews.map((review) => (
-              <CollegeReviewCard
-                key={review.id}
-                review={review}
-                variant="profile"
-              />
-            ))}
-          </div>
+          <ProfileActivityStream
+            className="mt-3"
+            items={streamItems}
+            owner={ownerAsUser}
+            memberUsersFor={memberUsersFor}
+            onPress={(l) => setDetailListing(l)}
+            onRequest={
+              isOwnProfile ? undefined : (l) => handleRequestClick(l)
+            }
+            disabled={listingDisabled}
+            disabledLabel={
+              isOwnProfile
+                ? "Your listing"
+                : !isAuthenticated
+                  ? "Sign in to request"
+                  : undefined
+            }
+          />
         )}
+        {activity?.hidden && streamItems.length > 0 ? (
+          <PrivateActivityNotice pending={followState?.following === "pending"} />
+        ) : null}
       </section>
+
+      <BadgeCaseModal
+        open={badgeCaseOpen}
+        onClose={() => setBadgeCaseOpen(false)}
+        earned={earnedBadges}
+        progress={badgeProgress}
+      />
 
       <ListingDetailModal
         open={!!detailListing}
@@ -593,7 +604,6 @@ export function ProfileView({
           if (detailListing) handleRequestClick(detailListing);
         }}
         disabled={listingDisabled}
-        hideInterests
         disabledLabel={
           isOwnProfile
             ? "Your listing"
@@ -603,112 +613,7 @@ export function ProfileView({
         }
       />
 
-      <RequestTypeChooserModal
-        open={!!typeChooserTarget}
-        onClose={() => setTypeChooserTarget(null)}
-        college={typeChooserTarget?.college ?? ""}
-        onChoose={handleRequestTypeChosen}
-      />
-
-      <RequestSwapModal
-        open={!!requestTarget && pendingRequestType === "swap"}
-        onClose={() => {
-          setRequestTarget(null);
-          setPendingRequestType(null);
-        }}
-        targetListing={requestTarget}
-        myListings={myActiveListings}
-        onSubmit={async ({ offeringListingId, message }) => {
-          if (!requestTarget) return;
-          const result = await sendRequest({
-            requestType: "swap",
-            targetListingId: requestTarget.id,
-            offeringListingId,
-            message,
-            targetOwnerUserId: requestTarget.ownerUserId,
-          });
-          if (!result) throw new Error("Could not send request.");
-          setRequestTarget(null);
-          setPendingRequestType(null);
-          if (result.status === "accepted") {
-            setConfirmed({
-              requestType: "swap",
-              mine: getListing(offeringListingId) ?? null,
-              theirs:
-                getListing(requestTarget.id) ?? requestTarget,
-              otherUserId: requestTarget.ownerUserId,
-            });
-          }
-        }}
-      />
-
-      <RequestPayModal
-        open={!!requestTarget && pendingRequestType === "pay"}
-        onClose={() => {
-          setRequestTarget(null);
-          setPendingRequestType(null);
-        }}
-        targetListing={requestTarget}
-        onSubmit={async ({ message }) => {
-          if (!requestTarget) return;
-          const result = await sendRequest({
-            requestType: "pay",
-            targetListingId: requestTarget.id,
-            message,
-            targetOwnerUserId: requestTarget.ownerUserId,
-          });
-          if (!result) throw new Error("Could not send request.");
-          setRequestTarget(null);
-          setPendingRequestType(null);
-          if (result.status === "accepted") {
-            setConfirmed({
-              requestType: "pay",
-              mine: null,
-              theirs:
-                getListing(requestTarget.id) ?? requestTarget,
-              otherUserId: requestTarget.ownerUserId,
-            });
-          }
-        }}
-      />
-
-      <SwapConfirmedModal
-        open={!!confirmed}
-        onClose={() => setConfirmed(null)}
-        requestType={confirmed?.requestType ?? "swap"}
-        myListing={confirmed?.mine ?? null}
-        theirListing={confirmed?.theirs ?? null}
-        otherUser={
-          confirmed?.otherUserId ? (getUser(confirmed.otherUserId) ?? null) : null
-        }
-        otherUserId={confirmed?.otherUserId ?? null}
-      />
-
-      <BlockingRequestModal
-        open={blockingRequestOpen}
-        onClose={() => setBlockingRequestOpen(false)}
-        hasAccepted={blockingHasAccepted}
-        onViewRequests={() => router.push("/?tab=requests")}
-      />
-
-      <Modal
-        open={showNoListingPrompt}
-        onClose={() => setShowNoListingPrompt(false)}
-        title="List your formal first"
-        panelClassName="max-w-sm"
-      >
-        <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">
-          You need an active swap listing before you can request a swap.
-          Pay-only listings cannot be used in swaps.
-        </p>
-        <Link
-          href="/?tab=requests&openList=1"
-          className="flex w-full cursor-pointer items-center justify-center rounded-full bg-[var(--accent)] px-8 py-3 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
-          onClick={() => setShowNoListingPrompt(false)}
-        >
-          + List my formal
-        </Link>
-      </Modal>
+      <JoinRequestFlow target={joinTarget} onClose={() => setJoinTarget(null)} />
     </Outer>
   );
 }

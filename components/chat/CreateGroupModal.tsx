@@ -80,8 +80,7 @@ export function CreateGroupModal({ open, onClose }: Props) {
       panelClassName="max-w-md"
     >
       <p className="text-sm text-[var(--ink-muted)]">
-        Round up your crew — you&apos;re already in. Just add one more person
-        to get the chat going (up to {MAX_GROUP_SIZE} people total).
+        Add at least one person. Up to {MAX_GROUP_SIZE} per group.
       </p>
 
       <OutlineTextField
@@ -121,7 +120,7 @@ export function CreateGroupModal({ open, onClose }: Props) {
       <div className="mt-3 max-h-[35vh] overflow-y-auto">
         {trimmed.length < 2 ? (
           <p className="text-sm text-[var(--ink-soft)]">
-            Type at least 2 characters to search.
+            Type 2+ letters.
           </p>
         ) : searchResults === undefined ? (
           <p className="text-sm text-[var(--ink-soft)]">Searching…</p>

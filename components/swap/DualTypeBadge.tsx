@@ -34,7 +34,7 @@ export function DualTypeBadge({ size = "sm", className, subdued }: Props) {
         Swap
       </span>
       <span
-        className={`${s.segment} bg-[var(--accent)] font-medium text-[var(--accent-ink)]`}
+        className={`${s.segment} bg-[var(--accent-wash)] font-medium text-[var(--accent-wash-ink)]`}
       >
         Pay
       </span>

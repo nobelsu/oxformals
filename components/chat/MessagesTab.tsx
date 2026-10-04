@@ -19,6 +19,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { formatRelativeTime } from "@/lib/data/format";
 import { chatsTabUrl } from "@/lib/chat/navigation";
 import { isDmConversation, isGroupConversation } from "@/lib/chat/types";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingDots, SkeletonRows } from "@/components/ui/Loading";
 
 export function MessagesTab() {
   const router = useRouter();
@@ -81,7 +83,7 @@ export function MessagesTab() {
     if (activeConversation === undefined) {
       return (
         <div className={`${threadShellClassName} items-center justify-center`}>
-          <p className="text-sm text-[var(--ink-soft)]">Loading…</p>
+          <LoadingDots className="text-[var(--accent)]" />
         </div>
       );
     }
@@ -122,9 +124,6 @@ export function MessagesTab() {
           <h1 className="font-display text-4xl uppercase tracking-wide">
             Chats
           </h1>
-          <p className="mt-2 text-sm text-[var(--ink-muted)]">
-            Seat swaps, dress codes, and the inevitable plus-one debate.
-          </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <button
@@ -137,7 +136,7 @@ export function MessagesTab() {
           <button
             type="button"
             onClick={() => setStartChatOpen(true)}
-            className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm text-white transition-colors hover:bg-[var(--accent-hover)]"
+            className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)]"
           >
             New message
           </button>
@@ -146,11 +145,14 @@ export function MessagesTab() {
 
       <div className="mt-8 flex flex-col gap-3">
         {conversations === undefined ? (
-          <p className="text-sm text-[var(--ink-soft)]">Loading…</p>
+          <SkeletonRows count={4} />
         ) : conversations.length === 0 ? (
-          <p className="text-sm text-[var(--ink-soft)]">
-            No conversations yet. Start a new message or create a group.
-          </p>
+          <EmptyState
+            icon="chat"
+            title="No chats yet"
+            body="Message a host or start a group."
+            action={{ label: "New message", onClick: () => setStartChatOpen(true) }}
+          />
         ) : (
           conversations.map((convo) => {
             const hasUnread = convo.unreadCount > 0;
@@ -261,7 +263,7 @@ export function MessagesTab() {
 
       <ConfirmDialog
         open={clearTargetId !== null}
-        message="Clear this chat on your side only? The other person will still see the messages. You cannot undo this from your view."
+        message="Clear this chat for you? They'll still see it. This can't be undone."
         confirmLabel="Clear"
         variant="destructive"
         onConfirm={() => void handleConfirmClear()}

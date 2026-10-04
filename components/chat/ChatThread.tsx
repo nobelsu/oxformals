@@ -30,6 +30,7 @@ import type {
   MessageReplySnapshot,
 } from "@/lib/chat/types";
 import { isGroupConversation } from "@/lib/chat/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 function replySnapshotSenderLabel(
   reply: MessageReplySnapshot,
@@ -355,9 +356,7 @@ export function ChatThread({ conversation, onBack }: Props) {
           ) : null}
 
           {messages.length === 0 && status !== "LoadingFirstPage" ? (
-            <p className="text-center text-sm text-[var(--ink-soft)]">
-              No messages yet. Say hello!
-            </p>
+            <EmptyState compact icon="chat" title="Say hello" />
           ) : null}
 
           {messages.map((msg) => {

@@ -59,7 +59,7 @@ export function SketchRadioOption({
         aria-hidden
       >
         {checked ? (
-          <span className="h-2 w-2 rounded-full bg-[var(--accent)]" />
+          <span className="h-2 w-2 rounded-full bg-[var(--accent-wash)]" />
         ) : null}
       </span>
       <span className="min-w-0 flex-1 leading-snug">{label}</span>

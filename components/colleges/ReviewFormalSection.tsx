@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CloseIcon } from "@/components/ui/icons";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -23,6 +24,7 @@ import {
   uploadImageFile,
   validateImageFile,
 } from "@/lib/upload/imageFile";
+import { Skeleton } from "@/components/ui/Loading";
 
 const MAX_REVIEW_IMAGES = 3;
 
@@ -158,7 +160,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
           <Link href="/login" className="underline">
             Sign in
           </Link>{" "}
-          to rate your experience at {college}.
+          to rate {college}.
         </p>
       </SketchCard>
     );
@@ -166,7 +168,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
 
   if (state === undefined) {
     return (
-      <SketchCard className="p-5 text-sm text-[var(--ink-muted)]">Loading review…</SketchCard>
+      <Skeleton className="h-24 w-full rounded-[18px]" />
     );
   }
 
@@ -177,7 +179,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
 
   function openSubmitConfirm() {
     if (!ratingsComplete) {
-      setError("Please rate every category.");
+      setError("Rate every category.");
       return;
     }
     setError(null);
@@ -200,7 +202,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
         imageIds,
         isAnonymous: postAnonymously,
       });
-      setSuccess("Thanks for your review!");
+      setSuccess("Review posted.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -232,7 +234,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
 
   if (needsAttendanceConfirm) {
     return (
-      <ConfirmAttendanceSection listingId={listingId} college={college} />
+      <ConfirmAttendanceSection listingId={listingId} />
     );
   }
 
@@ -255,7 +257,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
                 aria-label={`Remove photo ${index + 1}`}
                 className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border-[2px] border-[var(--ink)] bg-[var(--bg)] text-xs leading-none disabled:opacity-50"
               >
-                ×
+                <CloseIcon />
               </button>
             </div>
           ))}
@@ -284,7 +286,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
           if (file) void handleImageSelect(file);
         }}
       />
-      {imageError ? <p className="text-sm text-red-600">{imageError}</p> : null}
+      {imageError ? <p className="text-sm text-[var(--danger)]">{imageError}</p> : null}
     </div>
   );
 
@@ -392,7 +394,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
               type="button"
               disabled={submitting || !ratingsComplete || imageUploading}
               onClick={openSubmitConfirm}
-              className="cursor-pointer rounded-full bg-[var(--accent)] px-5 py-2 text-sm text-white transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="cursor-pointer rounded-full bg-[var(--accent)] px-5 py-2 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? "Saving…" : "Submit review"}
             </button>
@@ -402,7 +404,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
         <p className="mt-2 text-sm text-[var(--ink-muted)]">{state.reason}</p>
       )}
 
-      {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-[var(--danger)]">{error}</p> : null}
       {success ? <p className="mt-3 text-sm text-[var(--ink-muted)]">{success}</p> : null}
 
       <Modal
@@ -412,15 +414,14 @@ export function ReviewFormalSection({ listingId, college }: Props) {
         panelClassName="max-w-sm"
       >
         <p className="mb-6 text-sm leading-relaxed text-[var(--ink-muted)]">
-          Would you like to post this review anonymously? Anonymous reviews
-          won&apos;t show your name on college pages.
+          Post anonymously? Your name won&apos;t show on college pages.
         </p>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <button
             type="button"
             disabled={submitting}
             onClick={() => void handleConfirmSubmit(true)}
-            className="cursor-pointer rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm text-white transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="cursor-pointer rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Yes, post anonymously
           </button>

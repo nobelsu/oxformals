@@ -49,13 +49,13 @@ export function sentRequestsForListing(
   );
 }
 
-/** All pay requests sent by the user (no offering listing). */
+/** Requests the user sent with no offering listing (paid in cash or credits). */
 export function outgoingPayRequests(
   requests: SwapRequest[],
   userId: string,
 ): SwapRequest[] {
   return requests.filter(
-    (r) => r.fromUserId === userId && resolveRequestType(r) === "pay",
+    (r) => r.fromUserId === userId && resolveRequestType(r) !== "swap",
   );
 }
 

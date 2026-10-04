@@ -12,9 +12,11 @@ import {
   validateDeclineReason,
 } from "../lib/data/formalAttendance";
 import { applyAttendanceConfirmation } from "../lib/data/collegeStats";
+import { awardNewBadges } from "./badges";
 import { removeUserFromListingGroup } from "./listingMembership";
 import { getOrCreateCollegeStatsDoc } from "./collegeStats";
 import { optionalUserId, requireActiveUser } from "./guards";
+import { earnReferralOnAttendance } from "./referrals";
 
 const declinePresetValidator = v.string();
 
@@ -133,7 +135,15 @@ export const confirmAttendance = mutation({
       throw new Error(eligibility.reason ?? "You cannot confirm attendance.");
     }
 
-    return await recordAttendanceConfirmation(ctx, listing, userId, args.nowMs);
+    const confirmationId = await recordAttendanceConfirmation(
+      ctx,
+      listing,
+      userId,
+      args.nowMs,
+    );
+    await awardNewBadges(ctx, userId, args.nowMs);
+    await earnReferralOnAttendance(ctx, listing._id, userId);
+    return confirmationId;
   },
 });
 

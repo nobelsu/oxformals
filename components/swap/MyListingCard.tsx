@@ -1,5 +1,6 @@
 "use client";
 
+import { formatYearRole } from "@/lib/data/roles";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { ListingGroupChatButton } from "@/components/chat/ListingGroupChatButton";
@@ -14,7 +15,7 @@ import { ListingFormalBadges } from "@/components/colleges/ListingFormalBadges";
 import { ConfirmAttendanceIndicator } from "@/components/colleges/ConfirmAttendanceIndicator";
 import { RateFormalIndicator } from "@/components/colleges/RateFormalIndicator";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
-import { formatListingMetaLine, formatYearLabel } from "@/lib/data/format";
+import { formatListingMetaLine } from "@/lib/data/format";
 import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { Listing } from "@/lib/data/types";
@@ -61,12 +62,10 @@ export function MyListingCard({
     onViewRequests();
   }, [onViewRequests, opening]);
 
-  const profileLine = [
-    formatYearLabel(profile?.year || "") || profile?.year || formatYearLabel(listing.year) || listing.year,
+  const profileLine = formatYearRole(
+    profile?.year || listing.year,
     profile?.role || listing.role,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  );
 
   const cardContent = (
     <>

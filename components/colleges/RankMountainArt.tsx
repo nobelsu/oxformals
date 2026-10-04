@@ -121,8 +121,8 @@ export function RankBadge({
           : isFirst
             ? "bg-[var(--tag)] text-[var(--tag-ink)]"
             : rank === 2
-              ? "border-[2px] border-[var(--ink)] bg-[var(--accent)]/15 text-[var(--ink)]"
-              : "border-[2px] border-[var(--ink)] bg-[var(--accent)]/8 text-[var(--ink-muted)]"
+              ? "border-[2px] border-[var(--ink)] bg-[var(--accent-wash)]/15 text-[var(--ink)]"
+              : "border-[2px] border-[var(--ink)] bg-[var(--accent-wash)]/8 text-[var(--ink-muted)]"
       }`}
     >
       {label}
@@ -332,7 +332,6 @@ export function MountainTrail({ className = "" }: { className?: string }) {
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeDasharray="5 4"
           opacity="0.85"
         />
         <path

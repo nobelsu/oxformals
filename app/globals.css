@@ -2,17 +2,22 @@
 
 :root {
   --app-nav-height: 5.5rem;
-  --bg: #f2ead8;
-  --paper: #f6efe0;
-  --ink: #1a140f;
-  --ink-muted: #5a4d40;
-  --ink-soft: #9a8c7a;
-  --tag: #20140d;
-  --tag-ink: #f6efe0;
-  --accent: #edbfba;
-  --accent-hover: #e3a9a2;
-  --accent-ink: #1a140f;
-  --danger: #c96360;
+  /* The light palette; the dark one follows in the media query below. */
+  --bg: #f2ecdd;
+  --paper: #ffffff;
+  --ink: #1b1a12;
+  --ink-muted: #565039;
+  --ink-soft: #716b55;
+  --tag: #1b1a12;
+  --tag-ink: #f5f1e6;
+  --accent: #b8524c;
+  --accent-hover: #a3453f;
+  --accent-ink: #ffffff;
+  --accent-wash: #edbfba;
+  /* Wash is the same colour in light and dark — ink stays dark in both. */
+  --accent-wash-ink: #1a1810;
+  --danger: #b8423e;
+  --danger-ink: #ffffff;
   /* Rankings mountain — summit (#1) and silhouette fill */
   --rank-summit-bg: var(--tag);
   --rank-summit-emphasis: var(--tag-ink);
@@ -26,16 +31,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1a140f;
-    --paper: #241b14;
-    --ink: #f2ead8;
-    --ink-muted: #c9bfb1;
-    --ink-soft: #8a7d70;
-    --tag: #f2ead8;
-    --tag-ink: #1a140f;
-    --accent: #edbfba;
-    --accent-hover: #e3a9a2;
-    --accent-ink: #1a140f;
+    --bg: #1a1810;
+    --paper: #232016;
+    --ink: #f2ecdd;
+    --ink-muted: #c6bfa9;
+    --ink-soft: #8f8875;
+    --tag: #f2ecdd;
+    --tag-ink: #1a1810;
+    --accent: #d9736c;
+    --accent-hover: #c85f58;
+    --accent-ink: #1a1810;
+    --accent-wash: #edbfba;
+    --accent-wash-ink: #1a1810;
+    --danger: #f87171;
+    --danger-ink: #1a1810;
     --rank-summit-bg: var(--tag);
     --rank-summit-emphasis: var(--tag-ink);
     --rank-summit-score: var(--tag-ink);
@@ -57,122 +66,66 @@
   --color-tag-ink: var(--tag-ink);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-wash: var(--accent-wash);
+  --color-accent-wash-ink: var(--accent-wash-ink);
+  --color-danger: var(--danger);
+  --color-danger-ink: var(--danger-ink);
   --font-hand: var(--font-app);
-  --font-display: var(--font-app);
+  --font-display: var(--font-display-face);
 }
 
-/* --- Font stacks + paired color themes (light) --- */
+/* --- Font stacks --- */
 
 html {
   scrollbar-gutter: stable;
-  --font-app: var(--font-schoolbell), "Schoolbell", cursive;
+  /* No grey/blue flash over tapped cards and buttons on phones; pressed
+     states come from each component instead. */
+  -webkit-tap-highlight-color: transparent;
+  /* Default faces; Settings → Appearance → Font swaps them (see below). */
+  --font-app: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-display-face: var(--font-schoolbell), "Schoolbell", cursive;
 }
 
-html[data-ui-font="schoolbell"] {
-  --font-app: var(--font-schoolbell), "Schoolbell", cursive;
-  --bg: #f2ead8;
-  --paper: #f6efe0;
-  --ink: #1a140f;
-  --ink-muted: #5a4d40;
-  --ink-soft: #9a8c7a;
-  --tag: #20140d;
-  --tag-ink: #f6efe0;
-  --accent: #edbfba;
-  --accent-hover: #e3a9a2;
-  --accent-ink: #1a140f;
-  --danger: #c96360;
+/* Landing preview (logged-out marketing only) — keeps the app's rose accent,
+   just a slightly richer, more present pink wash for its decorative surfaces.
+   (The `="navy"` attribute value is legacy; the palette is rose now.) */
+html:has([data-landing-theme="navy"]),
+[data-landing-theme="navy"] {
+  --accent-wash: #f2c4cb;
+  --accent-wash-ink: #1a1810;
+  --accent-wash-strong: #e79aa6;
 }
 
-html[data-ui-font="inter"] {
-  --font-app: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --bg: #eef2f7;
-  --paper: #f7f9fc;
-  --ink: #0f172a;
-  --ink-muted: #475569;
-  --ink-soft: #94a3b8;
-  --tag: #1e293b;
-  --tag-ink: #f1f5f9;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-ink: #ffffff;
-  --danger: #dc2626;
+/*
+ * Settings → Appearance → Font. The default (no attribute) is Space Grotesk
+ * with handwritten headings; the others swap both for one plainer face.
+ */
+html[data-font="simple"] {
+  --font-app: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display-face: var(--font-app);
 }
 
-html[data-ui-font="dm_sans"] {
-  --font-app: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --bg: #faf5f3;
-  --paper: #fff9f7;
-  --ink: #3d2a26;
-  --ink-muted: #7d5e58;
-  --ink-soft: #b89a94;
-  --tag: #4a322d;
-  --tag-ink: #fdf4f2;
-  --accent: #d4827e;
-  --accent-hover: #c46a66;
-  --accent-ink: #ffffff;
-  --danger: #b91c1c;
+html[data-font="serif"] {
+  --font-app: var(--font-lora), "Lora", ui-serif, Georgia, serif;
+  --font-display-face: var(--font-app);
 }
 
-html[data-ui-font="lora"] {
-  --font-app: "Lora", Georgia, "Times New Roman", serif;
-  --bg: #f4f1ea;
-  --paper: #faf7f0;
-  --ink: #2c1810;
-  --ink-muted: #6b5344;
-  --ink-soft: #9a8575;
-  --tag: #3d281c;
-  --tag-ink: #f7f2e9;
-  --accent: #b8860b;
-  --accent-hover: #9a7209;
-  --accent-ink: #1a1208;
-  --danger: #8b2942;
+/* Whatever this device uses, including a font someone installed to read better. */
+html[data-font="system"] {
+  --font-app: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display-face: var(--font-app);
 }
 
-html[data-ui-font="georgia"] {
-  --font-app: "Georgia", "Palatino Linotype", "Book Antiqua", "Palatino",
-    "Times New Roman", Times, serif;
-  --bg: #e8e4dc;
-  --paper: #f2efe8;
-  --ink: #111111;
-  --ink-muted: #4a4a4a;
-  --ink-soft: #737373;
-  --tag: #1c1917;
-  --tag-ink: #fafaf9;
-  --accent: #1e40af;
-  --accent-hover: #1d4ed8;
-  --accent-ink: #ffffff;
-  --danger: #b91c1c;
+/* Settings → Appearance → Text size. Everything is sized in rem, so this scales the lot. */
+html[data-text-size="small"] {
+  font-size: 93.75%;
 }
-
-html[data-ui-font="arial"] {
-  --font-app: "Arial", "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
-  --bg: #ffffff;
-  --paper: #f5f5f5;
-  --ink: #171717;
-  --ink-muted: #525252;
-  --ink-soft: #a3a3a3;
-  --tag: #262626;
-  --tag-ink: #fafafa;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-ink: #ffffff;
-  --danger: #dc2626;
+html[data-text-size="large"] {
+  font-size: 112.5%;
 }
-
-html[data-ui-font="system_ui"] {
-  --font-app: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --bg: #ecfdf5;
-  --paper: #f0fdf4;
-  --ink: #064e3b;
-  --ink-muted: #0f766e;
-  --ink-soft: #5eead4;
-  --tag: #134e4a;
-  --tag-ink: #ecfdf5;
-  --accent: #059669;
-  --accent-hover: #047857;
-  --accent-ink: #ffffff;
-  --danger: #be123c;
+html[data-text-size="xlarge"] {
+  font-size: 125%;
 }
 
 html,
@@ -180,134 +133,66 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-app);
-  font-weight: 700;
-  letter-spacing: 0.01em;
-}
-
-html[data-ui-font="inter"] body,
-html[data-ui-font="dm_sans"] body,
-html[data-ui-font="lora"] body,
-html[data-ui-font="georgia"] body,
-html[data-ui-font="arial"] body,
-html[data-ui-font="system_ui"] body {
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: 0.01em;
 }
 
 .font-display {
-  font-family: var(--font-app);
-  font-weight: 700;
+  font-family: var(--font-display-face);
+  font-weight: 400;
   letter-spacing: 0.02em;
 }
 
-html[data-ui-font="inter"] .font-display,
-html[data-ui-font="dm_sans"] .font-display,
-html[data-ui-font="lora"] .font-display,
-html[data-ui-font="georgia"] .font-display,
-html[data-ui-font="arial"] .font-display,
-html[data-ui-font="system_ui"] .font-display {
+/* Without the handwritten face, headings need weight to read as headings. */
+html[data-font] .font-display {
   font-weight: 600;
-  letter-spacing: 0.02em;
 }
 
-@media (prefers-color-scheme: dark) {
-  html[data-ui-font="schoolbell"] {
-    --bg: #1a140f;
-    --paper: #241b14;
-    --ink: #f2ead8;
-    --ink-muted: #c9bfb1;
-    --ink-soft: #8a7d70;
-    --tag: #f2ead8;
-    --tag-ink: #1a140f;
-    --accent: #edbfba;
-    --accent-hover: #e3a9a2;
-    --accent-ink: #1a140f;
-    --danger: #f87171;
-  }
+/*
+ * Settings → Appearance. A saved Light or Dark choice sets data-theme on <html>
+ * and wins over the device setting above; with no attribute the palette
+ * follows the device.
+ */
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f2ecdd;
+  --paper: #ffffff;
+  --ink: #1b1a12;
+  --ink-muted: #565039;
+  --ink-soft: #716b55;
+  --tag: #1b1a12;
+  --tag-ink: #f5f1e6;
+  --accent: #b8524c;
+  --accent-hover: #a3453f;
+  --accent-ink: #ffffff;
+  --accent-wash: #edbfba;
+  --accent-wash-ink: #1a1810;
+  --danger: #b8423e;
+  --danger-ink: #ffffff;
+  --rank-mountain-fill: color-mix(in srgb, var(--accent) 65%, var(--ink-soft));
+  --rank-mountain-fill-back: color-mix(in srgb, var(--accent) 35%, var(--ink-soft));
+  --rank-mountain-snow: color-mix(in srgb, var(--paper) 88%, var(--accent));
+}
 
-  html[data-ui-font="inter"] {
-    --bg: #0f172a;
-    --paper: #1e293b;
-    --ink: #e2e8f0;
-    --ink-muted: #94a3b8;
-    --ink-soft: #64748b;
-    --tag: #f1f5f9;
-    --tag-ink: #0f172a;
-    --accent: #60a5fa;
-    --accent-hover: #3b82f6;
-    --accent-ink: #0f172a;
-    --danger: #f87171;
-  }
-
-  html[data-ui-font="dm_sans"] {
-    --bg: #2a1f1d;
-    --paper: #352824;
-    --ink: #fce8e4;
-    --ink-muted: #d4a59a;
-    --ink-soft: #9a7269;
-    --tag: #fde8e4;
-    --tag-ink: #2a1f1d;
-    --accent: #f0a8a3;
-    --accent-hover: #e8928c;
-    --accent-ink: #2a1f1d;
-    --danger: #fca5a5;
-  }
-
-  html[data-ui-font="lora"] {
-    --bg: #1a1410;
-    --paper: #241c16;
-    --ink: #f4ede4;
-    --ink-muted: #c4b5a5;
-    --ink-soft: #8a7a6a;
-    --tag: #f7f0e6;
-    --tag-ink: #1a1410;
-    --accent: #d4a84b;
-    --accent-hover: #c49a3d;
-    --accent-ink: #1a1410;
-    --danger: #fb7185;
-  }
-
-  html[data-ui-font="georgia"] {
-    --bg: #171717;
-    --paper: #262626;
-    --ink: #fafafa;
-    --ink-muted: #a3a3a3;
-    --ink-soft: #737373;
-    --tag: #fafafa;
-    --tag-ink: #171717;
-    --accent: #93c5fd;
-    --accent-hover: #60a5fa;
-    --accent-ink: #171717;
-    --danger: #fca5a5;
-  }
-
-  html[data-ui-font="arial"] {
-    --bg: #0a0a0a;
-    --paper: #171717;
-    --ink: #fafafa;
-    --ink-muted: #a3a3a3;
-    --ink-soft: #737373;
-    --tag: #fafafa;
-    --tag-ink: #0a0a0a;
-    --accent: #60a5fa;
-    --accent-hover: #3b82f6;
-    --accent-ink: #0a0a0a;
-    --danger: #f87171;
-  }
-
-  html[data-ui-font="system_ui"] {
-    --bg: #022c22;
-    --paper: #064e3b;
-    --ink: #ecfdf5;
-    --ink-muted: #99f6e4;
-    --ink-soft: #2dd4bf;
-    --tag: #ecfdf5;
-    --tag-ink: #022c22;
-    --accent: #34d399;
-    --accent-hover: #10b981;
-    --accent-ink: #022c22;
-    --danger: #fda4af;
-  }
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1a1810;
+  --paper: #232016;
+  --ink: #f2ecdd;
+  --ink-muted: #c6bfa9;
+  --ink-soft: #8f8875;
+  --tag: #f2ecdd;
+  --tag-ink: #1a1810;
+  --accent: #d9736c;
+  --accent-hover: #c85f58;
+  --accent-ink: #1a1810;
+  --accent-wash: #edbfba;
+  --accent-wash-ink: #1a1810;
+  --danger: #f87171;
+  --danger-ink: #1a1810;
+  --rank-mountain-fill: color-mix(in srgb, var(--accent) 75%, var(--ink-soft));
+  --rank-mountain-fill-back: color-mix(in srgb, var(--accent) 40%, var(--ink));
+  --rank-mountain-snow: color-mix(in srgb, var(--paper) 90%, var(--accent));
 }
 
 ::selection {
@@ -451,236 +336,49 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
   }
 }
 
-/* --- Newsletter letter page (always warm parchment, not system dark) --- */
-
-.newsletter-page {
-  color-scheme: light;
-  --bg: #e5d9c4;
-  --paper: #faf6ee;
-  --ink: #1a140f;
-  --ink-muted: #5a4d40;
-  --ink-soft: #b5a48f;
-  --tag: #20140d;
-  --tag-ink: #f6efe0;
-  --accent: #e8b4ae;
-  --accent-hover: #dfa099;
-  --accent-ink: #1a140f;
-  --danger: #c96360;
-  --newsletter-shadow: 0 18px 48px rgba(26, 20, 15, 0.14);
-  background-color: var(--bg);
-  background-image:
-    radial-gradient(
-      ellipse 120% 80% at 50% -20%,
-      color-mix(in srgb, var(--accent) 45%, transparent),
-      transparent 55%
-    ),
-    radial-gradient(
-      circle at 85% 90%,
-      color-mix(in srgb, var(--paper) 80%, var(--accent)),
-      transparent 45%
-    );
+/* --- Loading: skeleton shimmer + bouncing dots (components/ui/Loading.tsx) --- */
+@keyframes skeleton-shimmer {
+  0% { background-position: -240px 0; }
+  100% { background-position: 240px 0; }
 }
-
-.newsletter-letter-paper {
-  border: 2px solid var(--ink);
-  border-radius: 4px;
-  background: var(--paper);
-  box-shadow: var(--newsletter-shadow);
-}
-
-.newsletter-letter-inner {
-  position: relative;
-}
-
-.newsletter-feature-item {
-  border: 2px solid color-mix(in srgb, var(--ink) 18%, transparent);
-  border-radius: 1rem;
-  background: color-mix(in srgb, var(--paper) 92%, var(--accent) 8%);
-}
-
-.newsletter-mobile-highlight {
+.skeleton {
   background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--accent) 55%, var(--paper)) 0%,
-    color-mix(in srgb, var(--accent) 28%, var(--paper)) 55%,
-    var(--paper) 100%
+    90deg,
+    color-mix(in srgb, var(--ink) 7%, transparent) 0,
+    color-mix(in srgb, var(--ink) 13%, transparent) 60px,
+    color-mix(in srgb, var(--ink) 7%, transparent) 120px
   );
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent),
-    0 14px 32px color-mix(in srgb, var(--ink) 12%, transparent);
+  background-size: 480px 100%;
+  animation: skeleton-shimmer 1.3s linear infinite;
 }
-
-.newsletter-mobile-badge {
-  animation: newsletter-mobile-badge-pulse 2.5s ease-in-out infinite;
+@keyframes loading-dot {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
+  40% { transform: translateY(-5px); opacity: 1; }
 }
-
-@keyframes newsletter-mobile-badge-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.04);
-  }
+.loading-dot {
+  animation: loading-dot 1s ease-in-out infinite;
 }
-
-.newsletter-cta {
-  border: 2px solid var(--ink);
-  background: var(--paper);
-  color: var(--ink);
-  font-weight: 600;
+/* Content arriving after a skeleton: a quick fade instead of a pop. */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-
-.newsletter-cta:hover {
-  background: color-mix(in srgb, var(--accent) 25%, var(--paper));
-  border-color: var(--ink);
+.fade-in {
+  animation: fade-in 200ms ease-out;
 }
-
-.newsletter-cta--primary {
-  background: var(--accent);
-  color: var(--accent-ink);
-  box-shadow: 0 4px 0 var(--ink);
-}
-
-.newsletter-cta--primary:hover {
-  background: var(--accent-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 5px 0 var(--ink);
-}
-
-.newsletter-cta--primary:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--ink);
-}
-
-@keyframes letter-seal-wiggle {
-  0%,
-  100% {
-    transform: rotate(-5deg);
-  }
-  50% {
-    transform: rotate(5deg);
-  }
-}
-
-@keyframes letter-flap-open {
-  from {
-    transform: rotateX(0deg);
-    opacity: 1;
-  }
-  to {
-    transform: rotateX(-125deg);
-    opacity: 0.25;
-  }
-}
-
-@keyframes letter-invite-vanish {
-  from {
-    opacity: 1;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.94) translateY(12px);
-  }
-}
-
-@keyframes letter-unfold {
-  from {
-    opacity: 0;
-    transform: scale(0.72) translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes newsletter-stat-pop {
-  0% {
-    transform: scale(1);
-  }
-  40% {
-    transform: scale(1.12);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes newsletter-hint-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.letter-invite-card {
-  box-shadow: var(--newsletter-shadow);
-}
-
-.letter-invite-envelope {
-  perspective: 520px;
-}
-
-.letter-invite-flap {
-  transform-origin: 124px 88px;
-  transform-style: preserve-3d;
-}
-
-.letter-seal-wiggle {
-  animation: letter-seal-wiggle 2.2s ease-in-out infinite;
-}
-
-.letter-invite--opening .letter-invite-seal {
-  animation: none;
-  opacity: 0;
-  transform: scale(0.4);
-  transition:
-    opacity 0.35s ease-out,
-    transform 0.35s ease-out;
-}
-
-.letter-invite--opening .letter-invite-flap {
-  animation: letter-flap-open 0.5s ease-in forwards;
-}
-
-.letter-invite--opening .letter-invite-stage {
-  animation: letter-invite-vanish 0.55s ease-in 0.15s forwards;
-}
-
-.letter-reveal-enter {
-  animation: letter-unfold 0.7s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
-}
-
-.newsletter-stat-pop {
-  display: inline-block;
-  animation: newsletter-stat-pop 0.55s ease-out 0.15s both;
-}
-
-.newsletter-hint-pulse {
-  animation: newsletter-hint-pulse 2s ease-in-out infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .letter-seal-wiggle,
-  .newsletter-hint-pulse,
-  .newsletter-stat-pop,
-  .newsletter-mobile-badge {
-    animation: none;
-  }
-
-  .letter-invite--opening .letter-invite-flap,
-  .letter-invite--opening .letter-invite-stage,
-  .letter-reveal-enter {
-    animation: none;
-  }
-
-  .letter-invite--opening .letter-invite-seal {
-    opacity: 0;
-    transition: none;
-  }
+  .skeleton { animation: none; }
+  .loading-dot { animation: none; opacity: 0.7; }
+  .fade-in { animation: none; }
+}
+/* First-run tour: cards and callouts ease in. */
+@keyframes onboarding-card-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.onboarding-card-in {
+  animation: onboarding-card-in 180ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-card-in { animation: none; }
 }

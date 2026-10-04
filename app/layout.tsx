@@ -1,17 +1,55 @@
 import type { Metadata } from "next";
+import Script from "next/script";
+import { APPEARANCE_BOOT_SCRIPT } from "@/lib/appearance";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
-import { Schoolbell } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { ConvexClientProvider } from "@/app/ConvexClientProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { DataProvider } from "@/components/data/DataProvider";
 import { Nav } from "@/components/Nav";
 import { OnboardingOverlay } from "@/components/onboarding/OnboardingOverlay";
+import { BadgeCelebration } from "@/components/badges/BadgeCelebration";
+import { InviteClaimer } from "@/components/invites/InviteClaimer";
 
-const schoolbell = Schoolbell({
+// Self-hosted (Latin subset, from Google Fonts, both under the SIL Open Font
+// Licence) so builds never depend on reaching fonts.gstatic.com.
+const schoolbell = localFont({
+  src: "./fonts/Schoolbell-latin.woff2",
   variable: "--font-schoolbell",
-  subsets: ["latin"],
   weight: "400",
+  display: "swap",
+});
+
+const spaceGrotesk = localFont({
+  src: "./fonts/SpaceGrotesk-latin.woff2",
+  variable: "--font-space-grotesk",
+  weight: "300 700",
+  display: "swap",
+});
+
+// Optional faces for Settings → Appearance → Font (globals.css, html[data-font]).
+// Variable Latin subsets, not preloaded: most people never pick them.
+const inter = localFont({
+  src: [
+    { path: "./fonts/Inter-latin.woff2", style: "normal" },
+    { path: "./fonts/Inter-Italic-latin.woff2", style: "italic" },
+  ],
+  variable: "--font-inter",
+  weight: "400 700",
+  display: "swap",
+  preload: false,
+});
+
+const lora = localFont({
+  src: [
+    { path: "./fonts/Lora-latin.woff2", style: "normal" },
+    { path: "./fonts/Lora-Italic-latin.woff2", style: "italic" },
+  ],
+  variable: "--font-lora",
+  weight: "400 700",
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -31,10 +69,6 @@ export const metadata: Metadata = {
   },
 };
 
-/** Self-hosted Schoolbell; Inter / DM Sans / Lora load via stylesheet so `font-family: "Inter"` etc. always resolve. */
-const googleUiFontsHref =
-  "https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Inter:ital,opsz,wght@0,14..32,400..700;1,14..32,400..700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -42,23 +76,25 @@ export default function RootLayout({
 }>) {
   return (
     <ConvexAuthNextjsServerProvider>
-      <html lang="en" className={`${schoolbell.variable} h-full antialiased`}>
-        <head>
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link
-            rel="preconnect"
-            href="https://fonts.gstatic.com"
-            crossOrigin="anonymous"
-          />
-          <link rel="stylesheet" href={googleUiFontsHref} />
-        </head>
+      <html
+        lang="en"
+        // The appearance script sets data-theme / data-font / data-text-size
+        // before React hydrates.
+        suppressHydrationWarning
+        className={`${schoolbell.variable} ${spaceGrotesk.variable} ${inter.variable} ${lora.variable} h-full antialiased`}
+      >
         <body className="min-h-full flex flex-col">
+          <Script id="appearance" strategy="beforeInteractive">
+            {APPEARANCE_BOOT_SCRIPT}
+          </Script>
           <ConvexClientProvider>
             <AuthProvider>
               <DataProvider>
                 <Nav />
                 <div className="flex-1 flex flex-col">{children}</div>
                 <OnboardingOverlay />
+                <BadgeCelebration />
+                <InviteClaimer />
               </DataProvider>
             </AuthProvider>
           </ConvexClientProvider>

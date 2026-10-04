@@ -1,0 +1,188 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import {
+  clampSeatsAvailable,
+  formatDayLabel,
+  formatListingDate,
+  formatListingMetaLine,
+  formatListingRowMeta,
+  formatListingTime,
+  formatRowTail,
+  formatWeekdayDate,
+  isoToOxfordInput,
+  oxfordInputToIso,
+} from "./format";
+
+describe("formatListingTime", () => {
+  it("drops :00 on the hour", () => {
+    assert.equal(formatListingTime("2026-05-08T18:00:00.000Z"), "7pm");
+  });
+
+  it("keeps minutes otherwise", () => {
+    assert.equal(formatListingTime("2026-05-08T18:15:00.000Z"), "7:15pm");
+  });
+
+  it("is Oxford time, whatever the viewer's timezone", () => {
+    // Winter: London is UTC. A 19:15 formal must never read "2:15am".
+    assert.equal(formatListingTime("2026-11-20T19:15:00.000Z"), "7:15pm");
+    assert.equal(formatListingDate("2026-11-20T19:15:00.000Z"), "Fri 20 Nov · 7:15pm");
+    // Summer: London is UTC+1.
+    assert.equal(formatListingTime("2026-06-12T18:15:00.000Z"), "7:15pm");
+  });
+
+  it("renders midnight and noon", () => {
+    assert.equal(formatListingTime("2026-05-07T23:30:00.000Z"), "12:30am");
+    assert.equal(formatListingTime("2026-05-08T11:00:00.000Z"), "12pm");
+  });
+});
+
+describe("formatDayLabel", () => {
+  it("splits day and weekday", () => {
+    assert.deepEqual(formatDayLabel("2026-05-08T18:00:00.000Z"), {
+      day: "8 May",
+      weekday: "Friday",
+    });
+  });
+});
+
+describe("formatListingRowMeta", () => {
+  it("omits the date and keeps group, seats, price", () => {
+    assert.equal(
+      formatListingRowMeta({
+        groupSize: 4,
+        seatsAvailable: 2,
+        isPast: false,
+        price: 28,
+      }),
+      "Group of 4 · 2 seats left · £28",
+    );
+  });
+
+  it("drops seats when past and price when absent", () => {
+    assert.equal(
+      formatListingRowMeta({ groupSize: 3, seatsAvailable: 1, isPast: true }),
+      "Group of 3",
+    );
+  });
+
+  it("says group full at zero seats", () => {
+    assert.equal(
+      formatListingRowMeta({ groupSize: 2, seatsAvailable: 0, isPast: false }),
+      "Group of 2 · Group full",
+    );
+  });
+});
+
+describe("formatRowTail", () => {
+  it("pairs remaining seats with price", () => {
+    assert.equal(
+      formatRowTail({ seatsAvailable: 2, isPast: false, price: 28 }),
+      "2 left · £28",
+    );
+  });
+
+  it("says group full at zero seats", () => {
+    assert.equal(
+      formatRowTail({ seatsAvailable: 0, isPast: false }),
+      "Group full",
+    );
+  });
+
+  it("omits seats entirely once past", () => {
+    assert.equal(formatRowTail({ seatsAvailable: 2, isPast: true, price: 28 }), "£28");
+  });
+
+  it("returns an empty string when a past listing has no price", () => {
+    assert.equal(formatRowTail({ seatsAvailable: 2, isPast: true }), "");
+  });
+
+  it("omits price when absent", () => {
+    assert.equal(formatRowTail({ seatsAvailable: 1, isPast: false }), "1 left");
+  });
+});
+
+describe("clampSeatsAvailable", () => {
+  it("passes through a valid value unchanged", () => {
+    assert.equal(clampSeatsAvailable(2, 4), 2);
+  });
+
+  it("floors negative seats to zero", () => {
+    assert.equal(clampSeatsAvailable(-1, 4), 0);
+  });
+
+  it("caps seats exceeding the group size", () => {
+    assert.equal(clampSeatsAvailable(9, 4), 4);
+  });
+
+  it("treats a negative group size as zero seats total", () => {
+    assert.equal(clampSeatsAvailable(2, -1), 0);
+  });
+
+  it("truncates fractional inputs", () => {
+    assert.equal(clampSeatsAvailable(2.9, 4.9), 2);
+  });
+});
+
+describe("formatRowTail composed with clampSeatsAvailable (as ListingRow calls them)", () => {
+  it("reads 'Group full' instead of negative seats", () => {
+    assert.equal(
+      formatRowTail({
+        seatsAvailable: clampSeatsAvailable(-1, 4),
+        isPast: false,
+      }),
+      "Group full",
+    );
+  });
+
+  it("caps seats over the group size instead of overstating availability", () => {
+    assert.equal(
+      formatRowTail({
+        seatsAvailable: clampSeatsAvailable(9, 4),
+        isPast: false,
+      }),
+      "4 left",
+    );
+  });
+});
+
+describe("existing formatters still behave", () => {
+  it("formatListingDate keeps day and time", () => {
+    assert.equal(formatListingDate("2026-05-08T18:15:00.000Z"), "Fri 8 May · 7:15pm");
+  });
+
+  it("formatListingMetaLine still leads with the date", () => {
+    assert.equal(
+      formatListingMetaLine({
+        dateTime: "2026-05-08T18:15:00.000Z",
+        groupSize: 4,
+        seatsAvailable: 2,
+        isPast: false,
+        price: 28,
+      }),
+      "Fri 8 May · 7:15pm · Group of 4 · 2 seats left · £28",
+    );
+  });
+});
+
+describe("formatWeekdayDate", () => {
+  it("reads the Oxford day", () => {
+    assert.equal(formatWeekdayDate("2026-10-08T23:30:00.000Z"), "Fri 9 Oct");
+  });
+});
+
+describe("Oxford datetime-local round trip", () => {
+  it("reads the input as Oxford time in summer (BST)", () => {
+    assert.equal(oxfordInputToIso("2026-10-09T19:15"), "2026-10-09T18:15:00.000Z");
+  });
+  it("reads the input as Oxford time in winter (GMT)", () => {
+    assert.equal(oxfordInputToIso("2026-11-20T19:15"), "2026-11-20T19:15:00.000Z");
+  });
+  it("shows an instant as Oxford wall time", () => {
+    assert.equal(isoToOxfordInput("2026-10-09T18:15:00.000Z"), "2026-10-09T19:15");
+    assert.equal(isoToOxfordInput("2026-11-20T19:15:00.000Z"), "2026-11-20T19:15");
+  });
+  it("rejects junk", () => {
+    assert.equal(oxfordInputToIso("nope"), "");
+    assert.equal(isoToOxfordInput("nope"), "");
+  });
+});

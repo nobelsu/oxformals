@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useId, type ReactNode } from "react";
 import { SketchCard } from "./SketchCard";
+import { useIsClient } from "@/lib/hooks/useIsClient";
 
 type Props = {
   open: boolean;
@@ -20,6 +22,9 @@ type Props = {
   children: ReactNode;
 };
 
+/** Open modals, oldest first: Escape only closes the one on top. */
+const openModals: string[] = [];
+
 export function Modal({
   open,
   onClose,
@@ -29,10 +34,22 @@ export function Modal({
   bodyScrollable = true,
   children,
 }: Props) {
+  // The portal target (document.body) only exists in the browser.
+  const isClient = useIsClient();
+  // Registered on open only, so a parent re-rendering can't jump above its child.
+  const id = useId();
+  useEffect(() => {
+    if (!open) return;
+    openModals.push(id);
+    return () => {
+      openModals.splice(openModals.indexOf(id), 1);
+    };
+  }, [open, id]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && openModals[openModals.length - 1] === id) onClose();
     };
     window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
@@ -41,13 +58,15 @@ export function Modal({
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, onClose]);
+  }, [open, onClose, id]);
 
-  if (!open) return null;
+  if (!open || !isClient) return null;
 
-  return (
+  // Render on <body> so a parent with a transform/filter (e.g. the blurred
+  // nav) can't trap this full-screen layer inside its own box.
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto overscroll-contain p-3 sm:p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden p-3 sm:p-4"
       role="dialog"
       aria-modal="true"
     >
@@ -58,7 +77,10 @@ export function Modal({
       <SketchCard
         seed={2}
         className={[
-          "relative w-full min-w-0 max-w-md overflow-visible",
+          "relative w-full min-h-0 min-w-0 max-w-md",
+          bodyScrollable
+            ? "max-h-[calc(100dvh-1.5rem)] overflow-hidden sm:max-h-[calc(100dvh-2rem)]"
+            : "overflow-visible",
           compact ? "p-4" : "p-6",
           panelClassName,
         ]
@@ -79,13 +101,14 @@ export function Modal({
         <div
           className={
             bodyScrollable
-              ? "min-h-0 min-w-0 w-full flex-1 overflow-y-auto overflow-x-clip px-1.5"
+              ? "min-h-0 min-w-0 w-full flex-1 overflow-y-auto overflow-x-hidden px-1.5"
               : "min-h-min min-w-0 w-full shrink-0 overflow-x-clip overflow-y-visible"
           }
         >
           {children}
         </div>
       </SketchCard>
-    </div>
+    </div>,
+    document.body,
   );
 }
