@@ -148,8 +148,14 @@ export function ReviewFormalSection({ listingId, college }: Props) {
     });
   }
 
-  if (isAuthenticated && user && !isGuestForCollegeListing(user, college)) {
-    return null;
+  // Your own college: you can say you went, but only visitors rate it.
+  const isVisitor = !user || isGuestForCollegeListing(user, college);
+  if (isAuthenticated && !isVisitor) {
+    if (!state || state.existingReview) return null;
+    if (!state.isPast || !state.canConfirmAttendance || state.hasRespondedToAttendance) {
+      return null;
+    }
+    return <ConfirmAttendanceSection listingId={listingId} />;
   }
 
   if (!isAuthenticated) {

@@ -113,7 +113,7 @@ describe("founding badge", () => {
 });
 
 describe("attendance from past formals", () => {
-  test("guests of formals over a week old count as attended; hosts, home-college members, decliners and recent formals don't", async () => {
+  test("everyone at a formal over a week old counts as attended, host and home college included; decliners, recent formals and listings nobody joined don't", async () => {
     const t = convexTest(schema, modules);
     const ids = await t.run(async (ctx) => {
       const user = (name: string, college: string) =>
@@ -137,6 +137,7 @@ describe("attendance from past formals", () => {
         });
       const old = await listing(30, [host, guest, homeMember, decliner]);
       await listing(2, [host, guest]);
+      await listing(40, [host]);
       await ctx.db.insert("formalAttendanceConfirmations", {
         listingId: old,
         userId: decliner,
@@ -147,7 +148,7 @@ describe("attendance from past formals", () => {
     });
 
     const args = { paginationOpts: { numItems: 25, cursor: null } };
-    expect((await t.mutation(internal.migrations.backfillAttendanceFromPastFormals, args)).recorded).toBe(1);
+    expect((await t.mutation(internal.migrations.backfillAttendanceFromPastFormals, args)).recorded).toBe(3);
     expect((await t.mutation(internal.migrations.backfillAttendanceFromPastFormals, args)).recorded).toBe(0);
     await t.mutation(internal.migrations.backfillUserBadges, args);
 
@@ -156,10 +157,15 @@ describe("attendance from past formals", () => {
       badges: await ctx.db.query("userBadges").collect(),
     }));
     const attended = rows.filter((r) => r.attended === true);
-    expect(attended.map((r) => [r.userId, r.listingId])).toEqual([[ids.guest, ids.old]]);
-    expect(
-      badges.filter((b) => b.userId === ids.guest).map((b) => b.badgeId).sort(),
-    ).toEqual(["college-keble", "formals-1"]);
-    expect(badges.filter((b) => b.userId !== ids.guest)).toEqual([]);
+    expect(attended.every((r) => r.listingId === ids.old)).toBe(true);
+    expect(attended.map((r) => r.userId).sort()).toEqual(
+      [ids.host, ids.guest, ids.homeMember].sort(),
+    );
+    for (const userId of [ids.host, ids.guest, ids.homeMember]) {
+      expect(
+        badges.filter((b) => b.userId === userId).map((b) => b.badgeId).sort(),
+      ).toEqual(["college-keble", "formals-1"]);
+    }
+    expect(badges.filter((b) => b.userId === ids.decliner)).toEqual([]);
   });
 });

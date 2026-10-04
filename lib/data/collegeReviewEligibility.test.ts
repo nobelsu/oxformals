@@ -98,10 +98,28 @@ describe("canConfirmAttendanceCollegeListing", () => {
     assert.equal(r.canConfirm, false);
   });
 
-  it("blocks host", () => {
+  it("allows the host", () => {
     const r = canConfirmAttendanceCollegeListing(
-      { id: "owner", college: "Magdalen" },
-      guestListing,
+      user,
+      { ...guestListing, ownerUserId: "u1" },
+      nowMs,
+    );
+    assert.equal(r.canConfirm, true);
+  });
+
+  it("allows someone from the hosting college", () => {
+    const r = canConfirmAttendanceCollegeListing(
+      user,
+      { ...guestListing, college: "Merton" },
+      nowMs,
+    );
+    assert.equal(r.canConfirm, true);
+  });
+
+  it("blocks before the formal", () => {
+    const r = canConfirmAttendanceCollegeListing(
+      user,
+      { ...guestListing, dateTime: futureIso },
       nowMs,
     );
     assert.equal(r.canConfirm, false);

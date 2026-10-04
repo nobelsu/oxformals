@@ -78,10 +78,8 @@ export function LandingHowItWorks() {
   if (reduced) {
     return (
       <section className="flex min-h-[85svh] flex-col justify-center bg-[var(--bg)] px-4 py-16 text-[var(--ink)] sm:px-6">
-        <h2 className="font-display text-3xl uppercase tracking-wide">
-          How it works
-        </h2>
-        <ol className="mt-8 grid gap-4 sm:grid-cols-3">
+        <h2 className="sr-only">How it works</h2>
+        <ol className="grid gap-4 sm:grid-cols-3">
           {STEPS.map((step, index) => (
             <li key={step.title}>
               <div className="h-full rounded-[14px] border-[2px] border-[var(--ink)] bg-[var(--paper)] p-5">
@@ -111,10 +109,6 @@ export function LandingHowItWorks() {
       style={{ height: `${(FRAMES - 1) * SCROLL_PER_FRAME + SCROLL_PER_FRAME * FINALE_SCROLL_MULTIPLIER}svh` }}
     >
       <div className="sticky top-0 flex h-svh flex-col items-center justify-center overflow-hidden px-6">
-        <span className="absolute left-1/2 top-[12svh] -translate-x-1/2 font-display text-sm uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--ink)_55%,var(--bg))]">
-          How it works
-        </span>
-
         {/* Stacked frames; the active one fades/rises in, the rest step aside. */}
         <div className="relative flex h-[46svh] w-full max-w-2xl items-center justify-center">
           {STEPS.map((step, index) => {
