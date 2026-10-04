@@ -1,5 +1,4 @@
 import type { User } from "@/lib/auth/types";
-import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 
 /** Shown when a user is not in the public directory cache yet. */
 export function placeholderUser(userId: string): User {
@@ -12,6 +11,5 @@ export function placeholderUser(userId: string): User {
     role: "",
     interests: [],
     subject: "",
-    uiFont: DEFAULT_UI_FONT,
   };
 }

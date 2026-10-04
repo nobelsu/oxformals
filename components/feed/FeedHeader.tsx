@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { ListFormalModal } from "@/components/swap/ListFormalModal";
+import { ShallowLink } from "@/components/ui/ShallowLink";
 
 function greetingWord(): string {
   const h = new Date().getHours();
@@ -16,27 +15,25 @@ const PlusIcon = () => (
   </svg>
 );
 
-/** Greeting, plus "List a formal" (opens the form over the feed). */
+/** Greeting, plus "List a formal" (`?openList=1` opens the form over the feed). */
 export function FeedHeader({ firstName }: { firstName: string }) {
-  const [listFormalOpen, setListFormalOpen] = useState(false);
   return (
     <div className="flex items-center justify-between gap-3">
       <h1 className="text-[1.5rem] font-semibold leading-tight">
         <span className="font-display font-normal">{greetingWord()},</span> {firstName}
       </h1>
       <div className="flex shrink-0 items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setListFormalOpen(true)}
+        <ShallowLink
+          href="/?openList=1"
+          scroll={false}
           data-onboarding="list"
           aria-label="List a formal"
           className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--ink)] px-3 py-2 text-[0.84rem] font-medium text-[var(--bg)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_88%,var(--accent))] sm:px-4"
         >
           <PlusIcon />
           <span className="hidden sm:inline">List a formal</span>
-        </button>
+        </ShallowLink>
       </div>
-      <ListFormalModal open={listFormalOpen} onClose={() => setListFormalOpen(false)} />
     </div>
   );
 }

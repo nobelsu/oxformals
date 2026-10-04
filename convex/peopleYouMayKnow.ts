@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { blockedIdsFor } from "./blocks";
 import type { Id } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import { optionalUserId } from "./guards";
@@ -27,7 +28,7 @@ export const getPeopleYouMayKnow = query({
     if (!meDoc) return [];
     const max = Math.min(Math.max(1, Math.floor(limit ?? 10)), 20);
 
-    const exclude = new Set<Id<"users">>([me]);
+    const exclude = new Set<Id<"users">>([me, ...(await blockedIdsFor(ctx, me))]);
     for (const status of ["active", "pending"] as const) {
       for (const row of await ctx.db
         .query("follows")

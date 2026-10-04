@@ -1,4 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { blockedEitherWay, blockedIdsFor } from "./blocks";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -50,6 +51,7 @@ import {
   validateMenuPdfId,
 } from "./listingHelpers";
 import {
+  optionalUserId,
   requireActiveUser,
   sanitizeLimitedUser,
   sanitizePublicUser,
@@ -177,7 +179,13 @@ export const listListings = query({
   args: {},
   handler: async (ctx) => {
     const listings = await ctx.db.query("listings").order("desc").take(200);
-    return Promise.all(listings.map((listing) => enrichListing(ctx, listing)));
+    // Hosts you've blocked, or who blocked you, drop out of every listing view.
+    const blocked = await blockedIdsFor(ctx, await optionalUserId(ctx));
+    return Promise.all(
+      listings
+        .filter((listing) => !blocked.has(listing.ownerUserId))
+        .map((listing) => enrichListing(ctx, listing)),
+    );
   },
 });
 
@@ -464,6 +472,9 @@ export const createRequest = mutation({
     }
     if (target.ownerUserId === userId) {
       throw new Error("You cannot request your own listing.");
+    }
+    if (await blockedEitherWay(ctx, userId, target.ownerUserId)) {
+      throw new Error("This listing is no longer available.");
     }
 
     const guests = args.guests ?? 0;

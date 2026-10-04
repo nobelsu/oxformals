@@ -28,7 +28,7 @@ const spaceGrotesk = localFont({
   display: "swap",
 });
 
-// Optional fonts from the UI font picker (globals.css, html[data-ui-font]).
+// Optional faces for Settings → Appearance → Font (globals.css, html[data-font]).
 // Variable Latin subsets, not preloaded: most people never pick them.
 const inter = localFont({
   src: [
@@ -36,17 +36,6 @@ const inter = localFont({
     { path: "./fonts/Inter-Italic-latin.woff2", style: "italic" },
   ],
   variable: "--font-inter",
-  weight: "400 700",
-  display: "swap",
-  preload: false,
-});
-
-const dmSans = localFont({
-  src: [
-    { path: "./fonts/DMSans-latin.woff2", style: "normal" },
-    { path: "./fonts/DMSans-Italic-latin.woff2", style: "italic" },
-  ],
-  variable: "--font-dm-sans",
   weight: "400 700",
   display: "swap",
   preload: false,
@@ -89,9 +78,10 @@ export default function RootLayout({
     <ConvexAuthNextjsServerProvider>
       <html
         lang="en"
-        // The appearance script sets data-theme before React hydrates.
+        // The appearance script sets data-theme / data-font / data-text-size
+        // before React hydrates.
         suppressHydrationWarning
-        className={`${schoolbell.variable} ${spaceGrotesk.variable} ${inter.variable} ${dmSans.variable} ${lora.variable} h-full antialiased`}
+        className={`${schoolbell.variable} ${spaceGrotesk.variable} ${inter.variable} ${lora.variable} h-full antialiased`}
       >
         <body className="min-h-full flex flex-col">
           <Script id="appearance" strategy="beforeInteractive">

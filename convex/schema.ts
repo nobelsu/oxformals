@@ -69,7 +69,9 @@ export default defineSchema({
     .index("email", ["email"])
     .index("phone", ["phone"])
     .index("by_deletedAt", ["deletedAt"])
-    .index("by_college", ["college"]),
+    .index("by_college", ["college"])
+    /** Find people by name (peopleSearch.ts). */
+    .searchIndex("search_name", { searchField: "name" }),
   collegeWishlists: defineTable({
     userId: v.id("users"),
     college: v.string(),
@@ -380,6 +382,17 @@ export default defineSchema({
     .index("by_followerId_and_followeeId", ["followerId", "followeeId"])
     .index("by_followerId_and_status", ["followerId", "status"])
     .index("by_followeeId_and_status", ["followeeId", "status"]),
+  /**
+   * `blockerId` has blocked `blockedId`. Either direction hides the two from
+   * each other and stops follows, messages and requests between them.
+   */
+  blocks: defineTable({
+    blockerId: v.id("users"),
+    blockedId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_blockerId_and_blockedId", ["blockerId", "blockedId"])
+    .index("by_blockedId", ["blockedId"]),
   /**
    * Seat credits: earned by hosting a credit-paying guest, spent on a seat at
    * any formal. No row means the user still has their 1 starter credit.

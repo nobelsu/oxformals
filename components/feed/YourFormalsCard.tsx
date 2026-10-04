@@ -109,9 +109,16 @@ export function YourFormalsCard({
   const [expanded, setExpanded] = useState(false);
   const userId = hub.user?.id;
 
+  // Every listing of yours, whatever its status: a full ("confirmed") formal is
+  // still one you're hosting until the night has passed.
+  const mine = useMemo(
+    () => [...hub.myActiveListings, ...hub.myBookedListings],
+    [hub.myActiveListings, hub.myBookedListings],
+  );
+
   const hosting: Row[] = useMemo(
     () =>
-      hub.myActiveListings
+      mine
         .filter((l) => !listingIsPast(l.dateTime, nowMs))
         .sort((a, b) => Date.parse(a.dateTime) - Date.parse(b.dateTime))
         .map((listing) => ({
@@ -119,7 +126,17 @@ export function YourFormalsCard({
           listing,
           count: hub.pendingCountByListing.get(listing.id) ?? 0,
         })),
-    [hub.myActiveListings, hub.pendingCountByListing, nowMs],
+    [mine, hub.pendingCountByListing, nowMs],
+  );
+
+  // Formals you hosted that have been and gone, latest first.
+  const hosted: Row[] = useMemo(
+    () =>
+      mine
+        .filter((l) => listingIsPast(l.dateTime, nowMs))
+        .sort((a, b) => Date.parse(b.dateTime) - Date.parse(a.dateTime))
+        .map((listing) => ({ key: `past-${listing.id}`, listing })),
+    [mine, nowMs],
   );
 
   const requested: Row[] = useMemo(() => {
@@ -160,7 +177,7 @@ export function YourFormalsCard({
     [hub.listingsNeedingAttendance, hub.listingsNeedingReview],
   );
 
-  if (hosting.length + requested.length + followUp.length === 0) {
+  if (hosting.length + requested.length + followUp.length + hosted.length === 0) {
     // Phones keep the space for the stream; the sidebar says what will show up here.
     if (collapsible) return null;
     return (
@@ -220,6 +237,7 @@ export function YourFormalsCard({
           <Group label="Hosting" rows={hosting} onOpen={onOpen} />
           <Group label="Requested" rows={requested} onOpen={onOpen} />
           <Group label="Follow up" rows={followUp} onOpen={onOpen} />
+          <Group label="Hosted" rows={hosted} onOpen={onOpen} />
         </div>
       ) : null}
     </section>

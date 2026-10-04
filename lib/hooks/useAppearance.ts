@@ -1,44 +1,54 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { APPEARANCE_KEY, type Appearance } from "@/lib/appearance";
+import {
+  APPEARANCE_PREFS,
+  type AppearancePref,
+  type AppearanceValue,
+} from "@/lib/appearance";
 
-export type { Appearance };
+export type { Appearance, FontChoice, TextSize } from "@/lib/appearance";
 
 const listeners = new Set<() => void>();
 
-function read(): Appearance {
+function read<P extends AppearancePref>(pref: P): AppearanceValue<P> {
+  const { key, values, fallback } = APPEARANCE_PREFS[pref];
   try {
-    const saved = window.localStorage.getItem(APPEARANCE_KEY);
-    return saved === "light" || saved === "dark" ? saved : "system";
+    const saved = window.localStorage.getItem(key);
+    return (values as readonly string[]).includes(saved ?? "")
+      ? (saved as AppearanceValue<P>)
+      : fallback;
   } catch {
-    return "system";
+    return fallback;
   }
 }
 
-/** "system" clears the override, so the palette follows the device again. */
-function applyAppearance(next: Appearance) {
-  if (next === "system") document.documentElement.removeAttribute("data-theme");
-  else document.documentElement.setAttribute("data-theme", next);
+/** The default clears the attribute, so the stylesheet's own default applies. */
+function apply(pref: AppearancePref, value: string) {
+  const { attr, fallback } = APPEARANCE_PREFS[pref];
+  if (value === fallback) document.documentElement.removeAttribute(attr);
+  else document.documentElement.setAttribute(attr, value);
 }
 
-export function setAppearance(next: Appearance) {
+export function setAppearancePref<P extends AppearancePref>(pref: P, value: AppearanceValue<P>) {
+  const { key, fallback } = APPEARANCE_PREFS[pref];
   try {
-    if (next === "system") window.localStorage.removeItem(APPEARANCE_KEY);
-    else window.localStorage.setItem(APPEARANCE_KEY, next);
+    if (value === fallback) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, value);
   } catch {
     // Private mode: the choice still applies until the tab closes.
   }
-  applyAppearance(next);
+  apply(pref, value);
   listeners.forEach((l) => l());
 }
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  // Another tab changed it.
-  const onStorage = (e: StorageEvent) => {
-    if (e.key !== APPEARANCE_KEY) return;
-    applyAppearance(read());
+  // Another tab changed one of them.
+  const onStorage = () => {
+    for (const pref of Object.keys(APPEARANCE_PREFS) as AppearancePref[]) {
+      apply(pref, read(pref));
+    }
     listener();
   };
   window.addEventListener("storage", onStorage);
@@ -48,7 +58,11 @@ function subscribe(listener: () => void) {
   };
 }
 
-/** This device's light / dark choice. Saved in the browser, not on the account. */
-export function useAppearance(): Appearance {
-  return useSyncExternalStore(subscribe, read, () => "system");
+/** One of this device's appearance choices. */
+export function useAppearancePref<P extends AppearancePref>(pref: P): AppearanceValue<P> {
+  return useSyncExternalStore(
+    subscribe,
+    () => read(pref),
+    () => APPEARANCE_PREFS[pref].fallback,
+  );
 }

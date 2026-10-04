@@ -10,12 +10,14 @@
 
 import type * as AdminEmail from "../AdminEmail.js";
 import type * as ResendOTP from "../ResendOTP.js";
+import type * as account from "../account.js";
 import type * as accountDeletion from "../accountDeletion.js";
 import type * as adminReset from "../adminReset.js";
 import type * as auth from "../auth.js";
 import type * as badges from "../badges.js";
 import type * as bio from "../bio.js";
 import type * as bioLimits from "../bioLimits.js";
+import type * as blocks from "../blocks.js";
 import type * as chat from "../chat.js";
 import type * as chatMentions from "../chatMentions.js";
 import type * as collegeAttendance from "../collegeAttendance.js";
@@ -56,6 +58,7 @@ import type * as notifications from "../notifications.js";
 import type * as notify from "../notify.js";
 import type * as partyInvites from "../partyInvites.js";
 import type * as password from "../password.js";
+import type * as peopleSearch from "../peopleSearch.js";
 import type * as peopleYouMayKnow from "../peopleYouMayKnow.js";
 import type * as profileActivity from "../profileActivity.js";
 import type * as pushNotifications from "../pushNotifications.js";
@@ -84,12 +87,14 @@ import type {
 declare const fullApi: ApiFromModules<{
   AdminEmail: typeof AdminEmail;
   ResendOTP: typeof ResendOTP;
+  account: typeof account;
   accountDeletion: typeof accountDeletion;
   adminReset: typeof adminReset;
   auth: typeof auth;
   badges: typeof badges;
   bio: typeof bio;
   bioLimits: typeof bioLimits;
+  blocks: typeof blocks;
   chat: typeof chat;
   chatMentions: typeof chatMentions;
   collegeAttendance: typeof collegeAttendance;
@@ -130,6 +135,7 @@ declare const fullApi: ApiFromModules<{
   notify: typeof notify;
   partyInvites: typeof partyInvites;
   password: typeof password;
+  peopleSearch: typeof peopleSearch;
   peopleYouMayKnow: typeof peopleYouMayKnow;
   profileActivity: typeof profileActivity;
   pushNotifications: typeof pushNotifications;

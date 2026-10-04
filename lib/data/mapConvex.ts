@@ -1,6 +1,5 @@
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import type { User } from "@/lib/auth/types";
-import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { Listing } from "./types";
 
 export type PublicUserDoc = {
@@ -13,7 +12,6 @@ export type PublicUserDoc = {
   interests?: string[];
   bio?: string;
   subject?: string;
-  uiFont?: Doc<"users">["uiFont"];
   instagramHandle?: string;
   whatsappPhone?: string;
   avatar?: Doc<"users">["avatar"];
@@ -30,7 +28,6 @@ export function mapUser(doc: PublicUserDoc): User {
     interests: doc.interests ?? [],
     bio: doc.bio ?? "",
     subject: doc.subject ?? "",
-    uiFont: doc.uiFont ?? DEFAULT_UI_FONT,
     ...(doc.instagramHandle ? { instagramHandle: doc.instagramHandle } : {}),
     ...(doc.whatsappPhone ? { whatsappPhone: doc.whatsappPhone } : {}),
     ...(doc.avatar ? { avatar: doc.avatar } : {}),

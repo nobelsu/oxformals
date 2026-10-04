@@ -1,4 +1,3 @@
-import type { UiFontId } from "@/convex/uiFont";
 
 export type AvatarSource =
   | { kind: "image"; dataUrl: string }
@@ -25,8 +24,6 @@ export type User = {
   dietaryConsent?: boolean;
   /** Degree / course subject (optional). */
   subject: string;
-  /** App UI font preference; persisted on Convex `users.uiFont`. */
-  uiFont: UiFontId;
   avatar?: AvatarSource;
   agreedToRules?: boolean;
   /** When false, user opts out of email notifications (wishlist alerts, review reminders). */

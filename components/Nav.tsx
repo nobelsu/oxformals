@@ -106,7 +106,6 @@ const TABS = [
  *  chips) rather than the visible tab bar, but still needing a mobile title. */
 const OFF_BAR_LABELS: Record<string, string> = {
   mine: "Me",
-  requests: "Your listing",
 };
 
 export function Nav() {
@@ -135,18 +134,13 @@ function NavInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const isRequestsDetail = pathname?.startsWith("/requests/") ?? false;
   const isCollegeDetail = pathname?.startsWith("/college/") ?? false;
   const isLegalPage =
     pathname?.startsWith("/privacy") || pathname?.startsWith("/terms");
   const isLoginPage = pathname?.startsWith("/login") ?? false;
   const isBareRoot =
     pathname === "/" && !searchParams.get("tab") && !searchParams.get("listing");
-  const activeTab = isRequestsDetail
-    ? "requests"
-    : isCollegeDetail
-      ? "colleges"
-      : searchParams.get("tab") ?? "feed";
+  const activeTab = isCollegeDetail ? "colleges" : (searchParams.get("tab") ?? "feed");
   // Mirrors HomeClient's landing-page condition: logged-out visitors on "/"
   // with no ?tab= and no ?listing= (email deep links bypass landing) see the
   // marketing page, not BrowseTab, so Browse shouldn't be marked active
@@ -159,7 +153,7 @@ function NavInner() {
     status === "ready" &&
     !isAuthenticated;
 
-  const onTabbedPage = (pathname === "/" && !isLandingPage) || isRequestsDetail;
+  const onTabbedPage = pathname === "/" && !isLandingPage;
   const activeTabLabel =
     TABS.find((t) => t.id === activeTab)?.label ??
     OFF_BAR_LABELS[activeTab] ??

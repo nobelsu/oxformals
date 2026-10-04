@@ -12,7 +12,7 @@ export type BadgeIconId =
   | "pen"
   | "trophy"
   | "college"
-  | "rosette";
+  | "canape";
 export type BadgeMetric = "formals" | "reviews";
 
 export type MilestoneBadgeDefinition = {
@@ -138,9 +138,9 @@ export const SPECIAL_BADGES: SpecialBadgeDefinition[] = [
   {
     id: FOUNDING_BADGE_ID,
     family: "special",
-    name: "Founding Guest",
-    icon: "rosette",
-    description: "Joined Oxformals in its first term.",
+    name: "Starter",
+    icon: "canape",
+    description: "Here for the first course: joined Oxformals in its first term.",
   },
 ];
 
@@ -150,12 +150,28 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   ...COLLEGE_BADGES,
 ];
 
-/** Badges anyone can still earn; special ones sit outside the "x of y" count. */
+/** Badges anyone can still earn. */
 export const TOTAL_BADGE_COUNT = MILESTONE_BADGES.length + COLLEGE_BADGES.length;
 
-/** How many of the earnable badges these rows cover. */
-export function earnableCount(rows: { badgeId: string }[]): number {
-  return rows.filter((r) => !SPECIAL_BADGES.some((b) => b.id === r.badgeId)).length;
+/**
+ * "x of y" for someone's badges. Special badges can't be earned any more, so
+ * they only join the total for the people who hold them: a holder with nothing
+ * else reads "1 of 51", everyone else "0 of 50".
+ */
+export function badgeTally(rows: { badgeId: string }[]): { earned: number; total: number } {
+  const specialsHeld = rows.filter((r) => SPECIAL_BADGES.some((b) => b.id === r.badgeId)).length;
+  return { earned: rows.length, total: TOTAL_BADGE_COUNT + specialsHeld };
+}
+
+export type MedalTone = "bronze" | "silver" | "gold" | "ruby" | "ink";
+
+const LADDER_TONES: MedalTone[] = ["bronze", "silver", "gold", "ruby"];
+
+/** A medal's metal: its step on its own ladder (1st bronze … 4th ruby); specials are ink. */
+export function medalTone(def: BadgeDefinition): MedalTone {
+  if (def.family !== "milestone") return "ink";
+  const ladder = MILESTONE_BADGES.filter((b) => b.metric === def.metric);
+  return LADDER_TONES[Math.min(ladder.findIndex((b) => b.id === def.id), 3)] ?? "bronze";
 }
 
 export function badgeById(id: string): BadgeDefinition | undefined {

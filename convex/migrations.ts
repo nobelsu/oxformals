@@ -4,6 +4,11 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { collectBadgeInputs } from "./badges";
 import {
+  hasRespondedToAttendance,
+  recordAttendanceConfirmation,
+} from "./formalAttendance";
+import { canConfirmAttendanceCollegeListing } from "../lib/data/collegeReviewEligibility";
+import {
   COLLEGE_BADGES,
   FOUNDING_BADGE_ID,
   MILESTONE_BADGES,
@@ -120,7 +125,7 @@ export const backfillUserBadges = internalMutation({
 });
 
 /**
- * One-off: give the Founding Guest badge to everyone who signed up before
+ * One-off: give the Starter (first-term) badge to everyone who signed up before
  * `signedUpBefore` (ms since epoch: the end of the first term). Skips deleted
  * accounts and anyone who already holds it, so re-running awards nothing new.
  * Stamped with the run time, so holders get the celebration on their next
@@ -167,5 +172,74 @@ export const awardFoundingBadge = internalMutation({
       });
     }
     return { awarded, scanned: page.page.length, done };
+  },
+});
+
+/** Formals this recent are left alone: guests may still answer "did you go?". */
+const ATTENDANCE_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * One-off: count the guests of past formals as having attended. Before
+ * attendance was tracked (and for anyone who never answered "did you go?"),
+ * a formal someone was a guest at left no record, so it doesn't show on their
+ * profile or count towards badges.
+ *
+ * For every formal that ended more than a week ago, each guest who could have
+ * confirmed (the same rule as the app: in the group, not the host, not from
+ * that college) and never answered gets an attendance record dated the night
+ * of the formal. Anyone who said they didn't go is left as they are. No
+ * credits or referral rewards are paid. Re-running adds nothing new. When the
+ * last page is done it re-runs backfillUserBadges, which dates the badges
+ * historically so nobody gets a pile of celebration popups.
+ *
+ * Run with: npx convex run migrations:backfillAttendanceFromPastFormals '{"paginationOpts":{"numItems":25,"cursor":null}}'
+ */
+export const backfillAttendanceFromPastFormals = internalMutation({
+  args: { paginationOpts: paginationOptsValidator },
+  returns: v.object({
+    recorded: v.number(),
+    scanned: v.number(),
+    done: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const pageSize = Math.min(args.paginationOpts.numItems, 25);
+    const page = await ctx.db
+      .query("listings")
+      .paginate({ ...args.paginationOpts, numItems: pageSize });
+    const now = Date.now();
+    let recorded = 0;
+    for (const listing of page.page) {
+      const night = Date.parse(listing.dateTime);
+      if (Number.isNaN(night) || night > now - ATTENDANCE_GRACE_MS) continue;
+      for (const memberId of listing.members) {
+        const member = await ctx.db.get(memberId);
+        if (!member || member.deletedAt !== undefined) continue;
+        const eligible = canConfirmAttendanceCollegeListing(
+          { id: memberId, college: member.college },
+          {
+            college: listing.college,
+            dateTime: listing.dateTime,
+            members: listing.members.map(String),
+            ownerUserId: listing.ownerUserId,
+          },
+          now,
+        );
+        if (!eligible.canConfirm) continue;
+        if (await hasRespondedToAttendance(ctx, listing._id, memberId)) continue;
+        await recordAttendanceConfirmation(ctx, listing, memberId, night);
+        recorded += 1;
+      }
+    }
+    const done = page.isDone;
+    if (!done) {
+      await ctx.scheduler.runAfter(0, internal.migrations.backfillAttendanceFromPastFormals, {
+        paginationOpts: { numItems: pageSize, cursor: page.continueCursor },
+      });
+    } else {
+      await ctx.scheduler.runAfter(0, internal.migrations.backfillUserBadges, {
+        paginationOpts: { numItems: 25, cursor: null },
+      });
+    }
+    return { recorded, scanned: page.page.length, done };
   },
 });

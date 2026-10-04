@@ -4,7 +4,6 @@ import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import {
   createContext,
   useCallback,
-  useEffect,
   useMemo,
   type ReactNode,
 } from "react";
@@ -17,7 +16,6 @@ import type {
   SignupInput,
   User,
 } from "@/lib/auth/types";
-import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import { roleNeedsYear } from "@/convex/roles";
 
 type Status = "hydrating" | "ready";
@@ -48,7 +46,6 @@ function mapDocToUser(doc: Doc<"users">): User {
     dietaryRequirements: doc.dietaryRequirements ?? "",
     dietaryConsent: doc.dietaryConsentAt !== undefined,
     subject: doc.subject ?? "",
-    uiFont: doc.uiFont ?? DEFAULT_UI_FONT,
     ...(doc.avatar ? { avatar: doc.avatar } : {}),
     agreedToRules: doc.agreedToRules ?? false,
     ...(doc.emailNotifications !== undefined
@@ -142,22 +139,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ? convexUserDoc.email
       : null;
 
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (!jwtAuthenticated || convexUserDoc === undefined) {
-      if (!jwtAuthenticated) {
-        document.documentElement.removeAttribute("data-ui-font");
-      }
-      return;
-    }
-    if (convexUserDoc === null) {
-      document.documentElement.removeAttribute("data-ui-font");
-      return;
-    }
-    // The old per-account themes are retired; everyone gets the default palette.
-    document.documentElement.setAttribute("data-ui-font", DEFAULT_UI_FONT);
-  }, [jwtAuthenticated, convexUserDoc]);
-
   const requestCode = useCallback(
     async (email: string) => {
       const trimmed = email.trim();
@@ -238,7 +219,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         whatsappPhone: input.whatsappPhone?.trim() ?? "",
         dietaryRequirements: "",
         subject: "",
-        uiFont: DEFAULT_UI_FONT,
         agreedToRules: false,
       } satisfies User;
     },
@@ -266,7 +246,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         dietaryRequirements?: string;
         dietaryConsent?: boolean;
         subject?: string;
-        uiFont?: User["uiFont"];
         avatar?: User["avatar"] | null;
         emailNotifications?: boolean;
       } = {};
@@ -291,9 +270,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (patch.subject !== undefined) {
         payload.subject = patch.subject;
       }
-      if (patch.uiFont !== undefined) {
-        payload.uiFont = patch.uiFont;
-      }
       if (Object.prototype.hasOwnProperty.call(patch, "avatar")) {
         payload.avatar = patch.avatar ?? null;
       }
@@ -311,7 +287,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...user,
         ...patch,
         interests: patch.interests ?? user.interests,
-        uiFont: patch.uiFont ?? user.uiFont,
         avatar: Object.prototype.hasOwnProperty.call(patch, "avatar")
           ? patch.avatar
           : user.avatar,

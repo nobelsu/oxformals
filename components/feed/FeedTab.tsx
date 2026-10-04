@@ -20,6 +20,7 @@ import { FeedRow } from "./FeedRow";
 import { FeedHeader } from "./FeedHeader";
 import { PartyInvites } from "./PartyInvites";
 import { FeedSidebar, NextFormalCard, whenLabel, type NextFormal } from "./FeedSidebar";
+import { PeopleSearch } from "./PeopleSearch";
 import { YourFormalsCard } from "./YourFormalsCard";
 import { WeekFormals } from "./WeekFormals";
 import { BackToTop } from "@/components/ui/BackToTop";
@@ -61,6 +62,26 @@ export function FeedTab() {
       onView: () => setOpen({ listing: soonest, owner }),
     };
   }, [user, listings, nowMs, getUser]);
+
+  // The popup follows the live listing (so edits and new guests show), and
+  // `?listing=<id>` opens it: old /requests/<id> links land here.
+  const linkedId = searchParams.get("listing");
+  const linked = !open && linkedId ? (getListing(linkedId) ?? null) : null;
+  const shown = open ? (getListing(open.listing.id) ?? open.listing) : linked;
+  const shownOwner = shown
+    ? (getUser(shown.ownerUserId) ?? (open?.listing.id === shown.id ? open.owner : null))
+    : null;
+  const shownMembers = shown
+    ? shown.members.map(getUser).filter((u): u is User => !!u)
+    : [];
+  const closeListing = () => {
+    setOpen(null);
+    if (!linkedId) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("listing");
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `/?${qs}` : "/");
+  };
 
   const openListing = (listing: Listing) =>
     setOpen({ listing, owner: getUser(listing.ownerUserId) ?? null });
@@ -117,8 +138,9 @@ export function FeedTab() {
         <div className="flex justify-center">
           <InviteFriendsButton variant="ink" />
         </div>
-        {/* Desktop already has this in the sidebar */}
-        <PeopleYouMayKnow limit={10} className="lg:hidden" />
+        {/* Desktop already has this in the sidebar. Same limit as there, so the
+            hidden copy shares its query instead of running a second one. */}
+        <PeopleYouMayKnow className="lg:hidden" />
       </div>
     ) : items.length === 0 ? (
       <EmptyState
@@ -190,6 +212,10 @@ export function FeedTab() {
                 </ShallowLink>
               </div>
             ) : null}
+            {/* Phones have no sidebar, so Following carries the people search. */}
+            {user && scope === "following" ? (
+              <PeopleSearch className="mb-2 mt-3 lg:hidden" />
+            ) : null}
             {scope === "forYou" && raw?.wishlistEmpty ? (
               <Link
                 href="/?tab=mine&edit=1"
@@ -213,10 +239,11 @@ export function FeedTab() {
       <BackToTop />
 
       <ListingDetailModal
-        open={open !== null}
-        onClose={() => setOpen(null)}
-        listing={open?.listing ?? null}
-        owner={open?.owner ?? null}
+        open={shown !== null}
+        onClose={closeListing}
+        listing={shown}
+        owner={shownOwner}
+        memberUsers={shownMembers}
       />
     </div>
   );

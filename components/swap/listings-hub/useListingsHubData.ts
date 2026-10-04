@@ -5,8 +5,6 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
-import { listingIsPast } from "@/lib/data/collegeReviewEligibility";
-import { outgoingPayRequests } from "@/lib/data/requestFilters";
 import { useNowMs } from "@/lib/hooks/useNowMs";
 import type { Listing } from "@/lib/data/types";
 
@@ -18,11 +16,7 @@ export type ListingNeedingAttendance = {
   listing: Listing;
 };
 
-export type ListingNeedingRequests = {
-  listing: Listing;
-  pendingCount: number;
-};
-
+/** What the feed's "Your formals" card needs: your listings and what's waiting on you. */
 export function useListingsHubData() {
   const { user } = useAuth();
   const { requests, listings } = useData();
@@ -87,33 +81,6 @@ export function useListingsHubData() {
     return sum;
   }, [pendingCountByListing]);
 
-  const myPayRequests = useMemo(
-    () =>
-      user
-        ? outgoingPayRequests(requests, user.id).sort(
-            (a, b) => b.createdAt - a.createdAt,
-          )
-        : [],
-    [requests, user],
-  );
-
-  const pendingPayRequestCount = useMemo(
-    () => myPayRequests.filter((r) => r.status === "pending").length,
-    [myPayRequests],
-  );
-
-  const attendedPastListings = useMemo(() => {
-    if (!user) return [];
-    return listings
-      .filter(
-        (l) =>
-          l.members.includes(user.id) &&
-          l.ownerUserId !== user.id &&
-          listingIsPast(l.dateTime, nowMs),
-      )
-      .sort((a, b) => +new Date(b.dateTime) - +new Date(a.dateTime));
-  }, [listings, user, nowMs]);
-
   const listingsNeedingAttendance = useMemo((): ListingNeedingAttendance[] => {
     if (pendingAttendanceSet.size === 0) return [];
     const byId = new Map(listings.map((l) => [l.id, l]));
@@ -140,61 +107,13 @@ export function useListingsHubData() {
     );
   }, [listings, pendingReviewSet]);
 
-  const listingsNeedingRequests = useMemo((): ListingNeedingRequests[] => {
-    const rows: ListingNeedingRequests[] = [];
-    for (const listing of myActiveListings) {
-      const pendingCount = pendingCountByListing.get(listing.id) ?? 0;
-      if (pendingCount > 0) rows.push({ listing, pendingCount });
-    }
-    return rows.sort((a, b) => b.pendingCount - a.pendingCount);
-  }, [myActiveListings, pendingCountByListing]);
-
-  const hasNeedsAttention =
-    listingsNeedingAttendance.length > 0 ||
-    listingsNeedingReview.length > 0 ||
-    listingsNeedingRequests.length > 0;
-
-  const overviewAttentionCount =
-    listingsNeedingAttendance.length +
-    listingsNeedingReview.length +
-    totalPendingIncoming;
-
-  const myListingsUnreadCount = useMemo(() => {
-    const ownedReviews = myBookedListings.filter((l) =>
-      pendingReviewSet.has(l.id),
-    ).length;
-    return totalPendingIncoming + ownedReviews;
-  }, [myBookedListings, pendingReviewSet, totalPendingIncoming]);
-
-  const attendedUnreadCount = useMemo(
-    () =>
-      attendedPastListings.filter(
-        (l) => pendingAttendanceSet.has(l.id) || pendingReviewSet.has(l.id),
-      ).length,
-    [attendedPastListings, pendingAttendanceSet, pendingReviewSet],
-  );
-
-  const myListingsCount = myActiveListings.length + myBookedListings.length;
-
   return {
     user,
-    pendingReviewSet,
-    pendingAttendanceSet,
     myActiveListings,
     myBookedListings,
-    myPayRequests,
-    attendedPastListings,
     pendingCountByListing,
     totalPendingIncoming,
-    pendingPayRequestCount,
     listingsNeedingAttendance,
     listingsNeedingReview,
-    listingsNeedingRequests,
-    hasNeedsAttention,
-    overviewAttentionCount,
-    myListingsUnreadCount,
-    attendedUnreadCount,
-    myListingsCount,
-    formalsToReviewCount: pendingReviewSet.size,
   };
 }

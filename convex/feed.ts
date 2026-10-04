@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { blockedIdsFor } from "./blocks";
 import type { Doc, Id } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import { optionalUserId, sanitizePublicUser } from "./guards";
@@ -68,9 +69,11 @@ export const getCampusFeed = query({
     }
     const wishlistEmpty = wishlist.size === 0;
 
-    // Listings and reviews: everything (For you) or by person (Following).
+    // Listings and reviews: everything (For you) or by person (Following),
+    // never from someone you've blocked or who blocked you.
+    const blocked = await blockedIdsFor(ctx, viewerId);
     const inScope = (userId: Id<"users">) =>
-      scope === "following" ? followed.has(userId) : true;
+      !blocked.has(userId) && (scope === "following" ? followed.has(userId) : true);
 
     // Cache actor lookups: many items share an author/owner.
     const actorCache = new Map<string, PublicActor | null>();
@@ -122,7 +125,13 @@ export const getCampusFeed = query({
           dateTime: string;
         };
 
-    const items: FeedItem[] = [];
+    // Rank first, build later: the expensive lookups (hosts, enrichment, photo
+    // URLs) only run for the items that make the cut.
+    type Candidate = { rank: number; build: () => Promise<FeedItem | null> };
+    const candidates: Candidate[] = [];
+    // Newest first; For you bumps wishlist colleges and people you follow.
+    const rankOf = (ts: number, mine: boolean) =>
+      scope === "forYou" && mine ? ts + PRIORITY_BOOST_MS : ts;
 
     // Newly listed, still-upcoming formals.
     const listingDocs = await ctx.db
@@ -133,15 +142,23 @@ export const getCampusFeed = query({
     for (const listing of listingDocs) {
       if (!inScope(listing.ownerUserId)) continue;
       if (listing.dateTime <= nowIso) continue;
-      const actor = await getActor(listing.ownerUserId);
-      if (!actor) continue;
-      items.push({
-        kind: "listing",
-        key: `listing:${listing._id}`,
-        ts: listing._creationTime,
-        onWishlist: wishlist.has(listing.college),
-        actor,
-        listing: await enrichListing(ctx, listing),
+      candidates.push({
+        rank: rankOf(
+          listing._creationTime,
+          wishlist.has(listing.college) || followed.has(listing.ownerUserId),
+        ),
+        build: async () => {
+          const actor = await getActor(listing.ownerUserId);
+          if (!actor) return null;
+          return {
+            kind: "listing",
+            key: `listing:${listing._id}`,
+            ts: listing._creationTime,
+            onWishlist: wishlist.has(listing.college),
+            actor,
+            listing: await enrichListing(ctx, listing),
+          };
+        },
       });
     }
 
@@ -153,24 +170,32 @@ export const getCampusFeed = query({
     for (const review of reviewDocs) {
       if (!inScope(review.userId)) continue;
       if (review.isAnonymous) continue;
-      if (!(await canSee(review.userId))) continue;
-      const actor = await getActor(review.userId);
-      if (!actor) continue;
-      const imageUrls: string[] = [];
-      for (const imageId of review.imageIds ?? []) {
-        const url = await ctx.storage.getUrl(imageId);
-        if (url) imageUrls.push(url);
-      }
-      items.push({
-        kind: "review",
-        key: `review:${review._id}`,
-        ts: review.updatedAt,
-        onWishlist: wishlist.has(review.college),
-        actor,
-        college: review.college,
-        ratings: review.ratings,
-        comment: review.comment ?? null,
-        imageUrls,
+      candidates.push({
+        rank: rankOf(
+          review.updatedAt,
+          wishlist.has(review.college) || followed.has(review.userId),
+        ),
+        build: async () => {
+          if (!(await canSee(review.userId))) return null;
+          const actor = await getActor(review.userId);
+          if (!actor) return null;
+          const imageUrls: string[] = [];
+          for (const imageId of review.imageIds ?? []) {
+            const url = await ctx.storage.getUrl(imageId);
+            if (url) imageUrls.push(url);
+          }
+          return {
+            kind: "review",
+            key: `review:${review._id}`,
+            ts: review.updatedAt,
+            onWishlist: wishlist.has(review.college),
+            actor,
+            college: review.college,
+            ratings: review.ratings,
+            comment: review.comment ?? null,
+            imageUrls,
+          };
+        },
       });
     }
 
@@ -214,8 +239,9 @@ export const getCampusFeed = query({
       bundle.ts = Math.max(bundle.ts, row.confirmedAt);
       bundles.set(key, bundle);
     }
+    // Already limited to people you follow, so these are cheap and always "yours".
     for (const bundle of bundles.values()) {
-      items.push({
+      const item: FeedItem = {
         kind: "attended",
         key: bundle.key,
         ts: bundle.ts,
@@ -224,23 +250,17 @@ export const getCampusFeed = query({
         attendeeCount: bundle.actors.size,
         college: bundle.college,
         dateTime: bundle.dateTime,
-      });
+      };
+      candidates.push({ rank: rankOf(bundle.ts, true), build: async () => item });
     }
 
-    // Newest first; For you bumps wishlist colleges and people you follow.
-    const rank = (item: FeedItem) => {
-      if (scope === "following") return item.ts;
-      const mine =
-        item.kind === "attended"
-          ? true
-          : item.onWishlist ||
-            followed.has(
-              item.kind === "listing" ? item.listing.ownerUserId : item.actor._id,
-            );
-      return mine ? item.ts + PRIORITY_BOOST_MS : item.ts;
-    };
-    items.sort((a, b) => rank(b) - rank(a));
-    const sliced = items.slice(0, limit);
+    candidates.sort((a, b) => b.rank - a.rank);
+    const sliced: FeedItem[] = [];
+    for (const candidate of candidates) {
+      if (sliced.length >= limit) break;
+      const item = await candidate.build();
+      if (item) sliced.push(item);
+    }
 
     // Attach comment + like counts only for the items we return.
     const withCounts = await Promise.all(

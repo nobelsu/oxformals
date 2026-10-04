@@ -2,18 +2,7 @@
 
 :root {
   --app-nav-height: 5.5rem;
-  /*
-   * Fallback palette — NOT a duplicate of html[data-ui-font="schoolbell"] by
-   * accident. `data-ui-font` is set entirely client-side in
-   * components/auth/AuthProvider.tsx, inside a useEffect: it's absent on the
-   * server-rendered HTML and during hydration for every visitor, and
-   * AuthProvider explicitly removes it (`removeAttribute`) whenever the user
-   * is unauthenticated or has no Convex user doc. That makes bare `html` a
-   * persistent, common state (every signed-out visitor, including the public
-   * landing page), not a brief pre-hydration flash — so this mirrors the Sand
-   * palette below rather than being deleted. It also keeps the --rank-* var()
-   * references beneath it resolvable.
-   */
+  /* The light palette; the dark one follows in the media query below. */
   --bg: #f2ecdd;
   --paper: #ffffff;
   --ink: #1b1a12;
@@ -42,7 +31,6 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* See the fallback comment on the light :root block above. */
     --bg: #1a1810;
     --paper: #232016;
     --ink: #f2ecdd;
@@ -87,18 +75,14 @@
   --font-display: var(--font-display-face);
 }
 
-/* --- Font stacks + paired color themes (light) --- */
+/* --- Font stacks --- */
 
 html {
   scrollbar-gutter: stable;
   /* No grey/blue flash over tapped cards and buttons on phones; pressed
      states come from each component instead. */
   -webkit-tap-highlight-color: transparent;
-  /*
-   * Body face for the default theme (and bare `html` — see the fallback
-   * comment on the :root block above: logged-out visitors never get
-   * data-ui-font, so this rule is their live styling, not a flash).
-   */
+  /* Default faces; Settings → Appearance → Font swaps them (see below). */
   --font-app: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-display-face: var(--font-schoolbell), "Schoolbell", cursive;
 }
@@ -113,97 +97,35 @@ html:has([data-landing-theme="navy"]),
   --accent-wash-strong: #e79aa6;
 }
 
-html[data-ui-font="schoolbell"] {
-  --font-app: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-display-face: var(--font-schoolbell), "Schoolbell", cursive;
-  --bg: #f2ecdd;
-  --paper: #ffffff;
-  --ink: #1b1a12;
-  --ink-muted: #565039;
-  --ink-soft: #716b55;
-  --tag: #1b1a12;
-  --tag-ink: #f5f1e6;
-  --accent: #b8524c;
-  --accent-hover: #a3453f;
-  --accent-ink: #ffffff;
-  --accent-wash: #edbfba;
-  --accent-wash-ink: #1a1810;
-  --danger: #b8423e;
-  --danger-ink: #ffffff;
-}
-
-html[data-ui-font="inter"] {
+/*
+ * Settings → Appearance → Font. The default (no attribute) is Space Grotesk
+ * with handwritten headings; the others swap both for one plainer face.
+ */
+html[data-font="simple"] {
   --font-app: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display-face: var(--font-app);
 }
 
-html[data-ui-font="dm_sans"] {
-  --font-app: var(--font-dm-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display-face: var(--font-app);
-  --bg: #faf5f3;
-  --paper: #fff9f7;
-  --ink: #3d2a26;
-  --ink-muted: #7d5e58;
-  --ink-soft: #b89a94;
-  --tag: #4a322d;
-  --tag-ink: #fdf4f2;
-  --accent: #d4827e;
-  --accent-hover: #c46a66;
-  --accent-ink: #ffffff;
-  --accent-wash: #d4827e;
-  --accent-wash-ink: #3d2a26;
-  --danger: #b91c1c;
-  --danger-ink: #ffffff;
-}
-
-html[data-ui-font="lora"] {
-  --font-app: var(--font-lora), "Lora", Georgia, "Times New Roman", serif;
-  --font-display-face: var(--font-app);
-  --bg: #f4f1ea;
-  --paper: #faf7f0;
-  --ink: #2c1810;
-  --ink-muted: #6b5344;
-  --ink-soft: #9a8575;
-  --tag: #3d281c;
-  --tag-ink: #f7f2e9;
-  --accent: #b8860b;
-  --accent-hover: #9a7209;
-  --accent-ink: #1a1208;
-  --accent-wash: #b8860b;
-  --accent-wash-ink: #1a1208;
-  --danger: #8b2942;
-  --danger-ink: #ffffff;
-}
-
-html[data-ui-font="georgia"] {
-  --font-app: "Georgia", "Palatino Linotype", "Book Antiqua", "Palatino",
-    "Times New Roman", Times, serif;
+html[data-font="serif"] {
+  --font-app: var(--font-lora), "Lora", ui-serif, Georgia, serif;
   --font-display-face: var(--font-app);
 }
 
-html[data-ui-font="arial"] {
-  --font-app: "Arial", "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
+/* Whatever this device uses, including a font someone installed to read better. */
+html[data-font="system"] {
+  --font-app: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display-face: var(--font-app);
 }
 
-html[data-ui-font="system_ui"] {
-  --font-app: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-display-face: var(--font-app);
-  --bg: #ecfdf5;
-  --paper: #f0fdf4;
-  --ink: #064e3b;
-  --ink-muted: #0f766e;
-  --ink-soft: #5eead4;
-  --tag: #134e4a;
-  --tag-ink: #ecfdf5;
-  --accent: #059669;
-  --accent-hover: #047857;
-  --accent-ink: #ffffff;
-  --accent-wash: #059669;
-  --accent-wash-ink: #000000;
-  --danger: #be123c;
-  --danger-ink: #ffffff;
+/* Settings → Appearance → Text size. Everything is sized in rem, so this scales the lot. */
+html[data-text-size="small"] {
+  font-size: 93.75%;
+}
+html[data-text-size="large"] {
+  font-size: 112.5%;
+}
+html[data-text-size="xlarge"] {
+  font-size: 125%;
 }
 
 html,
@@ -215,108 +137,23 @@ body {
   letter-spacing: 0.01em;
 }
 
-html[data-ui-font="inter"] body,
-html[data-ui-font="dm_sans"] body,
-html[data-ui-font="lora"] body,
-html[data-ui-font="georgia"] body,
-html[data-ui-font="arial"] body,
-html[data-ui-font="system_ui"] body {
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
 .font-display {
   font-family: var(--font-display-face);
   font-weight: 400;
   letter-spacing: 0.02em;
 }
 
-html[data-ui-font="inter"] .font-display,
-html[data-ui-font="dm_sans"] .font-display,
-html[data-ui-font="lora"] .font-display,
-html[data-ui-font="georgia"] .font-display,
-html[data-ui-font="arial"] .font-display,
-html[data-ui-font="system_ui"] .font-display {
+/* Without the handwritten face, headings need weight to read as headings. */
+html[data-font] .font-display {
   font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-@media (prefers-color-scheme: dark) {
-  html[data-ui-font="schoolbell"] {
-    --bg: #1a1810;
-    --paper: #232016;
-    --ink: #f2ecdd;
-    --ink-muted: #c6bfa9;
-    --ink-soft: #8f8875;
-    --tag: #f2ecdd;
-    --tag-ink: #1a1810;
-    --accent: #d9736c;
-    --accent-hover: #c85f58;
-    --accent-ink: #1a1810;
-    --accent-wash: #edbfba;
-    --accent-wash-ink: #1a1810;
-    --danger: #f87171;
-    --danger-ink: #1a1810;
-  }
-
-  html[data-ui-font="dm_sans"] {
-    --bg: #2a1f1d;
-    --paper: #352824;
-    --ink: #fce8e4;
-    --ink-muted: #d4a59a;
-    --ink-soft: #9a7269;
-    --tag: #fde8e4;
-    --tag-ink: #2a1f1d;
-    --accent: #f0a8a3;
-    --accent-hover: #e8928c;
-    --accent-ink: #2a1f1d;
-    --accent-wash: #f0a8a3;
-    --accent-wash-ink: #2a1f1d;
-    --danger: #fca5a5;
-    --danger-ink: #2a1f1d;
-  }
-
-  html[data-ui-font="lora"] {
-    --bg: #1a1410;
-    --paper: #241c16;
-    --ink: #f4ede4;
-    --ink-muted: #c4b5a5;
-    --ink-soft: #8a7a6a;
-    --tag: #f7f0e6;
-    --tag-ink: #1a1410;
-    --accent: #d4a84b;
-    --accent-hover: #c49a3d;
-    --accent-ink: #1a1410;
-    --accent-wash: #d4a84b;
-    --accent-wash-ink: #1a1410;
-    --danger: #fb7185;
-    --danger-ink: #1a1410;
-  }
-
-  html[data-ui-font="system_ui"] {
-    --bg: #022c22;
-    --paper: #064e3b;
-    --ink: #ecfdf5;
-    --ink-muted: #99f6e4;
-    --ink-soft: #2dd4bf;
-    --tag: #ecfdf5;
-    --tag-ink: #022c22;
-    --accent: #34d399;
-    --accent-hover: #10b981;
-    --accent-ink: #022c22;
-    --accent-wash: #34d399;
-    --accent-wash-ink: #022c22;
-    --danger: #fda4af;
-    --danger-ink: #022c22;
-  }
 }
 
 /*
  * Settings → Appearance. A saved Light or Dark choice sets data-theme on <html>
- * and wins over the device setting above (`:root` adds the specificity to beat
- * the data-ui-font rules); with no attribute the palette follows the device.
+ * and wins over the device setting above; with no attribute the palette
+ * follows the device.
  */
-html[data-theme="light"]:root {
+html[data-theme="light"] {
   color-scheme: light;
   --bg: #f2ecdd;
   --paper: #ffffff;
@@ -337,7 +174,7 @@ html[data-theme="light"]:root {
   --rank-mountain-snow: color-mix(in srgb, var(--paper) 88%, var(--accent));
 }
 
-html[data-theme="dark"]:root {
+html[data-theme="dark"] {
   color-scheme: dark;
   --bg: #1a1810;
   --paper: #232016;

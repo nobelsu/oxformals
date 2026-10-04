@@ -7,8 +7,7 @@ import {
   COLLEGE_BADGES,
   MILESTONE_BADGES,
   SPECIAL_BADGES,
-  TOTAL_BADGE_COUNT,
-  earnableCount,
+  badgeTally,
   badgeById,
   type BadgeDefinition,
   type BadgeMetric,
@@ -150,6 +149,7 @@ export function BadgeCaseModal({ open, onClose, earned, progress }: Props) {
   const earnedMap = new Map((earned ?? []).map((e) => [e.badgeId, e.earnedAt]));
   const selected = selectedId ? badgeById(selectedId) : undefined;
   // Special badges are only shown to the people who hold them.
+  const tally = badgeTally(earned ?? []);
   const specialHeld = SPECIAL_BADGES.filter((b) => earnedMap.has(b.id));
   const collegeEarned = COLLEGE_BADGES.filter((b) => earnedMap.has(b.id)).length;
   const toggle = (id: string) =>
@@ -164,7 +164,7 @@ export function BadgeCaseModal({ open, onClose, earned, progress }: Props) {
       panelClassName="!max-w-2xl"
     >
       <p className="-mt-1 mb-4 text-[0.8rem] text-[var(--ink-muted)]">
-        {earnableCount(earned ?? [])} of {TOTAL_BADGE_COUNT} earned
+        {tally.earned} of {tally.total} earned
       </p>
 
       <section className="flex flex-col gap-5">

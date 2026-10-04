@@ -21,7 +21,6 @@ export type BrowseFilters = {
   /** People the viewer is bringing; a listing needs 1 + guests free seats. */
   guests: number;
   types: FormalType[];
-  role: string | null;
 };
 
 export const EMPTY_BROWSE_FILTERS: BrowseFilters = {
@@ -32,7 +31,6 @@ export const EMPTY_BROWSE_FILTERS: BrowseFilters = {
   how: [],
   guests: 0,
   types: [],
-  role: null,
 };
 
 export const WHEN_PRESETS: WhenPreset[] = ["tonight", "week", "weekend", "dates"];
@@ -48,6 +46,7 @@ export const BROWSE_FILTER_PARAMS = [
   "how",
   "seats",
   "type",
+  // Retired filter: still listed so old `?role=` links get cleaned up.
   "role",
 ] as const;
 
@@ -91,7 +90,6 @@ export function parseBrowseFilters(
     types: unique(list(params.get("type"))).filter((t): t is FormalType =>
       (FORMAL_TYPES as string[]).includes(t),
     ),
-    role: params.get("role") || null,
   };
 }
 
@@ -110,7 +108,6 @@ export function writeBrowseFilters(
   if (filters.how.length > 0) params.set("how", filters.how.join(","));
   if (filters.guests > 0) params.set("seats", String(filters.guests));
   if (filters.types.length > 0) params.set("type", filters.types.join(","));
-  if (filters.role) params.set("role", filters.role);
   return params;
 }
 
@@ -122,7 +119,6 @@ export function activeFilterSections(filters: BrowseFilters): number {
   if (filters.how.length > 0) n++;
   if (filters.guests > 0) n++;
   if (filters.types.length > 0) n++;
-  if (filters.role) n++;
   return n;
 }
 
@@ -210,7 +206,6 @@ export function browseFilterPredicate(
     }
     if (l.seatsAvailable < seatsNeeded) return false;
     if (types.size > 0 && !types.has(l.formalType)) return false;
-    if (filters.role && l.role !== filters.role) return false;
     return true;
   };
 }

@@ -1,4 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { blockedEitherWay } from "./blocks";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
@@ -621,6 +622,9 @@ export const getOrCreateConversation = mutation({
     const otherUser = await ctx.db.get(args.otherUserId);
     if (!otherUser) throw new Error("User not found");
     assertVerifiedEmail(otherUser);
+    if (await blockedEitherWay(ctx, viewerId, args.otherUserId)) {
+      throw new Error("You can't message this person.");
+    }
 
     const [participantLow, participantHigh] = orderParticipants(
       viewerId,
@@ -1403,6 +1407,13 @@ export const sendMessage = mutation({
       args.conversationId,
       userId,
     );
+
+    if (
+      conversationKind(convo) !== "group" &&
+      (await blockedEitherWay(ctx, userId, otherParticipantId(convo, userId)))
+    ) {
+      throw new Error("You can't message this person.");
+    }
 
     const clearedAt = await getClearedAt(convo, userId);
 

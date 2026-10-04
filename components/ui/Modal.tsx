@@ -1,7 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useId, type ReactNode } from "react";
 import { SketchCard } from "./SketchCard";
 import { useIsClient } from "@/lib/hooks/useIsClient";
 
@@ -22,6 +22,9 @@ type Props = {
   children: ReactNode;
 };
 
+/** Open modals, oldest first: Escape only closes the one on top. */
+const openModals: string[] = [];
+
 export function Modal({
   open,
   onClose,
@@ -33,10 +36,20 @@ export function Modal({
 }: Props) {
   // The portal target (document.body) only exists in the browser.
   const isClient = useIsClient();
+  // Registered on open only, so a parent re-rendering can't jump above its child.
+  const id = useId();
+  useEffect(() => {
+    if (!open) return;
+    openModals.push(id);
+    return () => {
+      openModals.splice(openModals.indexOf(id), 1);
+    };
+  }, [open, id]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && openModals[openModals.length - 1] === id) onClose();
     };
     window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
@@ -45,7 +58,7 @@ export function Modal({
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, onClose]);
+  }, [open, onClose, id]);
 
   if (!open || !isClient) return null;
 

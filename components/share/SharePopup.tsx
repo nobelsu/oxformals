@@ -110,7 +110,13 @@ export function SharePopup({ open, onClose, title = "Share", url, text, onStoryI
   const canNativeShare = typeof navigator !== "undefined" && "share" in navigator;
 
   const links: { label: string; href: string; icon: ReactNode }[] = [
-    { label: "WhatsApp", href: `https://api.whatsapp.com/send?text=${both}`, icon: <WhatsAppGlyph /> },
+    {
+      label: "WhatsApp",
+      // Link on its own line: the desktop app has been seen to keep only the
+      // link when it shares a line with the message.
+      href: `https://api.whatsapp.com/send?text=${encodeURIComponent(`${text}\n${url}`)}`,
+      icon: <WhatsAppGlyph />,
+    },
     {
       label: "Telegram",
       href: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
@@ -133,7 +139,8 @@ export function SharePopup({ open, onClose, title = "Share", url, text, onStoryI
           <button
             type="button"
             disabled={story === "busy"}
-            className={TILE}
+            // Touch devices have their own story button beside share.
+            className={`${TILE} pointer-coarse:hidden`}
             onClick={async () => {
               setStory("busy");
               try {

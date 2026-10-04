@@ -111,3 +111,55 @@ describe("founding badge", () => {
     expect(none.awarded).toBe(0);
   });
 });
+
+describe("attendance from past formals", () => {
+  test("guests of formals over a week old count as attended; hosts, home-college members, decliners and recent formals don't", async () => {
+    const t = convexTest(schema, modules);
+    const ids = await t.run(async (ctx) => {
+      const user = (name: string, college: string) =>
+        ctx.db.insert("users", { name, email: `${name.toLowerCase()}@ox.ac.uk`, college });
+      const host = await user("Host", "Keble");
+      const guest = await user("Guest", "Exeter");
+      const homeMember = await user("Home", "Keble");
+      const decliner = await user("Decliner", "Oriel");
+      const listing = (daysAgo: number, members: (typeof host)[]) =>
+        ctx.db.insert("listings", {
+          ownerUserId: host,
+          college: "Keble",
+          dateTime: new Date(Date.now() - daysAgo * 864e5).toISOString(),
+          groupSize: 4,
+          seatsAvailable: 0,
+          members,
+          year: "2",
+          role: "UG",
+          message: "",
+          status: "expired",
+        });
+      const old = await listing(30, [host, guest, homeMember, decliner]);
+      await listing(2, [host, guest]);
+      await ctx.db.insert("formalAttendanceConfirmations", {
+        listingId: old,
+        userId: decliner,
+        confirmedAt: 1,
+        attended: false,
+      });
+      return { host, guest, homeMember, decliner, old };
+    });
+
+    const args = { paginationOpts: { numItems: 25, cursor: null } };
+    expect((await t.mutation(internal.migrations.backfillAttendanceFromPastFormals, args)).recorded).toBe(1);
+    expect((await t.mutation(internal.migrations.backfillAttendanceFromPastFormals, args)).recorded).toBe(0);
+    await t.mutation(internal.migrations.backfillUserBadges, args);
+
+    const { rows, badges } = await t.run(async (ctx) => ({
+      rows: await ctx.db.query("formalAttendanceConfirmations").collect(),
+      badges: await ctx.db.query("userBadges").collect(),
+    }));
+    const attended = rows.filter((r) => r.attended === true);
+    expect(attended.map((r) => [r.userId, r.listingId])).toEqual([[ids.guest, ids.old]]);
+    expect(
+      badges.filter((b) => b.userId === ids.guest).map((b) => b.badgeId).sort(),
+    ).toEqual(["college-keble", "formals-1"]);
+    expect(badges.filter((b) => b.userId !== ids.guest)).toEqual([]);
+  });
+});

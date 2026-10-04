@@ -21,6 +21,7 @@ import { ProfileActivityStream } from "./ProfileActivityStream";
 import { BadgeCaseModal } from "./BadgeCaseModal";
 import { BadgeArt } from "@/components/badges/BadgeArt";
 import { CollegeCrest } from "@/components/colleges/CollegeCrest";
+import { BlockButton, UnblockButton } from "@/components/profile/BlockControls";
 import { ShareProfileButton } from "@/components/profile/ShareProfileButton";
 import { collegeToSlug } from "@/lib/data/collegeSlug";
 import {
@@ -29,10 +30,9 @@ import {
   PrivateActivityNotice,
   ProfileCounts,
 } from "@/components/follows/FollowControls";
-import { DEFAULT_UI_FONT } from "@/convex/uiFont";
 import type { AvatarSource } from "@/lib/auth/types";
 import type { GroupSize, Listing } from "@/lib/data/types";
-import { TOTAL_BADGE_COUNT, badgeById, earnableCount } from "@/lib/data/badges";
+import { badgeById, badgeTally } from "@/lib/data/badges";
 import type { ProfileActivityItem } from "@/lib/data/groupActivityByDay";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton, SkeletonRows } from "@/components/ui/Loading";
@@ -150,6 +150,9 @@ const STANDALONE_OUTER =
   "mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-8 sm:px-6";
 const EMBEDDED_OUTER = "mx-auto flex w-full max-w-xl flex-col gap-6";
 
+/** Crests shown before "+N": few enough to stay on one row at any width. */
+const WISHLIST_PREVIEW = 5;
+
 export function ProfileView({
   userId,
   embedded = false,
@@ -174,6 +177,11 @@ export function ProfileView({
   const earnedBadges = useQuery(api.badges.getUserBadges, {
     userId: userId as Id<"users">,
   });
+  const [wishlistOpen, setWishlistOpen] = useState(false);
+  const blockState = useQuery(
+    api.blocks.getBlockState,
+    isAuthenticated ? { userId: userId as Id<"users"> } : "skip",
+  );
   const followState = useQuery(api.follows.getFollowState, {
     userId: userId as Id<"users">,
   });
@@ -276,7 +284,6 @@ export function ProfileView({
     interests,
     bio: profileUser.bio ?? "",
     subject,
-    uiFont: profileUser.uiFont ?? DEFAULT_UI_FONT,
     avatar,
   };
 
@@ -301,7 +308,7 @@ export function ProfileView({
           }
         : item,
   );
-  const earnedCount = earnableCount(earnedBadges ?? []);
+  const badgeCount = badgeTally(earnedBadges ?? []);
   // Most recent first; up to three sit next to the name.
   const recentBadges = [...(earnedBadges ?? [])]
     .sort((x, y) => y.earnedAt - x.earnedAt)
@@ -430,6 +437,10 @@ export function ProfileView({
               )}
               <InviteFriendsButton variant="plain" className="flex-1" />
             </>
+          ) : blockState?.iBlocked ? (
+            <UnblockButton userId={userId} className="flex-1" />
+          ) : blockState?.blockedMe ? (
+            <span className="flex-1" />
           ) : isAuthenticated ? (
             <>
               {followState ? (
@@ -454,21 +465,38 @@ export function ProfileView({
             </button>
           )}
           <ShareProfileButton userId={userId} name={name} />
+          {!isOwnProfile && isAuthenticated && blockState && !blockState.iBlocked ? (
+            <BlockButton userId={userId} name={name} />
+          ) : null}
         </div>
+        {blockState?.iBlocked ? (
+          <p className="text-sm text-[var(--ink-muted)]">
+            You&apos;ve blocked {name.split(" ")[0] || name}. Unblock to see their formals and
+            activity again.
+          </p>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 overflow-hidden rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] sm:grid-cols-2">
         <div className="flex flex-col gap-2.5 p-4">
           <p className="text-sm font-bold">Wants to go</p>
           {wishlist.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {wishlist.slice(0, 6).map((c) => (
-                <Link key={c} href={`/college/${collegeToSlug(c)}`} title={c}>
+            // Collapsed: one row of crests and the count. Expanded: all of them, wrapping.
+            <div className={`flex items-center gap-2 ${wishlistOpen ? "flex-wrap" : ""}`}>
+              {(wishlistOpen ? wishlist : wishlist.slice(0, WISHLIST_PREVIEW)).map((c) => (
+                <Link key={c} href={`/college/${collegeToSlug(c)}`} title={c} className="shrink-0">
                   <CollegeCrest college={c} size={34} />
                 </Link>
               ))}
-              {wishlist.length > 6 ? (
-                <span className="text-xs text-[var(--ink-muted)]">+{wishlist.length - 6}</span>
+              {wishlist.length > WISHLIST_PREVIEW ? (
+                <button
+                  type="button"
+                  aria-expanded={wishlistOpen}
+                  onClick={() => setWishlistOpen((v) => !v)}
+                  className="shrink-0 cursor-pointer whitespace-nowrap rounded-full px-2 py-1 text-xs font-bold text-[var(--accent)] hover:underline"
+                >
+                  {wishlistOpen ? "Show less" : `+${wishlist.length - WISHLIST_PREVIEW}`}
+                </button>
               ) : null}
             </div>
           ) : !isOwnProfile ? (
@@ -488,7 +516,7 @@ export function ProfileView({
           <span className="flex items-baseline justify-between gap-2">
             <span className="text-sm font-bold">Badges</span>
             <span className="text-xs text-[var(--ink-muted)]">
-              {earnedCount} of {TOTAL_BADGE_COUNT}
+              {badgeCount.earned} of {badgeCount.total}
             </span>
           </span>
           {recentBadges.length > 0 ? (

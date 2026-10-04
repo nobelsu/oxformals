@@ -84,7 +84,7 @@ export function BadgeCelebration() {
           <BadgeArt def={def} earned size={120} />
           <p className="mt-3 font-display text-3xl">{def.name}</p>
           <p className="text-sm text-[var(--ink-muted)]">
-            You were here from the start. Thanks for being one of the first.
+            You were here for the first course. Thanks for joining in our first term.
           </p>
           <button
             type="button"

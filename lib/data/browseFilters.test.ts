@@ -136,11 +136,9 @@ describe("browseFilterPredicate", () => {
     assert.equal(passes(filters({ guests: 2 }), listing({ seatsAvailable: 2 })), false);
   });
 
-  it("filters by type and role", () => {
+  it("filters by type", () => {
     assert.equal(passes(filters({ types: ["networking"] }), listing()), false);
     assert.equal(passes(filters({ types: ["social", "networking"] }), listing()), true);
-    assert.equal(passes(filters({ role: "DPhil" }), listing()), false);
-    assert.equal(passes(filters({ role: "Undergrad" }), listing()), true);
   });
 });
 
@@ -154,7 +152,6 @@ describe("URL round trip", () => {
       how: ["swap"],
       guests: 2,
       types: ["social"],
-      role: "Masters",
     });
     const params = writeBrowseFilters(new URLSearchParams("tab=browse&q=x"), f);
     assert.equal(params.get("tab"), "browse");

@@ -27,6 +27,7 @@ import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
 import { FormalTypeTag } from "@/components/swap/FormalTypeTag";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
+import { HostListingControls, RemoveMemberButton } from "@/components/swap/HostListingControls";
 import { IncomingRequests } from "@/components/swap/IncomingRequests";
 import { pendingIncomingRequestsForListing } from "@/lib/data/requestFilters";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -108,8 +109,9 @@ export function ListingDetailModal({
   const pendingCount = isHost
     ? pendingIncomingRequestsForListing(requests, user.id, listing.id).length
     : 0;
-  const showTabs = isHost && !isPast;
-  const tab = !showTabs
+  // Hosts always get the bar (edit, delete); requests only matter before the night.
+  const showTabs = isHost;
+  const tab = !showTabs || isPast
     ? "details"
     : picked?.listingId === listing.id
       ? picked.tab
@@ -208,20 +210,22 @@ export function ListingDetailModal({
             >
               Details
             </button>
-            <button
-              type="button"
-              className={tabCls(tab === "requests")}
-              onClick={() => setPicked({ listingId: listing.id, tab: "requests" })}
-            >
-              Requests{pendingCount > 0 ? ` · ${pendingCount}` : ""}
-            </button>
-            <Link
-              href={`/requests/${listing.id}`}
-              onClick={onClose}
-              className="ml-auto py-2 text-sm text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
-            >
-              Manage
-            </Link>
+            {!isPast ? (
+              <button
+                type="button"
+                className={tabCls(tab === "requests")}
+                onClick={() => setPicked({ listingId: listing.id, tab: "requests" })}
+              >
+                Requests{pendingCount > 0 ? ` · ${pendingCount}` : ""}
+              </button>
+            ) : null}
+            <span className="ml-auto pb-1.5">
+              <HostListingControls
+                listing={listing}
+                onViewRequests={() => setPicked({ listingId: listing.id, tab: "requests" })}
+                onDeleted={onClose}
+              />
+            </span>
           </div>
         ) : null}
 
@@ -277,6 +281,9 @@ export function ListingDetailModal({
                       )}
                       <GuestCountLabel count={guestCountFor(listing.guestSeats, m.id)} />
                     </div>
+                    {isHost && !isOwner ? (
+                      <RemoveMemberButton listing={listing} member={m} />
+                    ) : null}
                   </div>
                 );
               })}

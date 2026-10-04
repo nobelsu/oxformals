@@ -4,6 +4,7 @@ import { formatListingTime } from "@/lib/data/format";
 import type { useListingsHubData } from "@/components/swap/listings-hub/useListingsHubData";
 import type { Listing } from "@/lib/data/types";
 import { PeopleYouMayKnow } from "@/components/invites/PeopleYouMayKnow";
+import { PeopleSearch } from "./PeopleSearch";
 import { YourFormalsCard } from "./YourFormalsCard";
 
 type Hub = ReturnType<typeof useListingsHubData>;
@@ -62,7 +63,7 @@ export function NextFormalCard({ nextFormal }: { nextFormal: NextFormal }) {
 }
 
 /**
- * The feed's desktop sidebar: your next formal, your formals and people to follow.
+ * The feed's desktop sidebar: your next formal, your formals, and finding people.
  */
 export function FeedSidebar({
   hub,
@@ -77,6 +78,7 @@ export function FeedSidebar({
     <div className="flex flex-col gap-3">
       {nextFormal ? <NextFormalCard nextFormal={nextFormal} /> : null}
       <YourFormalsCard hub={hub} onOpen={onOpenListing} />
+      <PeopleSearch />
       <PeopleYouMayKnow />
     </div>
   );

@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import {
+  medalTone,
   stampLabel,
   type BadgeDefinition,
   type BadgeIconId,
+  type MedalTone,
 } from "@/lib/data/badges";
 
 const STROKE = {
@@ -60,11 +62,13 @@ const ICON_PATHS: Record<BadgeIconId, ReactNode> = {
       <path d="M3 9.5 12 4l9 5.5M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18" />
     </g>
   ),
-  rosette: (
+  // A canapé: olive on a cocktail stick, through a bite on a little plate.
+  canape: (
     <g {...STROKE}>
-      <circle cx="12" cy="9" r="5.5" />
-      <path d="M12 6.8l.8 1.6 1.7.2-1.2 1.2.3 1.7-1.6-.8-1.6.8.3-1.7-1.2-1.2 1.7-.2z" />
-      <path d="M8.6 13.6 7 21l5-2.6 5 2.6-1.6-7.4" />
+      <path d="M12 2.5v9" />
+      <circle cx="12" cy="6.2" r="2.1" />
+      <path d="M7 11.5h10l-1.2 4.5H8.2z" />
+      <path d="M3.5 19.5c2.6 1.3 5.4 2 8.5 2s5.9-.7 8.5-2" />
     </g>
   ),
 };
@@ -84,27 +88,38 @@ export function BadgeIcon({
 }
 
 /**
- * Milestone medal: rose disc with an ink outline and offset shadow when earned.
- * Special badges invert it: an ink disc with a rose shadow.
+ * Fixed metal fills (the same in light and dark), each with dark ink on top.
+ * Ruby is the app's rose; special badges are a dark disc with a rose shadow.
+ */
+const TONES: Record<MedalTone, string> = {
+  bronze: "border-[var(--ink)] bg-[#e2b28c] text-[#1a1810] shadow-[3px_3px_0_var(--ink)]",
+  silver: "border-[var(--ink)] bg-[#d9d8d2] text-[#1a1810] shadow-[3px_3px_0_var(--ink)]",
+  gold: "border-[var(--ink)] bg-[#eec95c] text-[#1a1810] shadow-[3px_3px_0_var(--ink)]",
+  ruby: "border-[var(--ink)] bg-[#d9736c] text-[#1a1810] shadow-[3px_3px_0_var(--ink)]",
+  // Always the dark disc: flipping with the theme left a pale icon on a pale disc.
+  ink: "border-[var(--ink)] bg-[#1b1a12] text-[#edbfba] shadow-[3px_3px_0_var(--accent)]",
+};
+
+/**
+ * Milestone medal: a metal disc with an ink outline and offset shadow when
+ * earned, a pale ghost until then. The metal says how far up the ladder it is.
  */
 export function Medal({
   icon,
   earned,
   size = 56,
-  special = false,
+  tone = "bronze",
 }: {
   icon: BadgeIconId;
   earned: boolean;
   size?: number;
-  special?: boolean;
+  tone?: MedalTone;
 }) {
   return (
     <span
       className={`flex shrink-0 items-center justify-center rounded-full border-[2px] ${
-        earned && special
-          ? "border-[var(--ink)] bg-[var(--ink)] text-[var(--accent-wash)] shadow-[3px_3px_0_var(--accent)]"
-          : earned
-          ? "border-[var(--ink)] bg-[var(--accent-wash)] text-[var(--ink)] shadow-[3px_3px_0_var(--ink)]"
+        earned
+          ? TONES[tone]
           : "border-[color-mix(in_srgb,var(--ink)_22%,transparent)] bg-[var(--paper)] text-[color-mix(in_srgb,var(--ink)_28%,transparent)]"
       }`}
       style={{ width: size, height: size }}
@@ -178,6 +193,6 @@ export function BadgeArt({
   return def.family === "college" ? (
     <Stamp college={def.college} earned={earned} size={size} />
   ) : (
-    <Medal icon={def.icon} earned={earned} size={size} special={def.family === "special"} />
+    <Medal icon={def.icon} earned={earned} size={size} tone={medalTone(def)} />
   );
 }

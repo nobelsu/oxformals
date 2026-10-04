@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { blockedEitherWay } from "./blocks";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
   mutation,
@@ -66,6 +67,9 @@ export async function canSeeActivity(
   owner: Pick<Doc<"users">, "_id" | "isPrivate"> | null,
 ): Promise<boolean> {
   if (!owner) return false;
+  if (viewerId && viewerId !== owner._id && (await blockedEitherWay(ctx, viewerId, owner._id))) {
+    return false;
+  }
   if (owner.isPrivate !== true) return true;
   if (!viewerId) return false;
   if (viewerId === owner._id) return true;
@@ -160,6 +164,9 @@ export const follow = mutation({
     if (me === userId) throw new Error("You can't follow yourself.");
     const target = await ctx.db.get(userId);
     if (!target || target.deletedAt) throw new Error("That account doesn't exist.");
+    if (await blockedEitherWay(ctx, me, userId)) {
+      throw new Error("You can't follow this account.");
+    }
     const existing = await followRow(ctx, me, userId);
     if (existing) return existing.status;
     const status = target.isPrivate === true ? "pending" : "active";
