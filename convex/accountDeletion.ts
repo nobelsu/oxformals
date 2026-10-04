@@ -406,6 +406,18 @@ export const purgeUserContent = internalMutation({
     );
     await deleteAll(
       ctx.db
+        .query("reports")
+        .withIndex("by_reportedUserId", (q) => q.eq("reportedUserId", userId)),
+    );
+    await deleteAll(
+      ctx.db
+        .query("reports")
+        .withIndex("by_reporterUserId_and_targetKey", (q) =>
+          q.eq("reporterUserId", userId),
+        ),
+    );
+    await deleteAll(
+      ctx.db
         .query("collegeTips")
         .withIndex("by_userId", (q) => q.eq("userId", userId)),
     );
@@ -509,6 +521,7 @@ export const purgeUserContent = internalMutation({
 type TableWithRows =
   | "feedComments"
   | "bioReports"
+  | "reports"
   | "collegeTips"
   | "collegeReviewReports"
   | "partyInvites"

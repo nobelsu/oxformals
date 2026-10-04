@@ -9,6 +9,7 @@ import { mapUser } from "@/lib/data/mapConvex";
 import { formatRelativeTime } from "@/lib/data/format";
 import { MAX_FEED_COMMENT_LENGTH } from "@/lib/data/feed";
 import { LoadingDots } from "@/components/ui/Loading";
+import { ReportModal } from "@/components/report/ReportButton";
 
 /** Inline comment thread for one feed item, keyed by its stable `targetKey`. */
 export function FeedComments({ targetKey }: { targetKey: string }) {
@@ -17,6 +18,7 @@ export function FeedComments({ targetKey }: { targetKey: string }) {
   const deleteComment = useMutation(api.feedComments.deleteComment);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [reporting, setReporting] = useState<Id<"feedComments"> | null>(null);
 
   const submit = async () => {
     const trimmed = text.trim();
@@ -65,12 +67,26 @@ export function FeedComments({ targetKey }: { targetKey: string }) {
                   >
                     Delete
                   </button>
-                ) : null}
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setReporting(comment.id as Id<"feedComments">)}
+                    className="shrink-0 text-[0.7rem] text-[var(--ink-soft)] transition-colors hover:text-[var(--danger)]"
+                  >
+                    Report
+                  </button>
+                )}
               </li>
             );
           })}
         </ul>
       )}
+
+      <ReportModal
+        target={reporting ? { kind: "comment", commentId: reporting } : null}
+        subject="this comment"
+        onClose={() => setReporting(null)}
+      />
 
       <div className="mt-2.5 flex items-center gap-2">
         <input

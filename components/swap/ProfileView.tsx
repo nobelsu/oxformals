@@ -23,6 +23,7 @@ import { BadgeArt } from "@/components/badges/BadgeArt";
 import { CollegeCrest } from "@/components/colleges/CollegeCrest";
 import { BlockButton, UnblockButton } from "@/components/profile/BlockControls";
 import { ShareProfileButton } from "@/components/profile/ShareProfileButton";
+import { ReportUserButton } from "@/components/report/ReportButton";
 import { collegeToSlug } from "@/lib/data/collegeSlug";
 import {
   FollowButton,
@@ -466,7 +467,10 @@ export function ProfileView({
           )}
           <ShareProfileButton userId={userId} name={name} />
           {!isOwnProfile && isAuthenticated && blockState && !blockState.iBlocked ? (
-            <BlockButton userId={userId} name={name} />
+            <>
+              <ReportUserButton userId={userId} name={name} />
+              <BlockButton userId={userId} name={name} />
+            </>
           ) : null}
         </div>
         {blockState?.iBlocked ? (

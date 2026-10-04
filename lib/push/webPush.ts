@@ -31,13 +31,21 @@ function applicationServerKey(base64: string): ArrayBuffer {
 
 export async function ensureWebPushSubscription(
   save: (sub: SavedSubscription) => Promise<unknown>,
-  { prompt }: { prompt: boolean },
+  {
+    prompt,
+    onPermission,
+  }: {
+    prompt: boolean;
+    /** Called as soon as the browser has answered, before subscribing. */
+    onPermission?: (permission: NotificationPermission) => void;
+  },
 ): Promise<NotificationPermission | "unsupported"> {
   if (!webPushSupported()) return "unsupported";
   let permission = Notification.permission;
   if (permission === "default" && prompt) {
     permission = await Notification.requestPermission();
   }
+  onPermission?.(permission);
   if (permission !== "granted") return permission;
 
   const registration = await navigator.serviceWorker.register("/sw.js", {
