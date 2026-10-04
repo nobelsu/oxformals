@@ -1,5 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { blockedEitherWay } from "./blocks";
+import { blockedEitherWay, blockedIdsFor } from "./blocks";
+import { OXFORD_COLLEGES } from "../lib/data/colleges";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
@@ -1025,15 +1026,35 @@ export const searchUsersForChat = query({
     const q = args.query.trim().toLowerCase();
     if (q.length < 2) return [];
 
-    const users = await ctx.db.query("users").take(500);
-    const matches = users
-      .filter((u) => u._id !== userId && (u.name?.trim() ?? "").length > 0)
-      .filter((u) => {
-        const name = u.name!.toLowerCase();
-        const college = (u.college ?? "").toLowerCase();
-        return name.includes(q) || college.includes(q);
-      })
-      .slice(0, 15);
+    // By name through the search index (every account, not the first 500),
+    // then by college for a query like "keb".
+    const LIMIT = 15;
+    const found = new Map<Id<"users">, Doc<"users">>();
+    for (const u of await ctx.db
+      .query("users")
+      .withSearchIndex("search_name", (sq) => sq.search("name", q))
+      .take(LIMIT * 2)) {
+      found.set(u._id, u);
+    }
+    for (const college of OXFORD_COLLEGES.filter((c) => c.toLowerCase().includes(q)).slice(0, 3)) {
+      if (found.size >= LIMIT * 2) break;
+      for (const u of await ctx.db
+        .query("users")
+        .withIndex("by_college", (iq) => iq.eq("college", college))
+        .take(LIMIT)) {
+        found.set(u._id, u);
+      }
+    }
+    const blocked = await blockedIdsFor(ctx, userId);
+    const matches = [...found.values()]
+      .filter(
+        (u) =>
+          u._id !== userId &&
+          u.deletedAt === undefined &&
+          !blocked.has(u._id) &&
+          (u.name?.trim() ?? "").length > 0,
+      )
+      .slice(0, LIMIT);
     return await Promise.all(
       matches.map(async (u) => {
         // Not in a chat with them yet: a private account they can't see
