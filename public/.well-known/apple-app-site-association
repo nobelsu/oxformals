@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["XL5JK4F896.com.nobelsu.oxformals-mobile"],
+        "components": [
+          { "/": "/i/*", "comment": "Invite links" },
+          { "/": "/s/*", "comment": "Seat links" }
+        ]
+      }
+    ]
+  }
+}
