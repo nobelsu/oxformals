@@ -10,6 +10,7 @@ import { formatRelativeTime } from "@/lib/data/format";
 import { MAX_FEED_COMMENT_LENGTH } from "@/lib/data/feed";
 import { LoadingDots } from "@/components/ui/Loading";
 import { ReportModal } from "@/components/report/ReportButton";
+import { useConfirm } from "@/components/ui/useConfirm";
 
 /** Inline comment thread for one feed item, keyed by its stable `targetKey`. */
 export function FeedComments({ targetKey }: { targetKey: string }) {
@@ -19,6 +20,7 @@ export function FeedComments({ targetKey }: { targetKey: string }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [reporting, setReporting] = useState<Id<"feedComments"> | null>(null);
+  const { confirm, dialog } = useConfirm();
 
   const submit = async () => {
     const trimmed = text.trim();
@@ -59,9 +61,11 @@ export function FeedComments({ targetKey }: { targetKey: string }) {
                   <button
                     type="button"
                     onClick={() =>
-                      void deleteComment({
-                        commentId: comment.id as Id<"feedComments">,
-                      })
+                      confirm("Delete this comment?", "Delete", () =>
+                        deleteComment({
+                          commentId: comment.id as Id<"feedComments">,
+                        }).then(() => undefined),
+                      )
                     }
                     className="shrink-0 text-[0.7rem] text-[var(--ink-soft)] transition-colors hover:text-[var(--accent)]"
                   >
@@ -82,6 +86,7 @@ export function FeedComments({ targetKey }: { targetKey: string }) {
         </ul>
       )}
 
+      {dialog}
       <ReportModal
         target={reporting ? { kind: "comment", commentId: reporting } : null}
         subject="this comment"

@@ -91,13 +91,15 @@ export function NotificationBell() {
         data-onboarding="bell"
         ref={buttonRef}
         onClick={() => setAnchor(open ? null : measure())}
-        className="relative inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-[2px] border-[var(--nav-ink)] text-[var(--nav-ink)] transition-colors hover:bg-[var(--nav-ink)] hover:text-[var(--nav-bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)]"
+        // With unread notifications the circle widens into a pill and the count
+        // sits beside the bell, inside the border (not perched on its corner).
+        className={`relative inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border-[2px] border-[var(--nav-ink)] text-[var(--nav-ink)] transition-colors hover:bg-[var(--nav-ink)] hover:text-[var(--nav-bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nav-ink)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-bg)] ${
+          badge ? "px-2.5" : "w-9"
+        }`}
       >
         <BellIcon />
         {badge ? (
-          <span className="absolute -right-1.5 -top-1.5 min-w-[1.25rem] rounded-full border-2 border-[var(--nav-bg)] bg-[var(--nav-ink)] px-1 text-center text-[11px] font-bold leading-4 text-[var(--nav-bg)]">
-            {badge}
-          </span>
+          <span className="text-[13px] font-bold tabular-nums leading-none">{badge}</span>
         ) : null}
       </button>
       {anchor ? (
