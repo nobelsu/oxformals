@@ -11,6 +11,8 @@ import { HeroFeedSlide } from "@/components/landing/HeroFeedSlide";
 import { HeroReviewSlide } from "@/components/landing/HeroReviewSlide";
 import { HeroFormalUnderline } from "@/components/landing/HeroFormalUnderline";
 
+const HERO_FORMALS = 2;
+
 export function LandingHero({
   preloaded,
 }: {
@@ -18,7 +20,8 @@ export function LandingHero({
 }) {
   const docs = usePreloadedQuery(preloaded);
 
-  const listings = docs?.map(mapListing) ?? [];
+  // Two rows keep this slide the same height as the other two.
+  const listings = (docs ?? []).slice(0, HERO_FORMALS).map(mapListing);
   const owners = new Map(
     (docs ?? []).map((doc) => [doc.ownerUserId as string, mapUser(doc.owner)]),
   );
