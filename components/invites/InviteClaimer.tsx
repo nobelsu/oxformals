@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
@@ -43,7 +44,7 @@ export function InviteClaimer() {
           await claimSeat({ token: seat });
           router.push("/");
         } catch (err) {
-          setError(err instanceof Error ? err.message : "That link didn't work.");
+          setError(errorMessage(err, "That link didn't work."));
         } finally {
           clearCookie(SEAT_COOKIE);
         }

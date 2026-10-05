@@ -6,8 +6,13 @@ const nextConfig: NextConfig = {
     "/api/share/**/*": ["./lib/share/fonts/**/*"],
   },
   // The push service worker must never be cached, so updates reach browsers.
+  // The iOS app-link file has no extension, so it needs its type set by hand.
   async headers() {
     return [
+      {
+        source: "/.well-known/apple-app-site-association",
+        headers: [{ key: "Content-Type", value: "application/json" }],
+      },
       {
         source: "/sw.js",
         headers: [

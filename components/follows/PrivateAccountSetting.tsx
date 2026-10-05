@@ -22,7 +22,7 @@ export function PrivateAccountSetting() {
             Private account
           </span>
           <span className="block text-sm text-[var(--ink-muted)]">
-            You approve who follows you, and only they see your reviews and where you&apos;ve been.
+            Only followers you approve see your activity.
           </span>
         </span>
         <button

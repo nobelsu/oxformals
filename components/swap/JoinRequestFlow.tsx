@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import { useMemo, useState } from "react";
 import { MinusIcon, PlusIcon } from "@/components/ui/icons";
 import { useRouter } from "next/navigation";
@@ -311,7 +312,7 @@ function JoinRequestModal({
         result.links,
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send request.");
+      setError(errorMessage(err, "Could not send request."));
     } finally {
       setSubmitting(false);
     }
@@ -502,7 +503,7 @@ function JoinRequestModal({
           ) : null}
           {newPeople > 0 ? (
             <p className="text-xs text-[var(--ink-muted)]">
-              New people pay with their starter credit. You get a link to send them.
+              You&apos;ll get a link to send them.
             </p>
           ) : null}
         </fieldset>

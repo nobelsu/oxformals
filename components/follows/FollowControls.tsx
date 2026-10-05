@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/components/ui/useConfirm";
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
@@ -232,6 +233,7 @@ function FollowListModal({
     direction,
   });
   const removeFollower = useMutation(api.follows.removeFollower);
+  const { confirm, dialog } = useConfirm();
   return (
     <Modal
       open
@@ -260,7 +262,13 @@ function FollowListModal({
                 canRemove ? (
                   <button
                     type="button"
-                    onClick={() => void removeFollower({ userId: p._id })}
+                    onClick={() =>
+                      confirm(
+                        `Remove ${p.name?.split(" ")[0] ?? "this follower"}? They won't be told, and can follow you again.`,
+                        "Remove",
+                        () => removeFollower({ userId: p._id }).then(() => undefined),
+                      )
+                    }
                     className="cursor-pointer rounded-full border-[1.5px] border-[var(--ink)] px-3 py-1 text-xs hover:bg-[var(--ink)] hover:text-[var(--bg)]"
                   >
                     Remove
@@ -271,6 +279,7 @@ function FollowListModal({
           ))}
         </ul>
       )}
+      {dialog}
     </Modal>
   );
 }

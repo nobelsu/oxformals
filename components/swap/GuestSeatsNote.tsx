@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -50,7 +51,7 @@ export function ReleaseGuestSeatButton({
             try {
               await release({ listingId: listingId as Id<"listings"> });
             } catch (err) {
-              setError(err instanceof Error ? err.message : "Couldn't do that.");
+              setError(errorMessage(err, "Couldn't do that."));
             } finally {
               setBusy(false);
             }

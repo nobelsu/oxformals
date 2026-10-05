@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation } from "convex/react";
@@ -35,7 +36,7 @@ function RowActions({ item }: { item: BellItem }) {
     try {
       await fn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "That didn't work.");
+      setError(errorMessage(err, "That didn't work."));
     } finally {
       setBusy(false);
     }

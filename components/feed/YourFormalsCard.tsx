@@ -184,7 +184,7 @@ export function YourFormalsCard({
       <section aria-label="Your formals" className={`${CARD} p-4`}>
         <p className="text-sm font-bold">Your formals</p>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
-          Formals you host or ask to join show up here.
+          Nothing yet.
         </p>
         <Link
           href={BROWSE_ROUTE}

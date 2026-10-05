@@ -93,7 +93,7 @@ function OtherDevicesPanel() {
   return (
     <Panel
       title="Other devices"
-      blurb="Signed in somewhere you no longer use, or on a shared computer? Sign out everywhere except here."
+      blurb="Sign out everywhere except here."
     >
       <button
         type="button"
@@ -105,7 +105,7 @@ function OtherDevicesPanel() {
       </button>
       {others === "done" ? (
         <p role="status" className="mt-3 text-sm text-[var(--ink-muted)]">
-          Signed out everywhere else. This device stays signed in.
+          Signed out everywhere else.
         </p>
       ) : others === "error" ? (
         <p role="status" className="mt-3 text-sm text-[var(--danger)]">
@@ -195,7 +195,7 @@ function DataPanel() {
   const all = picked.size === DATA_SECTIONS.length;
 
   return (
-    <Panel title="Your data" blurb="Download a copy of what Oxformals holds about you.">
+    <Panel title="Your data" blurb="Download a copy.">
       <div className="mb-1 flex justify-end">
         <button
           type="button"
@@ -514,7 +514,7 @@ export function SettingsPage() {
               <InvitesPanel friendsJoined={summary?.friendsJoined} />
               <Panel
                 title="Delete account"
-                blurb="You'll see exactly what gets removed before you confirm."
+                
               >
                 <button
                   type="button"
@@ -526,7 +526,7 @@ export function SettingsPage() {
               </Panel>
             </div>
           ) : section === "appearance" ? (
-            <Panel title="Appearance" blurb="Applies on this device.">
+            <Panel title="Appearance">
               <SubHeading>Theme</SubHeading>
               <AppearanceSetting />
               <SubHeading>Font</SubHeading>
@@ -535,7 +535,7 @@ export function SettingsPage() {
               <TextSizeSetting />
             </Panel>
           ) : section === "notifications" ? (
-            <Panel title="Notifications" blurb="Choose what reaches you by push and by email.">
+            <Panel title="Notifications">
               <NotificationSettings />
             </Panel>
           ) : section === "privacy" ? (

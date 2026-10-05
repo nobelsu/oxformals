@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import Link from "next/link";
 import { CloseIcon } from "@/components/ui/icons";
 import { useMemo, useRef, useState, type ReactNode } from "react";
@@ -131,7 +132,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
       ]);
     } catch (e) {
       URL.revokeObjectURL(previewUrl);
-      setImageError(e instanceof Error ? e.message : "Could not upload image.");
+      setImageError(errorMessage(e, "Could not upload image."));
     } finally {
       setImageUploading(false);
       if (imageInputRef.current) imageInputRef.current.value = "";
@@ -210,7 +211,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
       });
       setSuccess("Review posted.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(errorMessage(e, "Something went wrong."));
     } finally {
       setSubmitting(false);
     }
@@ -228,7 +229,7 @@ export function ReviewFormalSection({ listingId, college }: Props) {
       setReported(true);
       setSuccess("Thanks — we'll look into it.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not submit report.");
+      setError(errorMessage(e, "Could not submit report."));
     } finally {
       setSubmitting(false);
     }

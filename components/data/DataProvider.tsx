@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import { roleNeedsYear } from "@/lib/data/roles";
 import {
   createContext,
@@ -288,9 +289,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           ...(args.links && args.links.length > 0 ? { links: args.links } : {}),
         });
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Could not send request.";
-        throw new Error(message);
+        throw new Error(errorMessage(err, "Could not send request."));
       }
       if (args.message.trim()) {
         try {

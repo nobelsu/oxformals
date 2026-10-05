@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/components/ui/useConfirm";
+import { errorMessage } from "@/lib/errorMessage";
 import { useState, type ReactNode } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -42,6 +44,7 @@ const chip = (on: boolean) =>
 export function CollegeGuide({ college }: { college: string }) {
   const data = useQuery(api.collegeGuide.getGuide, { college });
   const deleteTip = useMutation(api.collegeGuide.deleteTip);
+  const { confirm, dialog } = useConfirm();
   const [editing, setEditing] = useState(false);
   const [tipping, setTipping] = useState(false);
 
@@ -59,6 +62,7 @@ export function CollegeGuide({ college }: { college: string }) {
 
   return (
     <div className="flex flex-col gap-2.5">
+      {dialog}
       {facts ? (
         <div className="grid grid-cols-2 overflow-hidden rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)]">
           {facts.map((f, i) => (
@@ -101,7 +105,11 @@ export function CollegeGuide({ college }: { college: string }) {
             {tip.mine ? (
               <button
                 type="button"
-                onClick={() => void deleteTip({ tipId: tip.id as Id<"collegeTips"> })}
+                onClick={() =>
+                  confirm("Remove your tip?", "Remove", () =>
+                    deleteTip({ tipId: tip.id as Id<"collegeTips"> }).then(() => undefined),
+                  )
+                }
                 className="cursor-pointer hover:text-[var(--ink)]"
               >
                 Remove
@@ -227,7 +235,7 @@ function GuideEditor({
                 });
                 onClose();
               } catch (err) {
-                setError(err instanceof Error ? err.message : "Couldn't save that.");
+                setError(errorMessage(err, "Couldn't save that."));
               } finally {
                 setBusy(false);
               }
@@ -285,7 +293,7 @@ function TipEditor({ college, onClose }: { college: string; onClose: () => void 
                 if (res.ok) onClose();
                 else setError(REASONS[res.reason] ?? "Couldn't post that.");
               } catch (err) {
-                setError(err instanceof Error ? err.message : "Couldn't post that.");
+                setError(errorMessage(err, "Couldn't post that."));
               } finally {
                 setBusy(false);
               }

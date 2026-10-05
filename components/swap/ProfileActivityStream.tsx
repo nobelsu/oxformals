@@ -35,7 +35,7 @@ export function ProfileActivityStream({
 }: Props) {
   const groups = groupActivityByDay(items);
   return (
-    <div className={className}>
+    <div className={`flex flex-col gap-6 ${className}`}>
       {groups.map((group) => (
         <section key={group.dateKey} aria-label={`${group.weekday} ${group.day}`}>
           <div className="font-display text-[1.1rem] text-[var(--ink-muted)]">

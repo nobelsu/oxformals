@@ -51,6 +51,13 @@ const COLLECT: { what: string; items: string; seenBy: string }[] = [
       "Listings, reviews, tips and guides: anyone (you can post a review anonymously). Comments: anyone who can see what you commented on. With a private account, your reviews, badges, attended formals and wishlist are followers only. Requests and swaps: the people involved. Votes, likes, bookmarks, credits: only you.",
   },
   {
+    what: "Contacts",
+    items:
+      "Only in the mobile app, and only if you tap Find friends: the phone numbers and email addresses in your address book are sent to us to see who is already on Oxformals. They are compared and discarded straight away; we do not store them or contact anyone in them.",
+    seenBy:
+      "Nobody. People who already hold your number or Oxford email can find your account this way; switch that off under Settings, Privacy.",
+  },
+  {
     what: "Messages",
     items: "Chats and group chats, including mentions and shared listings.",
     seenBy: "The people in that chat.",
@@ -58,7 +65,7 @@ const COLLECT: { what: string; items: string; seenBy: string }[] = [
   {
     what: "Reports",
     items:
-      "Bio and review reports you make or that are made about you (including a copy of the reported text).",
+      "Reports you make or that are made about you, of a person, bio, review, listing, comment or message (including a copy of the reported text).",
     seenBy: "Only us.",
   },
   {

@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -49,7 +50,7 @@ export function CreditDisputeLink({ listingId }: { listingId: string }) {
           try {
             await report({ listingId: listingId as Id<"listings"> });
           } catch (err) {
-            setError(err instanceof Error ? err.message : "Couldn't send that.");
+            setError(errorMessage(err, "Couldn't send that."));
           }
         }}
       />

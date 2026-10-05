@@ -71,8 +71,7 @@ export function BlockedPeople() {
     <div>
       <p className="text-sm font-semibold">Blocked people</p>
       <p className="text-sm text-[var(--ink-muted)]">
-        You and they can&apos;t see, follow, message or request each other. Block someone from
-        their profile.
+        Block someone from their profile.
       </p>
       {blocks === undefined ? (
         <Skeleton className="mt-4 h-9 w-full" />

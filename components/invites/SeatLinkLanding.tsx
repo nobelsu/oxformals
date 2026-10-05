@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
@@ -53,7 +54,7 @@ export function SeatLinkLanding({ token }: { token: string }) {
       await claim({ token });
       router.push("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "That didn't work.");
+      setError(errorMessage(err, "That didn't work."));
       setBusy(false);
     }
   };
