@@ -208,13 +208,13 @@ export function PasswordSettings() {
       <input type="email" autoComplete="username" value={user.email} readOnly hidden />
       {!hasPassword ? (
         <p className="text-sm text-[var(--ink-muted)]">
-          Set a password to skip the email code next time you sign in.
+          Skip the email code when you sign in.
         </p>
       ) : mode !== "reset" ? (
         <>
         {mode === "remove" ? (
           <p className="text-sm text-[var(--ink-muted)]">
-            Enter your password to remove it. You&apos;ll sign in with an email code instead.
+            Enter your password to remove it.
           </p>
         ) : null}
         <input

@@ -672,7 +672,7 @@ export function ProfileEditor({ onDirtyChange, registerSave, registerCancel }: P
           </label>
           {legacyDietary && !dietaryConsentDraft ? (
             <p className="text-xs text-[var(--ink-muted)]">
-              Tick the box to confirm you&apos;re happy to keep sharing these.
+              Tick to keep sharing these.
             </p>
           ) : null}
       </section>

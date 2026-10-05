@@ -76,7 +76,7 @@ export function ReportModal({
       {sent ? (
         <>
           <p className="text-sm text-[var(--ink-muted)]">
-            Thanks. The team will look at it. They won&apos;t be told you reported them.
+            Thanks. They won&apos;t be told.
           </p>
           <div className="mt-6 flex justify-end">
             <button

@@ -503,7 +503,7 @@ function JoinRequestModal({
           ) : null}
           {newPeople > 0 ? (
             <p className="text-xs text-[var(--ink-muted)]">
-              New people pay with their starter credit. You get a link to send them.
+              You&apos;ll get a link to send them.
             </p>
           ) : null}
         </fieldset>
