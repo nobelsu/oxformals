@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { Resend as ResendAPI } from "resend";
+import { outboundDisabled } from "./outboundSwitch";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalQuery } from "./_generated/server";
@@ -80,6 +81,7 @@ async function sendEmail(
   subject: string,
   content: EmailContent,
 ): Promise<void> {
+  if (outboundDisabled()) return;
   const apiKey = process.env.AUTH_RESEND_KEY;
   if (!apiKey) {
     console.error(`${label}: AUTH_RESEND_KEY is not set`);
