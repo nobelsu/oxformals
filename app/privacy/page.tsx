@@ -46,7 +46,7 @@ const COLLECT: { what: string; items: string; seenBy: string }[] = [
   {
     what: "Activity",
     items:
-      "Listings, requests and swaps, seat credits, group bookings and the friends you name in them, follows, your private-account setting, college reviews and their photos, review votes, feed comments, likes and bookmarks, badges, attendance confirmations, wishlist colleges, college tips and guide edits.",
+      "Listings, requests and swaps, spoons (seat credits), group bookings and the friends you name in them, follows, your private-account setting, college reviews and their photos, review votes, feed comments, likes and bookmarks, badges, attendance confirmations, wishlist colleges, college tips and guide edits.",
     seenBy:
       "Listings, reviews, tips and guides: anyone (you can post a review anonymously). Comments: anyone who can see what you commented on. With a private account, your reviews, badges, attended formals and wishlist are followers only. Requests and swaps: the people involved. Votes, likes, bookmarks, credits: only you.",
   },
@@ -84,7 +84,7 @@ const COLLECT: { what: string; items: string; seenBy: string }[] = [
 
 const BASES: { why: string; basis: string }[] = [
   {
-    why: "Running your account, listings, requests, swaps, credits, chats and profile",
+    why: "Running your account, listings, requests, swaps, spoons, chats and profile",
     basis: "Contract: it's the service you signed up for.",
   },
   {
@@ -248,7 +248,7 @@ export default function PrivacyPage() {
           <p className={P}>
             When you delete your account we remove your profile, email, sign-in
             records, follows, likes, bookmarks, comments, tips, votes, reports,
-            badges, wishlist, push tokens, credit balance and every photo or
+            badges, wishlist, push tokens, spoon balance and every photo or
             file you uploaded, and blank the free text on your requests. Some
             records are kept, without your name, because other people rely on
             them:

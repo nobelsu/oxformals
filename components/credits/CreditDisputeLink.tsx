@@ -23,7 +23,7 @@ export function CreditDisputeLink({ listingId }: { listingId: string }) {
   if (holds.disputed > 0) {
     return (
       <p className="text-xs text-[var(--ink-muted)]">
-        Reported. We&apos;ll sort out your credit.
+        Reported. We&apos;ll sort out your spoon.
       </p>
     );
   }

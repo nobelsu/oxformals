@@ -157,7 +157,7 @@ describe("seat links", () => {
         message: "",
         links: [{ paysOwn: true, method: "pay" }],
       }),
-    ).rejects.toThrow(/credit/);
+    ).rejects.toThrow(/spoon/);
   });
 
   test("deleting the requester's account removes their seat links", async () => {

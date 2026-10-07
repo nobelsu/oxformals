@@ -7,7 +7,7 @@ import { REQUEST_TYPE_TAG_CLASS } from "@/lib/swap/typeTagStyles";
 const LABELS: Record<RequestType, string> = {
   swap: "Swap",
   pay: "Pay",
-  credit: "Credit",
+  credit: "Spoon",
 };
 
 type Props = {

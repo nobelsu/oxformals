@@ -136,7 +136,7 @@ function CreditsPanel() {
   const credits = useQuery(api.credits.getMyCredits, {});
   const [open, setOpen] = useState(false);
   return (
-    <Panel title="Credits">
+    <Panel title="Spoons">
       {!credits ? (
         <Skeleton className="h-9 w-24" />
       ) : (
@@ -144,7 +144,7 @@ function CreditsPanel() {
           <p className="flex items-baseline gap-2">
             <span className="text-3xl font-semibold leading-none">{credits.balance}</span>
             <span className="text-sm text-[var(--ink-muted)]">
-              credit{credits.balance === 1 ? "" : "s"} to spend
+              spoon{credits.balance === 1 ? "" : "s"} to use
             </span>
           </p>
           {credits.spending + credits.earning > 0 ? (
@@ -158,7 +158,7 @@ function CreditsPanel() {
             </p>
           ) : null}
           <button type="button" onClick={() => setOpen(true)} className={`${BUTTON} mt-5`}>
-            How credits work
+            How spoons work
           </button>
           <CreditsInfoModal open={open} onClose={() => setOpen(false)} credits={credits} />
         </>
@@ -173,7 +173,7 @@ const DATA_SECTIONS = [
   ["reviews", "Reviews", "Reviews and college tips you wrote"],
   ["social", "Social", "Follows, blocks, likes, comments and saves"],
   ["messages", "Messages", "Messages you sent"],
-  ["credits", "Credits and invites", "Your balance and invite code"],
+  ["credits", "Spoons and invites", "Your balance and invite code"],
   ["notifications", "Notifications", "What we've notified you about"],
 ] as const;
 type DataSection = (typeof DATA_SECTIONS)[number][0];

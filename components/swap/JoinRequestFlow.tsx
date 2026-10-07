@@ -263,7 +263,7 @@ function JoinRequestModal({
         : cashSeats > 0 && !allowsPay
           ? "This listing doesn't take cash."
           : yourCredits > balance
-            ? `Needs ${yourCredits} credits. You have ${balance}.`
+            ? `Needs ${yourCredits} spoons. You have ${balance}.`
             : null;
   const ready = credits !== undefined && problem === null;
 
@@ -322,7 +322,7 @@ function JoinRequestModal({
     `${seats} seat${seats === 1 ? "" : "s"}`,
     swapSeats > 0 ? `${swapSeats} swap seat${swapSeats === 1 ? "" : "s"}` : null,
     plan.some((p) => p.method === "credit")
-      ? `${plan.filter((p) => p.method === "credit").length} credit${plan.filter((p) => p.method === "credit").length === 1 ? "" : "s"}`
+      ? `${plan.filter((p) => p.method === "credit").length} spoon${plan.filter((p) => p.method === "credit").length === 1 ? "" : "s"}`
       : null,
     cashSeats > 0 && target.price !== undefined ? formatPrice(target.price * cashSeats) : null,
   ]
@@ -467,15 +467,15 @@ function JoinRequestModal({
             selected={baseMethod === "credit"}
             disabled={!canCreditBase}
             onSelect={() => setPicked("credit")}
-            title="Credit"
+            title="Spoon"
             detail={
               credits === undefined
-                ? "Checking your credits…"
+                ? "Checking your spoons…"
                 : canCreditBase
-                  ? `Spend ${coveredSeats} credit${coveredSeats === 1 ? "" : "s"} · you have ${balance}`
+                  ? `Use ${coveredSeats} spoon${coveredSeats === 1 ? "" : "s"} · you have ${balance}`
                   : balance === 0
                     ? "Host a guest to earn one"
-                    : `Needs ${coveredSeats} credits · you have ${balance}`
+                    : `Needs ${coveredSeats} spoons · you have ${balance}`
             }
           />
           {allowsPay ? (
@@ -497,8 +497,8 @@ function JoinRequestModal({
           {friendIds.length > 0 ? (
             <p className="text-xs text-[var(--ink-muted)]">
               {friendIds.length === 1
-                ? `${friendName(friendIds[0])} pays their own credit.`
-                : "Friends pay their own credits."}
+                ? `${friendName(friendIds[0])} uses their own spoon.`
+                : "Friends use their own spoons."}
             </p>
           ) : null}
           {newPeople > 0 ? (
@@ -618,14 +618,14 @@ function SeatPlanTable({
     if (allowsSwap) {
       opts.push({ value: "you:swap", label: friend ? "You cover: swap a seat" : "Swap a seat" });
     }
-    opts.push({ value: "you:credit", label: friend ? "You cover: 1 credit" : "1 of your credits" });
+    opts.push({ value: "you:credit", label: friend ? "You cover: 1 spoon" : "1 of your spoons" });
     if (allowsPay) opts.push({ value: "you:pay", label: friend ? `You cover: ${cash}` : cash });
     if (seat.kind === "friend") {
-      opts.push({ value: "them:credit", label: "They pay: 1 credit" });
+      opts.push({ value: "them:credit", label: "They pay: 1 spoon" });
       if (allowsPay) opts.push({ value: "them:pay", label: `They pay: ${cash}` });
     }
     if (seat.kind === "link") {
-      opts.push({ value: "them:credit", label: "They pay: their 1 credit" });
+      opts.push({ value: "them:credit", label: "They pay: their own spoon" });
     }
     return opts;
   };

@@ -10,7 +10,7 @@ const ROWS = [
   ["bookings", "Bookings", "Requests, replies and cancelled formals"],
   ["invites", "Group invites", "Invites to a group, and who has joined yours"],
   ["social", "Social", "New followers, and friends joining Oxformals"],
-  ["credits", "Credits & reminders", "Credits, formal tomorrow, and new formals you want"],
+  ["credits", "Spoons & reminders", "Spoons, formal tomorrow, and new formals you want"],
 ] as const;
 
 const CHANNELS = [

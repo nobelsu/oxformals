@@ -96,8 +96,8 @@ export function IncomingRequestRow({
           {requestType === "credit" ? (
             <div className="text-sm leading-snug text-[var(--ink-muted)]">
               {requestSeatCount(request) > 1
-                ? `${requestSeatCount(request)} credits · yours after they come`
-                : "1 credit · yours after they come"}
+                ? `${requestSeatCount(request)} spoons · yours after they come`
+                : "1 spoon · yours after they come"}
             </div>
           ) : requestType === "pay" ? (
             <div className="text-sm leading-snug text-[var(--ink-muted)]">

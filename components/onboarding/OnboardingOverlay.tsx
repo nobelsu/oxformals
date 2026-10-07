@@ -1,5 +1,6 @@
 "use client";
 
+import { SpoonIcon } from "@/components/credits/CreditsChip";
 import {
   useCallback,
   useEffect,
@@ -47,7 +48,7 @@ const POINTERS: readonly PointerStep[] = [
     kind: "pointer",
     id: "list",
     title: "Host yours",
-    line: "Guests can pay in credits.",
+    line: "Guests can pay in spoons.",
     selector: '[data-onboarding="list"]',
   },
   {
@@ -254,8 +255,8 @@ function OnboardingFlow() {
             ) : step.id === "credit" ? (
               <TextSlide
                 coin
-                title="You've got a credit"
-                line="1 credit = 1 seat. Host to earn more."
+                title="You've got a spoon"
+                line="1 spoon = 1 seat. Host to earn more."
                 onBack={back}
                 onNext={next}
                 primaryRef={primaryRef}
@@ -385,7 +386,7 @@ function Buttons({
 const WAYS = [
   { title: "Swap", line: "Trade seats" },
   { title: "Pay", line: "Pay the host" },
-  { title: "Credit", line: "Use a credit" },
+  { title: "Spoon", line: "Use a spoon" },
 ] as const;
 
 function WaysSlide({ onNext, primaryRef }: { onNext: () => void; primaryRef: PrimaryRef }) {
@@ -430,9 +431,9 @@ function TextSlide({
       {coin ? (
         <div
           aria-hidden
-          className="mx-auto mt-3 flex h-14 w-14 items-center justify-center rounded-full border-2 border-[var(--ink)] font-display text-[26px] text-[var(--accent)]"
+          className="mx-auto mt-3 flex h-14 w-14 items-center justify-center rounded-full border-2 border-[var(--ink)] text-[var(--accent)]"
         >
-          1
+          <SpoonIcon className="h-7 w-7" />
         </div>
       ) : null}
       <SlideTitle className={coin ? "mt-2.5" : "mt-3"}>{title}</SlideTitle>
