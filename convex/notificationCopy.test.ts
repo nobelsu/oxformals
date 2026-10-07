@@ -44,14 +44,14 @@ describe("renderNotification", () => {
     const r = renderNotification(
       view({ kind: "credit_paid_out", actorName: null, data: { college: "Keble", count: 2 } }),
     );
-    expect(r.body).toBe("You earned 2 credits for hosting at Keble.");
+    expect(r.body).toBe("You earned 2 spoons for hosting at Keble.");
   });
 
   test("a referral credit names who joined", () => {
     const r = renderNotification(
       view({ kind: "credit_earned", actorName: "Sam", data: { reason: "referral", count: 1 } }),
     );
-    expect(r.body).toBe("You earned 1 credit. Sam went to their first formal.");
+    expect(r.body).toBe("You earned 1 spoon. Sam went to their first formal.");
   });
 
   test("a missing actor reads as Someone", () => {
@@ -69,7 +69,7 @@ describe("notificationEmail", () => {
       subject: "Maya wants to bring you to Worcester",
       eyebrow: "Group invite",
       heading: "Maya added you to their group",
-      ticket: { college: "Worcester", tag: "You pay 1 credit" },
+      ticket: { college: "Worcester", tag: "You pay 1 spoon" },
       cta: { label: "I'm in", path: "/" },
       secondary: { label: "Not me", path: "/" },
     });

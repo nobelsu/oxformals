@@ -143,7 +143,7 @@ describe("group requests (me + N)", () => {
         message: "",
         guests: 1,
       }),
-    ).rejects.toThrow(/needs 2 credits and you have 1/);
+    ).rejects.toThrow(/needs 2 spoons and you have 1/);
   });
 
   test("group swap is seats for seats; the host can give spare seats back", async () => {

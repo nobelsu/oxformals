@@ -6,7 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Modal } from "@/components/ui/Modal";
 
-export function CoinIcon({ className = "h-[14px] w-[14px]" }: { className?: string }) {
+export function SpoonIcon({ className = "h-[14px] w-[14px]" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -18,8 +18,8 @@ export function CoinIcon({ className = "h-[14px] w-[14px]" }: { className?: stri
       className={className}
       aria-hidden
     >
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M9.5 9.5h3.2a1.8 1.8 0 0 1 0 3.6H10.4m-.9 0h3.8a1.8 1.8 0 0 1 0 3.6H9.5M11 8v1.5M11 16.7v1.3" />
+      <ellipse cx="12" cy="7.5" rx="4" ry="5" />
+      <path d="M12 12.5V21" />
     </svg>
   );
 }
@@ -34,13 +34,13 @@ export function CreditsChip({ compact = false }: { compact?: boolean }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={`${credits.balance} credit${credits.balance === 1 ? "" : "s"}`}
+        aria-label={`${credits.balance} spoon${credits.balance === 1 ? "" : "s"}`}
         className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--accent-wash)] py-2 text-[0.84rem] font-medium text-[var(--accent-wash-ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--accent-wash)_80%,var(--accent))] ${compact ? "px-3" : "px-4"}`}
       >
-        <CoinIcon />
+        <SpoonIcon />
         {compact
           ? credits.balance
-          : `${credits.balance} credit${credits.balance === 1 ? "" : "s"}`}
+          : `${credits.balance} spoon${credits.balance === 1 ? "" : "s"}`}
       </button>
       <CreditsInfoModal open={open} onClose={() => setOpen(false)} credits={credits} />
     </>
@@ -57,11 +57,11 @@ export function CreditsInfoModal({
   credits: { balance: number; spending: number; earning: number };
 }) {
   return (
-    <Modal open={open} onClose={onClose} title="Seat credits" panelClassName="max-w-md">
+    <Modal open={open} onClose={onClose} title="Spoons" panelClassName="max-w-md">
       <div className="flex items-baseline gap-2">
         <span className="font-display text-5xl leading-none">{credits.balance}</span>
         <span className="text-[var(--ink-muted)]">
-          credit{credits.balance === 1 ? "" : "s"} to spend
+          spoon{credits.balance === 1 ? "" : "s"} to use
         </span>
       </div>
       {credits.spending > 0 || credits.earning > 0 ? (
@@ -81,8 +81,8 @@ export function CreditsInfoModal({
 
       <ol className="mt-5 flex flex-col gap-3 text-sm">
         {[
-          ["Host a guest", "You earn their credit 24 hours after the formal."],
-          ["Spend it anywhere", "One credit, one seat, any college."],
+          ["Host a guest", "You earn their spoon 24 hours after the formal."],
+          ["Use it anywhere", "One spoon, one seat, any college."],
           ["Keep it", "You start with one. They never expire."],
         ].map(([title, body], i) => (
           <li key={title} className="flex gap-3">

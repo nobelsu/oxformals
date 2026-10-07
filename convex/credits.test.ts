@@ -99,7 +99,7 @@ describe("seat credits", () => {
     });
     const first = await requestWithCredit(s.t, s.guest, s.listing);
     await as(s.t, s.host).mutation(api.listings.acceptRequest, { requestId: first });
-    await expect(requestWithCredit(s.t, s.guest, other)).rejects.toThrow(/don't have any credits/);
+    await expect(requestWithCredit(s.t, s.guest, other)).rejects.toThrow(/don't have any spoons/);
   });
 
   test("accepting fails if the guest has spent their credit elsewhere", async () => {
@@ -116,7 +116,7 @@ describe("seat credits", () => {
     await as(s.t, s.host).mutation(api.listings.acceptRequest, { requestId: a });
     await expect(
       as(s.t, host2).mutation(api.listings.acceptRequest, { requestId: b }),
-    ).rejects.toThrow(/enough credits/);
+    ).rejects.toThrow(/enough spoons/);
   });
 
   test("leaving before the formal refunds the credit", async () => {
