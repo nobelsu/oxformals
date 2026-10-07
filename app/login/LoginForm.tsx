@@ -40,7 +40,7 @@ function normalizeEmail(raw: string): string {
 }
 
 function isOxfordEmail(email: string): boolean {
-  return email.endsWith("@ox.ac.uk") || email.endsWith("@oxford.said.edu") || email.endsWith("@said.ox.ac.uk") || email.endsWith("@said.oxford.edu");
+  return email.endsWith("@ox.ac.uk") || email.endsWith("@oxford.said.edu") || email.endsWith("@said.ox.ac.uk") || email.endsWith("@said.oxford.edu") || email.endsWith("@stanford.edu");
 }
 
 function renderHighlightedMatch(label: string, query: string) {
