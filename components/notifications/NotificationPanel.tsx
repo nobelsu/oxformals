@@ -79,18 +79,6 @@ export const NotificationPanel = forwardRef<
       <div className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-3.5">
         <h2 className="font-display text-2xl leading-none">Notifications</h2>
         <div className="flex items-baseline gap-4">
-          {fresh.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => {
-              void markAllRead({});
-              setNewIds(new Set());
-            }}
-            className="cursor-pointer text-[13px] text-[var(--ink-muted)] underline underline-offset-2"
-          >
-            Mark all read
-          </button>
-          ) : null}
           <button
             type="button"
             onClick={onClose}
