@@ -182,9 +182,6 @@ export function ListingDetailModal({
             {" · "}
             <FormalTypeTag formalType={listing.formalType} className="align-[-2px]" />
           </p>
-          <p className="mt-0.5 text-sm text-[var(--ink-soft)]">
-            {formatYearRole(listing.year, listing.role)}
-          </p>
           {canConfirmAttendance && isPast ? (
             <div className="mt-2 flex justify-end">
               <ConfirmAttendanceIndicator />
