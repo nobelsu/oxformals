@@ -5,12 +5,14 @@ import { LandingHowItWorks } from "@/components/landing/LandingHowItWorks";
 import { LandingSocialTeaser } from "@/components/landing/LandingSocialTeaser";
 import { SprayFinale } from "@/components/landing/SprayFinale";
 import { SprayFinaleCover } from "@/components/landing/SprayFinaleCover";
-import { LandingStats } from "@/components/landing/LandingStats";
+import { LandingStats, type SiteStats } from "@/components/landing/LandingStats";
 
 export function LandingPage({
   preloaded,
+  stats,
 }: {
   preloaded: Preloaded<typeof api.listings.listUpcomingPublic>;
+  stats: SiteStats;
 }) {
   return (
     <div data-landing-theme="navy" className="flex min-h-0 flex-1 flex-col">
@@ -20,7 +22,7 @@ export function LandingPage({
         </div>
         <LandingHowItWorks />
         <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
-          <LandingStats />
+          <LandingStats stats={stats} />
         </div>
         <LandingSocialTeaser />
       </main>

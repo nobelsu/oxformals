@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { preloadQuery } from "convex/nextjs";
+import { fetchQuery, preloadQuery } from "convex/nextjs";
 import { isAuthenticatedNextjs } from "@convex-dev/auth/nextjs/server";
 import { api } from "@/convex/_generated/api";
 import { HomeClient } from "./HomeClient";
@@ -25,10 +25,11 @@ export default async function HomePage({
   const hasListing = typeof sp.listing === "string" && sp.listing.length > 0;
 
   if (!hasTab && !hasListing && !(await isAuthenticatedNextjs())) {
-    const preloaded = await preloadQuery(api.listings.listUpcomingPublic, {
-      limit: RAIL_LIMIT,
-    });
-    return <LandingPage preloaded={preloaded} />;
+    const [preloaded, stats] = await Promise.all([
+      preloadQuery(api.listings.listUpcomingPublic, { limit: RAIL_LIMIT }),
+      fetchQuery(api.siteStats.get, {}),
+    ]);
+    return <LandingPage preloaded={preloaded} stats={stats} />;
   }
 
   return (
