@@ -4,14 +4,27 @@ import { useEffect, useRef, useState } from "react";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePaintCanvas";
 import { Reveal } from "@/components/landing/Reveal";
 import { Squiggle } from "@/components/ui/Squiggle";
+import { OXFORD_COLLEGES } from "@/lib/data/colleges";
 
-// TODO(numbers): placeholder figures — swap for the real ones the user supplies.
-const STATS = [
-  { value: 100, suffix: "+", label: "formals" },
-  { value: 38, suffix: "", label: "colleges & halls" },
-  { value: 600, suffix: "+", label: "students" },
-  { value: 0, suffix: "", prefix: "£", label: "to join" },
-] as const;
+export type SiteStats = { formals: number; students: number } | null;
+
+type StatSpec = { value: number; suffix: string; prefix?: string; label: string };
+
+/** "137" reads as "130+": a real count, rounded down so it never overstates. */
+function rounded(n: number, label: string): StatSpec {
+  const step = n >= 1000 ? 100 : n >= 20 ? 10 : 1;
+  const value = Math.floor(n / step) * step;
+  return { value, suffix: value < n ? "+" : "", label };
+}
+
+function buildStats(stats: SiteStats): StatSpec[] {
+  return [
+    ...(stats ? [rounded(stats.formals, "formals listed")] : []),
+    { value: OXFORD_COLLEGES.length, suffix: "", label: "colleges & halls" },
+    ...(stats ? [rounded(stats.students, "students")] : []),
+    { value: 0, suffix: "", prefix: "£", label: "to join" },
+  ];
+}
 
 function formatNumber(n: number): string {
   return n.toLocaleString("en-GB");
@@ -76,7 +89,8 @@ function Stat({
  * A count-up stats band. The numbers animate from zero once the band scrolls
  * into view (one-shot); under reduced motion they render at their final value.
  */
-export function LandingStats() {
+export function LandingStats({ stats }: { stats: SiteStats }) {
+  const items = buildStats(stats);
   const ref = useRef<HTMLDivElement | null>(null);
   const [active, setActive] = useState(false);
 
@@ -109,14 +123,14 @@ export function LandingStats() {
       </Reveal>
       <div
         ref={ref}
-        className="mt-12 grid grid-cols-2 gap-10 sm:grid-cols-4"
+        className={`mt-12 grid grid-cols-2 gap-10 ${items.length === 4 ? "sm:grid-cols-4" : ""}`}
       >
-        {STATS.map((s, i) => (
+        {items.map((s, i) => (
           <Reveal key={s.label} delay={i * 90}>
             <Stat
               value={s.value}
               suffix={s.suffix}
-              prefix={"prefix" in s ? s.prefix : undefined}
+              prefix={s.prefix}
               label={s.label}
               active={active}
             />
