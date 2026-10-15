@@ -34,6 +34,8 @@ export const cardReadValidator = v.object({
   college: v.union(v.string(), v.null()),
   expiry: v.union(v.string(), v.null()),
   confidence: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
+        isPhotoOfPhysicalCard: v.optional(v.boolean()),
+        hasPortraitPhoto: v.optional(v.boolean()),
 });
 
 const statusValidator = v.union(

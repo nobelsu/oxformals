@@ -3,7 +3,7 @@ import { internal } from "./_generated/api";
 import { internalAction } from "./_generated/server";
 import type { CardRead } from "./cardRules";
 
-const DEFAULT_MODEL = "gpt-4.1-mini";
+const DEFAULT_MODEL = "gpt-4.1";
 
 const PROMPT = `You check photos of University of Oxford student cards ("University Card", issued by the Bodleian, showing a photo, name, college and an expiry date).
 Read the photo and report:
@@ -11,17 +11,30 @@ Read the photo and report:
 - name: the cardholder's name exactly as printed, or null if unreadable.
 - college: the college or hall as printed, or null.
 - expiry: the expiry or "valid until" date as YYYY-MM-DD, or null.
-- confidence: "high" only if the card is fully visible, sharp, unobstructed and shows no sign of editing; otherwise "medium" or "low".`;
+- isPhotoOfPhysicalCard: true only if this is a camera photo of a real plastic card (visible edges, lighting, perspective, texture). False for screenshots, scans of documents, digitally drawn or generated images, or a card shown on a screen.
+- hasPortraitPhoto: true only if the card shows a real photograph of a person's face (not a placeholder, blank box or drawing).
+- confidence: "high" only if all of the above is clear and the card shows the genuine University of Oxford design (crest and layout) with no sign of editing; otherwise "medium" or "low".
+Be sceptical: people may try to pass off made-up cards.`;
 
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["isOxfordUniversityCard", "name", "college", "expiry", "confidence"],
+  required: [
+    "isOxfordUniversityCard",
+    "name",
+    "college",
+    "expiry",
+    "isPhotoOfPhysicalCard",
+    "hasPortraitPhoto",
+    "confidence",
+  ],
   properties: {
     isOxfordUniversityCard: { type: "boolean" },
     name: { type: ["string", "null"] },
     college: { type: ["string", "null"] },
     expiry: { type: ["string", "null"] },
+    isPhotoOfPhysicalCard: { type: "boolean" },
+    hasPortraitPhoto: { type: "boolean" },
     confidence: { type: "string", enum: ["high", "medium", "low"] },
   },
 };
@@ -49,6 +62,8 @@ function parseRead(raw: unknown): CardRead | null {
     college: str(r.college),
     expiry: expiry && /^\d{4}-\d{2}-\d{2}$/.test(expiry) ? expiry : null,
     confidence,
+    isPhotoOfPhysicalCard: r.isPhotoOfPhysicalCard === true,
+    hasPortraitPhoto: r.hasPortraitPhoto === true,
   };
 }
 

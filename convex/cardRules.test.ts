@@ -7,6 +7,8 @@ const good: CardRead = {
   college: "Brasenose College",
   expiry: "2028-06-30",
   confidence: "high",
+  isPhotoOfPhysicalCard: true,
+  hasPortraitPhoto: true,
 };
 const today = "2026-10-15";
 
@@ -52,6 +54,11 @@ describe("decideCard", () => {
     expect(
       decideCard({ ...good, isOxfordUniversityCard: false }, "Jeremy Smith", today).kind,
     ).toBe("reject");
+  });
+  test("a screenshot or made-up card, or one without a face photo, goes to review", () => {
+    expect(decideCard({ ...good, isPhotoOfPhysicalCard: false }, "Jeremy Smith", today).kind).toBe("review");
+    expect(decideCard({ ...good, hasPortraitPhoto: false }, "Jeremy Smith", today).kind).toBe("review");
+    expect(decideCard({ ...good, hasPortraitPhoto: undefined }, "Jeremy Smith", today).kind).toBe("review");
   });
   test("anything doubtful goes to review", () => {
     expect(decideCard({ ...good, confidence: "medium" }, "Jeremy Smith", today).kind).toBe("review");

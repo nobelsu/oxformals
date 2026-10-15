@@ -15,6 +15,8 @@ const read = {
   college: "Keble College",
   expiry: "2099-06-30",
   confidence: "high" as const,
+  isPhotoOfPhysicalCard: true,
+  hasPortraitPhoto: true,
 };
 
 async function seed(t: T) {

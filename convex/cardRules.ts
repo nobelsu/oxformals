@@ -8,6 +8,10 @@ export type CardRead = {
   /** YYYY-MM-DD */
   expiry: string | null;
   confidence: "high" | "medium" | "low";
+  /** A camera photo of a real plastic card, not a screenshot, scan or made-up image. */
+  isPhotoOfPhysicalCard?: boolean;
+  /** The card carries a real photo of a person's face. */
+  hasPortraitPhoto?: boolean;
 };
 
 export type CardDecision =
@@ -82,6 +86,8 @@ export function decideCard(read: CardRead, profileName: string | undefined, toda
   if (
     read.isOxfordUniversityCard &&
     read.confidence === "high" &&
+    read.isPhotoOfPhysicalCard === true &&
+    read.hasPortraitPhoto === true &&
     read.expiry !== null &&
     college !== null &&
     namesMatch(read.name, profileName)
