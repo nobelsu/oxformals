@@ -12,6 +12,7 @@ import {
 import { optionalUserId, requireActiveUser } from "./guards";
 import { moderateText } from "./moderation";
 import { normalizeCollegeName } from "../lib/data/colleges";
+import { assertMemberId } from "./membership";
 
 /**
  * A college's insider guide: formal nights, gowns, guest price, dress code,
@@ -87,6 +88,7 @@ export const updateGuide = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const { userId } = await requireActiveUser(ctx);
+    await assertMemberId(ctx, userId);
     const college = normalizeCollegeName(args.college);
     if (!(await isMemberOf(ctx, userId, college))) {
       throw new ConvexError("Only members of this college can edit its guide.");
@@ -153,6 +155,7 @@ export const insertTip = internalMutation({
   args: { userId: v.id("users"), college: v.string(), text: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await assertMemberId(ctx, args.userId);
     const college = normalizeCollegeName(args.college);
     if (!(await isMemberOf(ctx, args.userId, college))) {
       throw new ConvexError("Only members of this college can add tips.");

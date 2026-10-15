@@ -6,6 +6,7 @@ import { notify } from "./notify";
 import { randomCode } from "./randomCode";
 import { recordReferral } from "./referrals";
 import { visibleAvatar } from "./userVisibility";
+import { assertMember } from "./membership";
 
 export const INVITE_CODE_LENGTH = 6;
 /** How long the invite cookie lives, and so how new an account must be to count. */
@@ -73,6 +74,7 @@ export const claimInvite = mutation({
   ),
   handler: async (ctx, { code, openedAt }) => {
     const { userId, user } = await requireActiveUser(ctx);
+    await assertMember(ctx, user);
     const row = await ctx.db
       .query("inviteCodes")
       .withIndex("by_code", (q) => q.eq("code", code.trim().toLowerCase()))

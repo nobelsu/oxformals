@@ -9,7 +9,11 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { isAllowedEmail } from "@/convex/allowedEmails";
 import { useAuth } from "@/components/auth/useAuth";
+import { CardPhotoForm } from "@/components/card/CardPhotoForm";
 import { BIO_ERRORS, BioTextarea } from "@/components/ui/BioTextarea";
 import { SketchCard } from "@/components/ui/SketchCard";
 import { normalizeCollegeName, OXFORD_COLLEGES } from "@/lib/data/colleges";
@@ -39,8 +43,9 @@ function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
-function isOxfordEmail(email: string): boolean {
-  return email.endsWith("@ox.ac.uk") || email.endsWith("@oxford.said.edu") || email.endsWith("@said.ox.ac.uk") || email.endsWith("@said.oxford.edu") || email.endsWith("@stanford.edu") || email.endsWith(".stanford.edu");
+/** A whole address has been typed (so the card notice doesn't flicker mid-word). */
+function looksComplete(email: string): boolean {
+  return /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(email);
 }
 
 function renderHighlightedMatch(label: string, query: string) {
@@ -160,6 +165,7 @@ export function LoginForm() {
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cardSkipped, setCardSkipped] = useState(false);
   const collegePickerRef = useRef<HTMLDivElement | null>(null);
   const rolePickerRef = useRef<HTMLDivElement | null>(null);
 
@@ -171,9 +177,30 @@ export function LoginForm() {
 
   const greeting = DINNER_GREETINGS[greetingIdx];
 
+  // Accounts without an allowed email send a University Card photo once their
+  // profile is done, before anything else.
+  const cardStatus = useQuery(
+    api.cardChecks.myCardStatus,
+    status === "ready" && isAuthenticated ? {} : "skip",
+  );
+  const showCardStep =
+    !cardSkipped &&
+    !!cardStatus &&
+    cardStatus.needsCard &&
+    !cardStatus.member &&
+    cardStatus.latest === null;
+  const cardStatusLoading = isAuthenticated && cardStatus === undefined;
+  const typedEmail = normalizeEmail(email);
+  const showCardNotice = looksComplete(typedEmail) && !isAllowedEmail(typedEmail);
+
   // Offer optional password setup once, when the user has none yet.
   const offerPassword =
-    status === "ready" && isAuthenticated && hasPassword === false && !passwordDone;
+    status === "ready" &&
+    isAuthenticated &&
+    !cardStatusLoading &&
+    !showCardStep &&
+    hasPassword === false &&
+    !passwordDone;
   useOnChange(String(offerPassword), () => {
     if (offerPassword) setStep("set-password");
   });
@@ -181,10 +208,21 @@ export function LoginForm() {
   useEffect(() => {
     if (status !== "ready" || !isAuthenticated) return;
     if (offerPassword) return;
+    if (cardStatusLoading || showCardStep) return;
     // Wait until we know whether a password exists before redirecting.
     if (hasPassword === undefined && !passwordDone) return;
     router.replace(nextPath);
-  }, [status, isAuthenticated, hasPassword, passwordDone, offerPassword, nextPath, router]);
+  }, [
+    status,
+    isAuthenticated,
+    hasPassword,
+    passwordDone,
+    offerPassword,
+    cardStatusLoading,
+    showCardStep,
+    nextPath,
+    router,
+  ]);
 
   useOnChange(`${status}|${needsOnboarding}|${authEmail ?? ""}`, () => {
     if (status !== "ready" || !needsOnboarding) return;
@@ -254,10 +292,6 @@ export function LoginForm() {
       setError("That doesn't look like an email.");
       return;
     }
-    if (!isOxfordEmail(normalized)) {
-      setError("Use your @ox.ac.uk email.");
-      return;
-    }
     setSubmitting(true);
     try {
       await requestCode(normalized);
@@ -308,10 +342,6 @@ export function LoginForm() {
     e.preventDefault();
     setError(null);
     const normalized = normalizeEmail(email);
-    if (!isOxfordEmail(normalized)) {
-      setError("Use your @ox.ac.uk email.");
-      return;
-    }
     if (!password) {
       setError("Enter your password.");
       return;
@@ -402,7 +432,9 @@ export function LoginForm() {
         instagramHandle: instagramHandle.trim() || undefined,
         whatsappPhone: whatsappPhone.trim() || undefined,
       });
-      router.replace(nextPath);
+      // Card accounts stay here for the card step; the redirect effect
+      // moves on once it's done.
+      if (isAllowedEmail(authEmail ?? email)) router.replace(nextPath);
     } catch {
       setError("Couldn't save. Try again.");
     } finally {
@@ -412,8 +444,9 @@ export function LoginForm() {
 
   const inputCls =
     "w-full rounded-xl border-[2px] border-[var(--ink)] bg-[var(--paper)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] px-4 py-2.5 text-base transition-shadow focus:outline-none focus:bg-[var(--paper)]";
-  const stepEyebrow =
-    step === "email"
+  const stepEyebrow = showCardStep
+    ? "University Card"
+    : step === "email"
       ? "Sign in"
       : step === "code"
         ? "Check your inbox"
@@ -428,7 +461,7 @@ export function LoginForm() {
       data-landing-theme="navy"
       className="flex min-h-[calc(100dvh-var(--app-nav-height))] items-center justify-center bg-[var(--bg)] px-6 py-12 text-[var(--ink)]"
     >
-      <div className={`w-full ${step === "profile" ? "max-w-lg" : "max-w-sm"}`}>
+      <div className={`w-full ${step === "profile" && !showCardStep ? "max-w-lg" : "max-w-sm"}`}>
         <SketchCard className="p-8" seed={3}>
           <p className="font-display text-sm uppercase tracking-[0.2em] text-[var(--accent)]">
             {stepEyebrow}
@@ -442,11 +475,21 @@ export function LoginForm() {
             .
           </h1>
 
-          {step === "email" ? (
+          {showCardStep ? (
+          <div className="flex flex-col gap-4">
+            <p className="text-[var(--ink-muted)] leading-relaxed">
+              Take a photo of the front of your University Card.
+            </p>
+            <CardPhotoForm
+              onDone={() => setCardSkipped(true)}
+              onSkip={() => setCardSkipped(true)}
+            />
+          </div>
+        ) : step === "email" ? (
           <form onSubmit={onEmailSubmit} className="flex flex-col gap-4">
             <label className="flex flex-col gap-2">
               <span className="text-sm text-[var(--ink-muted)]">
-                Enter your Oxford email
+                Enter your email
               </span>
               <input
                 type="email"
@@ -458,6 +501,11 @@ export function LoginForm() {
                 placeholder="sso@ox.ac.uk"
                 className={inputCls}
               />
+              {showCardNotice ? (
+                <span className="text-sm text-[var(--ink-muted)]">
+                  Not an Oxford email? You&apos;ll need a photo of your University Card.
+                </span>
+              ) : null}
             </label>
 
             {error && (
@@ -570,9 +618,7 @@ export function LoginForm() {
         ) : step === "password" ? (
           <form onSubmit={onPasswordSignIn} className="flex flex-col gap-4">
             <label className="flex flex-col gap-2">
-              <span className="text-sm text-[var(--ink-muted)]">
-                Oxford email
-              </span>
+              <span className="text-sm text-[var(--ink-muted)]">Email</span>
               <input
                 type="email"
                 autoComplete="email"

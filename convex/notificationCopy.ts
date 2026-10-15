@@ -162,6 +162,16 @@ export function renderNotification(n: NotificationView): RenderedNotification {
       segments = [b(who), t(" joined from your invite.")];
       url = profileUrl;
       break;
+    case "card_approved":
+      title = "You're in";
+      segments = [t("Your University Card checked out. Welcome to Oxformals.")];
+      url = FORMALS_URL;
+      break;
+    case "card_rejected":
+      title = "Card not accepted";
+      segments = [t("We couldn't accept your University Card. Open Oxformals to see why.")];
+      url = FORMALS_URL;
+      break;
     case "credit_earned":
       if (n.data.reason === "referral") {
         title = "Spoon earned";

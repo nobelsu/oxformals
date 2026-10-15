@@ -47,4 +47,11 @@ crons.cron(
   {},
 );
 
+crons.cron(
+  "close stale card checks",
+  "20 3 * * *",
+  internal.cardChecks.closeStale,
+  {},
+);
+
 export default crons;

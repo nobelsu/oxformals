@@ -31,6 +31,7 @@ import {
 } from "../lib/data/collegeReviews";
 import { optionalUserId, requireActiveUser } from "./guards";
 import { canSeeActivity } from "./follows";
+import { assertMember } from "./membership";
 
 const ratingsValidator = v.object({
   food: v.number(),
@@ -260,6 +261,7 @@ export const submitReview = mutation({
   returns: v.id("collegeReviews"),
   handler: async (ctx, args) => {
     const { userId, user } = await requireActiveUser(ctx);
+    await assertMember(ctx, user);
     const listing = await ctx.db.get(args.listingId);
     if (!listing) throw new ConvexError("Listing not found.");
 

@@ -7,8 +7,9 @@ function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
-function isOxfordEmail(email: string): boolean {
-  return email.endsWith("@ox.ac.uk") || email.endsWith("@oxford.said.edu") || email.endsWith("@said.ox.ac.uk") || email.endsWith("@said.oxford.edu") || email.endsWith("@stanford.edu") || email.endsWith(".stanford.edu");
+/** Any real-looking address can get a code; non-student ones then need a University Card. */
+function looksLikeEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 export function otpEmail({
@@ -45,10 +46,8 @@ export function buildOtpEmailText(args: { token: string; expiresInMinutes: numbe
 const emailProvider = Email({
   sendVerificationRequest: async ({ identifier: email, token }) => {
     const normalizedEmail = normalizeEmail(email);
-    if (!isOxfordEmail(normalizedEmail)) {
-      throw new Error(
-        "Only Oxford email addresses ending in @ox.ac.uk or @oxford.said.edu are allowed",
-      );
+    if (!looksLikeEmail(normalizedEmail)) {
+      throw new Error("That doesn't look like an email address.");
     }
 
     const apiKey = process.env.AUTH_RESEND_KEY;

@@ -16,6 +16,7 @@ import {
 } from "./listingHelpers";
 import { removeUserFromListingGroup } from "./listingMembership";
 import { refundListingCredits } from "./credits";
+import { deleteStorageAndOwnership } from "./uploadOwnership";
 
 /** Per-table bound; an account never comes close to this many rows. */
 const MAX_ROWS = 1000;
@@ -431,6 +432,17 @@ export const purgeUserContent = internalMutation({
         .query("partyInvites")
         .withIndex("by_userId", (q) => q.eq("userId", userId)),
     );
+    // University Card photos, if any are still waiting, then the checks.
+    for await (const check of ctx.db
+      .query("cardChecks")
+      .withIndex("by_userId_and_createdAt", (q) => q.eq("userId", userId))) {
+      if (check.imageId) await deleteStorageAndOwnership(ctx, check.imageId);
+    }
+    await deleteAll(
+      ctx.db
+        .query("cardChecks")
+        .withIndex("by_userId_and_createdAt", (q) => q.eq("userId", userId)),
+    );
     await deleteAll(
       ctx.db
         .query("creditAccounts")
@@ -526,6 +538,7 @@ type TableWithRows =
   | "collegeReviewReports"
   | "partyInvites"
   | "creditAccounts"
+  | "cardChecks"
   | "webPushSubscriptions"
   | "notifications"
   | "inviteCodes"

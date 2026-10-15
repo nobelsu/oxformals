@@ -9,6 +9,7 @@ import { recordReferral } from "./referrals";
 import { visibleAvatar } from "./userVisibility";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
+import { assertMember } from "./membership";
 
 /**
  * Seat links: a seat in a group request for someone not on Oxformals yet.
@@ -87,6 +88,7 @@ export const claimSeatLink = mutation({
   returns: v.object({ requestId: v.id("requests") }),
   handler: async (ctx, { token }) => {
     const { userId, user } = await requireActiveUser(ctx);
+    await assertMember(ctx, user);
     const link = await ctx.db
       .query("seatLinks")
       .withIndex("by_token", (q) => q.eq("token", token))

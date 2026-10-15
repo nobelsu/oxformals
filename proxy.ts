@@ -19,6 +19,9 @@ const isPublicRoute = createRouteMatcher([
   "/college/:slug",
   "/i/:code",
   "/s/:token",
+  // Admin pages gate themselves and show not-found to everyone else, signed
+  // in or not, rather than a sign-in redirect that gives the page away.
+  "/admin/(.*)",
   "/api/auth(.*)",
   "/api/share(.*)",
 ]);

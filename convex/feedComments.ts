@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { optionalUserId, requireActiveUser } from "./guards";
 import { visibleUser } from "./userVisibility";
 import { MAX_FEED_COMMENT_LENGTH } from "../lib/data/feedConstants";
+import { assertMemberId } from "./membership";
 
 /** All comments on one feed item (its `targetKey`), oldest first, author-enriched. */
 export const listComments = query({
@@ -35,6 +36,7 @@ export const addComment = mutation({
   args: { targetKey: v.string(), text: v.string() },
   handler: async (ctx, args) => {
     const { userId } = await requireActiveUser(ctx);
+    await assertMemberId(ctx, userId);
     const text = args.text.trim();
     if (!text) throw new ConvexError("Comment can't be empty.");
     if (text.length > MAX_FEED_COMMENT_LENGTH) {
