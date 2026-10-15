@@ -662,6 +662,21 @@ export const sendReportEmail = internalAction({
   },
 });
 
+/** Tell the team a University Card is waiting. No photo or details in the email. */
+export const sendCardReviewEmail = internalAction({
+  args: {},
+  returns: v.null(),
+  handler: async () => {
+    await sendEmail("sendCardReviewEmail", "team@oxformals.com", "A University Card is waiting for review", {
+      eyebrow: "Card check",
+      heading: "A University Card needs a look",
+      body: "Someone without an Oxford email sent their card and it couldn't be approved automatically.",
+      cta: { href: `${siteUrl()}/admin/cards`, label: "Review cards" },
+    });
+    return null;
+  },
+});
+
 // ── Formal changes (undone swaps, cancellations) ────────────────────────────
 
 const formalNoticeValidator = v.object({

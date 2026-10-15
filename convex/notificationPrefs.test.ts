@@ -35,7 +35,8 @@ describe("notification prefs", () => {
   });
 
   test("every kind belongs to exactly one category", () => {
-    expect(NOTIFICATION_KINDS).toHaveLength(16);
+    expect(NOTIFICATION_KINDS).toHaveLength(18);
+    expect(categoryOf("card_approved")).toBe("social");
     expect(categoryOf("party_invite")).toBe("invites");
     expect(categoryOf("wishlist_listing")).toBe("credits");
     expect(categoryOf("now_friends")).toBe("social");

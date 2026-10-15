@@ -14,6 +14,7 @@ import {
 import { assertVerifiedEmail } from "./userVerification";
 import { requireActiveUser } from "./guards";
 import { visibleAvatar } from "./userVisibility";
+import { assertMemberId } from "./membership";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -617,6 +618,7 @@ export const getOrCreateConversation = mutation({
   returns: v.id("conversations"),
   handler: async (ctx, args) => {
     const viewerId = await requireUserId(ctx);
+    await assertMemberId(ctx, viewerId);
     if (args.otherUserId === viewerId) {
       throw new ConvexError("You cannot message yourself");
     }
@@ -660,6 +662,7 @@ export const createGroupConversation = mutation({
   returns: v.id("conversations"),
   handler: async (ctx, args) => {
     const viewerId = await requireUserId(ctx);
+    await assertMemberId(ctx, viewerId);
     const uniqueIds = [...new Set(args.memberUserIds)];
     if (!uniqueIds.includes(viewerId)) {
       throw new ConvexError("You must include yourself in the group");
@@ -1423,6 +1426,7 @@ export const sendMessage = mutation({
   returns: v.id("messages"),
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
+    await assertMemberId(ctx, userId);
     const convo = await requireConversationParticipant(
       ctx,
       args.conversationId,

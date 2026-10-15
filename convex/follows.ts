@@ -14,6 +14,7 @@ import {
   sanitizePublicUser,
 } from "./guards";
 import { notify } from "./notify";
+import { assertMemberId } from "./membership";
 
 /**
  * Instagram/Beli-style follows. Following is instant, unless the other person
@@ -161,6 +162,7 @@ export const follow = mutation({
   returns: v.union(v.literal("pending"), v.literal("active")),
   handler: async (ctx, { userId }) => {
     const { userId: me } = await requireActiveUser(ctx);
+    await assertMemberId(ctx, me);
     if (me === userId) throw new ConvexError("You can't follow yourself.");
     const target = await ctx.db.get(userId);
     if (!target || target.deletedAt) throw new ConvexError("That account doesn't exist.");

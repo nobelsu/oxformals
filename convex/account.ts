@@ -86,6 +86,19 @@ export const exportMyData = query({
 
     if (want("profile")) {
       out.profile = await db.get(userId);
+      out.cardChecks = (
+        await db
+          .query("cardChecks")
+          .withIndex("by_userId_and_createdAt", (q) => q.eq("userId", userId))
+          .take(n)
+      ).map((c) => ({
+        status: c.status,
+        college: c.college,
+        expiry: c.expiry,
+        reason: c.reason,
+        createdAt: c.createdAt,
+        decidedAt: c.decidedAt,
+      }));
       out.wantToGo = await db
         .query("collegeWishlists")
         .withIndex("by_userId", (q) => q.eq("userId", userId))

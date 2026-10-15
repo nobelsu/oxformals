@@ -4,6 +4,7 @@ import { mutation, query } from "./_generated/server";
 import { blockedIdsFor } from "./blocks";
 import { optionalUserId, requireActiveUser } from "./guards";
 import { visibleAvatar } from "./userVisibility";
+import { assertMemberId } from "./membership";
 
 /** Most address-book entries one lookup may send. */
 export const MAX_CONTACTS = 1000;
@@ -53,6 +54,7 @@ export const matchContacts = mutation({
   returns: v.array(matchValidator),
   handler: async (ctx, { contacts }) => {
     const { userId: me } = await requireActiveUser(ctx);
+    await assertMemberId(ctx, me);
     if (contacts.length > MAX_CONTACTS) {
       throw new ConvexError(`That's too many contacts at once (the limit is ${MAX_CONTACTS}).`);
     }

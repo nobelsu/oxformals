@@ -515,6 +515,37 @@ export default defineSchema({
   })
     .index("by_token", ["token"])
     .index("by_requestId", ["requestId"]),
+  /**
+   * A University Card photo sent by someone without an allowed email, and what
+   * became of it. The photo is deleted once decided (convex/cardChecks.ts).
+   */
+  cardChecks: defineTable({
+    userId: v.id("users"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("needs_review"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
+    imageId: v.optional(v.id("_storage")),
+    read: v.optional(
+      v.object({
+        isOxfordUniversityCard: v.boolean(),
+        name: v.union(v.string(), v.null()),
+        college: v.union(v.string(), v.null()),
+        expiry: v.union(v.string(), v.null()),
+        confidence: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
+      }),
+    ),
+    college: v.optional(v.string()),
+    expiry: v.optional(v.string()),
+    reason: v.optional(v.string()),
+    decidedBy: v.optional(v.union(v.literal("auto"), v.id("users"))),
+    createdAt: v.number(),
+    decidedAt: v.optional(v.number()),
+  })
+    .index("by_userId_and_createdAt", ["userId", "createdAt"])
+    .index("by_status_and_createdAt", ["status", "createdAt"]),
   /** One row: the landing page's counts, refreshed daily (convex/siteStats.ts). */
   siteStats: defineTable({
     formals: v.number(),

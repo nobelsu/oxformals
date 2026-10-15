@@ -56,6 +56,7 @@ import {
   sanitizeLimitedUser,
   sanitizePublicUser,
 } from "./guards";
+import { assertMemberId } from "./membership";
 
 /** A listing host as signed-out visitors see them: private accounts limited. */
 function signedOutHostSummary(user: Doc<"users">) {
@@ -359,6 +360,7 @@ export const createListing = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
+    await assertMemberId(ctx, userId);
     const user = await ctx.db.get(userId);
     if (!user) throw new ConvexError("User profile not found");
 
@@ -461,6 +463,7 @@ export const createRequest = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
+    await assertMemberId(ctx, userId);
     const target = await getListingOrThrow(ctx, args.targetListingId);
     const targetType = resolveListingType(target);
 
@@ -972,6 +975,7 @@ export const acceptRequest = mutation({
   args: { requestId: v.id("requests") },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
+    await assertMemberId(ctx, userId);
     const req = await ctx.db.get(args.requestId);
     if (!req) throw new ConvexError("Request not found");
     if (req.toUserId !== userId) throw new ConvexError("Not allowed");

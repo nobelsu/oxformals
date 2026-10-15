@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import { optionalUserId } from "./guards";
 import { visibleUser } from "./userVisibility";
+import { isMember, needsCard } from "./membership";
 
 /** Bounds keep this one query well inside Convex's read limits. */
 const FRIENDS_SCANNED = 40;
@@ -106,6 +107,7 @@ export const getPeopleYouMayKnow = query({
     for (const [id, s] of scores) {
       const user = await ctx.db.get(id);
       if (!user || user.deletedAt !== undefined) continue;
+      if (needsCard(user) && !(await isMember(ctx, user))) continue;
       ranked.push({
         user: await visibleUser(ctx, me, user),
         ...s,

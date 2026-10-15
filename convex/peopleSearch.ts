@@ -3,6 +3,7 @@ import { query } from "./_generated/server";
 import { blockedIdsFor } from "./blocks";
 import { optionalUserId } from "./guards";
 import { visibleAvatar } from "./userVisibility";
+import { isMember, needsCard } from "./membership";
 
 const RESULTS = 8;
 
@@ -44,6 +45,7 @@ export const searchPeople = query({
       if (u._id === me || u.deletedAt !== undefined || blocked.has(u._id)) continue;
       const name = u.name?.trim();
       if (!name || !u.college?.trim()) continue;
+      if (needsCard(u) && !(await isMember(ctx, u))) continue;
       const avatar = await visibleAvatar(ctx, me, u);
       out.push({
         id: u._id,
