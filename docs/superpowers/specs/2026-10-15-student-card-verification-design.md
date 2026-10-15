@@ -115,7 +115,7 @@ Admin email: one per check that reaches `needs_review`, through `emails.ts` (res
 ## Configuration
 
 - `OPENAI_API_KEY` on production (already set on dev).
-- `ADMIN_EMAIL` on production (currently unset).
+- `ADMIN_EMAIL` on production: set to `sann8699@ox.ac.uk` on 2026-10-15. It is compared with the signed-in account's email, so it must be the email of an Oxformals account. Nothing used it before this feature.
 - `CARD_CHECK_MODEL` optional, defaulting to a current OpenAI vision model.
 
 ## Testing
