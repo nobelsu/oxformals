@@ -37,6 +37,13 @@ const COLLECT: { what: string; items: string; seenBy: string }[] = [
       "Email: only us. Name, college, year, role, subject: other members. Name, college, year and role also show on your listings, which anyone can see.",
   },
   {
+    what: "University Card",
+    items:
+      "A photo of your University Card, only if you sign up without an Oxford email, to confirm you're an Oxford student. The photo is deleted once it's checked; the college and expiry date read from it are kept.",
+    seenBy:
+      "OpenAI, which reads it. If it's unclear, the Oxformals admin.",
+  },
+  {
     what: "Profile",
     items:
       "Bio, profile photo or avatar, Instagram handle, phone/WhatsApp number (optional), dietary requirements (only if you opt in).",
@@ -92,7 +99,7 @@ const BASES: { why: string; basis: string }[] = [
     basis: "Contract.",
   },
   {
-    why: "Checking you're an Oxford member (Oxford email)",
+    why: "Checking you're an Oxford member (Oxford email, or a photo of your University Card)",
     basis: "Legitimate interests: keeping the community to Oxford students.",
   },
   {
@@ -121,7 +128,7 @@ const PROVIDERS: { name: string; does: string }[] = [
   { name: "Expo", does: "Delivers push notifications to the mobile app." },
   {
     name: "OpenAI",
-    does: "Automatically checks bios and college tips for abusive content before they're published. Reports from members are reviewed by a person.",
+    does: "Automatically checks bios and college tips for abusive content before they're published, and reads University Card photos. Reports from members, and cards it can't confirm, are reviewed by a person.",
   },
 ];
 
