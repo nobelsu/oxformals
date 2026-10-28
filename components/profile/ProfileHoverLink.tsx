@@ -106,7 +106,7 @@ export function ProfileHoverLink({ userId, className, title, children }: Props) 
               role="dialog"
               aria-label="Profile preview"
               style={{ top: position.top, left: position.left, width: CARD_WIDTH }}
-              className="fixed z-[70] rounded-[16px] border-[2px] border-[var(--ink)] bg-[var(--paper)] p-4 text-[var(--ink)] shadow-[0_10px_28px_color-mix(in_srgb,var(--ink)_22%,transparent)]"
+              className="fixed z-[70] rounded-[16px] border-[2px] border-[var(--ink)] bg-[var(--paper)] p-4 text-[var(--ink)] shadow-[0_10px_28px_rgba(0,0,0,0.3)]"
               onMouseEnter={clearTimers}
               onMouseLeave={scheduleClose}
               onClick={stop}
