@@ -10,7 +10,7 @@ import { useAuth } from "@/components/auth/useAuth";
 import { CollegeCrest, collegeColours } from "@/components/colleges/CollegeCrest";
 import { CollegeGuide } from "@/components/colleges/CollegeGuide";
 import { CollegeListingsSection } from "@/components/colleges/CollegeListingsSection";
-import { CollegePhotosSection } from "@/components/colleges/CollegePhotosSection";
+import { CollegePhotosSection, countReviewPhotos } from "@/components/colleges/CollegePhotosSection";
 import { CollegeReviewCard } from "@/components/colleges/CollegeReviewCard";
 import { StarRating } from "@/components/colleges/StarRating";
 import { Avatar } from "@/components/ui/Avatar";
@@ -59,6 +59,17 @@ export function CollegePage({ college }: Props) {
   const aggregates = useQuery(api.collegeReviews.getCollegeAggregates, { college });
   const reviews = useQuery(api.collegeReviews.listReviewsForCollege, { college, sort, limit: 30 });
   const toggleWishlist = useMutation(api.users.toggleWishlistCollege);
+  // Same arguments as the sections below, so these share their subscriptions.
+  const guide = useQuery(api.collegeGuide.getGuide, { college });
+  const recentReviews = useQuery(api.collegeReviews.listReviewsForCollege, {
+    college,
+    sort: "recent",
+    limit: 100,
+  });
+  // Empty sections are noise: show the guide only if it has something or the
+  // viewer can fill it in, and photos only once there are some.
+  const showGuide = !!guide && (!!guide.guide || guide.tips.length > 0 || guide.canEdit);
+  const photoCount = countReviewPhotos(recentReviews);
   const [wishOverride, setWishOverride] = useState<boolean | null>(null);
 
   // Keep the last list on screen while a new sort loads.
@@ -96,8 +107,8 @@ export function CollegePage({ college }: Props) {
 
         <div className="mt-3 overflow-hidden rounded-[22px] border-[2px] border-[var(--ink)] bg-[var(--paper)]">
           <div
-            className="relative h-24 border-b-[2px] border-[var(--ink)] sm:h-28"
-            style={{ background: `repeating-linear-gradient(90deg, ${c1} 0 36px, ${c2} 36px 48px)` }}
+            className="relative h-20 border-b-[2px] border-[var(--ink)] sm:h-24"
+            style={{ background: `linear-gradient(to bottom, ${c1} 0 82%, ${c2} 82%)` }}
           >
             {isAuthenticated ? (
               <button
@@ -133,14 +144,6 @@ export function CollegePage({ college }: Props) {
           </div>
         </div>
       </div>
-
-      <Section id="guide" title="The guide">
-        <CollegeGuide college={college} />
-      </Section>
-
-      <Section id="photos" title="Photos">
-        <CollegePhotosSection college={college} />
-      </Section>
 
       <Section id="listings" title="Upcoming formals">
         <CollegeListingsSection college={college} />
@@ -195,6 +198,18 @@ export function CollegePage({ college }: Props) {
           </div>
         )}
       </Section>
+
+      {showGuide ? (
+        <Section id="guide" title="The guide">
+          <CollegeGuide college={college} />
+        </Section>
+      ) : null}
+
+      {photoCount ? (
+        <Section id="photos" title="Photos">
+          <CollegePhotosSection college={college} />
+        </Section>
+      ) : null}
 
       {overview && overview.memberCount > 0 ? (
         <Section id="people" title={`${college} on Oxformals`}>

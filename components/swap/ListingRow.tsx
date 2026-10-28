@@ -1,7 +1,6 @@
 "use client";
 
 import { formatYearRole } from "@/lib/data/roles";
-import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import type { User } from "@/lib/auth/types";
 import {
@@ -19,6 +18,7 @@ import { ListingStatusTag } from "@/components/swap/ListingStatusTag";
 import { ListingTypeTag } from "@/components/swap/ListingTypeTag";
 import { FormalTypeTag } from "@/components/swap/FormalTypeTag";
 import { SeatPips } from "@/components/swap/SeatPips";
+import { ProfileHoverLink } from "@/components/profile/ProfileHoverLink";
 
 type Props = {
   listing: Listing;
@@ -203,10 +203,8 @@ export function ListingRow({
             </p>
           ) : null}
 
-          <Link
-            href={`/profile/${owner.id}`}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
+          <ProfileHoverLink
+            userId={owner.id}
             // Only as wide as the avatar and name, so the rest of the row opens the listing.
             className="group/host mt-auto flex w-fit max-w-full min-w-0 items-center gap-2.5 self-start pt-1"
           >
@@ -221,7 +219,7 @@ export function ListingRow({
                 </span>
               ) : null}
             </span>
-          </Link>
+          </ProfileHoverLink>
         </div>
 
         {rail}
@@ -317,15 +315,10 @@ export function ListingRow({
             spacious ? "mt-2.5" : "mt-2"
           } flex flex-wrap items-center gap-2`}
         >
-          <Link
-            href={`/profile/${owner.id}`}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-            className="flex items-center gap-2 hover:underline"
-          >
+          <ProfileHoverLink userId={owner.id} className="flex items-center gap-2 hover:underline">
             <Avatar name={owner.name} size="sm" source={owner.avatar} />
             <span className="text-[1.05rem]">{owner.name.split(" ")[0]}</span>
-          </Link>
+          </ProfileHoverLink>
           {profileLine ? (
             <span className="text-[0.95rem] text-[var(--ink-soft)]">
               {profileLine}
@@ -336,15 +329,9 @@ export function ListingRow({
               <span className="text-[0.8rem] text-[var(--ink-soft)]">with</span>
               <span className="flex flex-wrap -space-x-1.5">
                 {memberUsers.map((m) => (
-                  <Link
-                    key={m.id}
-                    href={`/profile/${m.id}`}
-                    title={m.name}
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  >
+                  <ProfileHoverLink key={m.id} userId={m.id} title={m.name}>
                     <Avatar name={m.name} size="sm" source={m.avatar} />
-                  </Link>
+                  </ProfileHoverLink>
                 ))}
               </span>
             </span>
