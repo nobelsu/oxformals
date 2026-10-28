@@ -33,6 +33,7 @@ import type * as collegeStats from "../collegeStats.js";
 import type * as contacts from "../contacts.js";
 import type * as credits from "../credits.js";
 import type * as crons from "../crons.js";
+import type * as devData from "../devData.js";
 import type * as emailAssets from "../emailAssets.js";
 import type * as emailNotifications from "../emailNotifications.js";
 import type * as emailTemplate from "../emailTemplate.js";
@@ -119,6 +120,7 @@ declare const fullApi: ApiFromModules<{
   contacts: typeof contacts;
   credits: typeof credits;
   crons: typeof crons;
+  devData: typeof devData;
   emailAssets: typeof emailAssets;
   emailNotifications: typeof emailNotifications;
   emailTemplate: typeof emailTemplate;
