@@ -8,13 +8,20 @@ const ALLOWED_DOMAINS = [
   "oxford.said.edu",
   "said.ox.ac.uk",
   "said.oxford.edu",
-  "stanford.edu",
 ];
-/** Domains whose subdomains are allowed too (alumni.stanford.edu). */
-const ALLOWED_WITH_SUBDOMAINS = ["stanford.edu"];
 
 export function isAllowedEmail(raw: string | undefined | null): boolean {
   const email = (raw ?? "").trim().toLowerCase();
-  if (ALLOWED_DOMAINS.some((d) => email.endsWith(`@${d}`))) return true;
-  return ALLOWED_WITH_SUBDOMAINS.some((d) => email.endsWith(`.${d}`));
+  return ALLOWED_DOMAINS.some((d) => email.endsWith(`@${d}`));
+}
+
+/**
+ * Stanford addresses (and subdomains like alumni.stanford.edu) used to count
+ * as allowed. Accounts made before this keep that; newer ones need a card.
+ */
+export const STANFORD_NEEDS_CARD_FROM = Date.parse("2026-10-28T15:00:00Z");
+
+export function isStanfordEmail(raw: string | undefined | null): boolean {
+  const email = (raw ?? "").trim().toLowerCase();
+  return email.endsWith("@stanford.edu") || email.endsWith(".stanford.edu");
 }

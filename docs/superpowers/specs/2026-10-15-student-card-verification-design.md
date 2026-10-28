@@ -1,10 +1,10 @@
 # Student card verification
 
-Status: design approved in chat on 2026-10-15 (Nobel, after discussing with Juyeon). Not built.
+Status: design approved in chat on 2026-10-15 (Nobel, after discussing with Juyeon). Built in PR #15. Changed 2026-10-28: Stanford addresses need a card too (accounts made before then keep access), and Claude reads the card instead of OpenAI.
 
 ## Goal
 
-Let Oxford students who don't have an Oxford email address join, by photographing their Oxford University Card. People with an allowed email (Oxford or Stanford) are unaffected and never see this.
+Let Oxford students who don't have an Oxford email address join, by photographing their Oxford University Card. People with an allowed email (Oxford, or a Stanford account made before 2026-10-28) are unaffected and never see this.
 
 ## Decisions
 
@@ -13,7 +13,7 @@ Let Oxford students who don't have an Oxford email address join, by photographin
 | What it's for | An alternative way in for people without an allowed email |
 | Who must do it | Only accounts whose email isn't an allowed domain |
 | Which cards | Oxford University Card only |
-| Who checks | OpenAI reads the card; clear passes are approved automatically; anything else goes to an admin |
+| Who checks | Claude (Anthropic API) reads the card; clear passes are approved automatically; anything else goes to an admin |
 | While waiting | Browse only |
 | The photo afterwards | Deleted as soon as there's a decision |
 | Admin review | A small admin page, linked from an email |
@@ -32,7 +32,7 @@ Let Oxford students who don't have an Oxford email address join, by photographin
 ## Checking a card
 
 1. The client uploads the image to Convex storage and calls `cardChecks.submit` with the storage id.
-2. `submit` records a `pending` check and schedules an action that sends the image to OpenAI (vision-capable model, structured JSON output) asking for:
+2. `submit` records a `pending` check and schedules an action that sends the image to Claude (vision-capable model, structured JSON output) asking for:
    - `isOxfordUniversityCard` (boolean)
    - `name` (string or null)
    - `college` (string or null)
@@ -45,7 +45,7 @@ Let Oxford students who don't have an Oxford email address join, by photographin
    - `name` roughly matches the profile name: after lowercasing and removing punctuation, every word of the shorter name appears as a whole word in the longer one ("Jeremy Smith" matches "Jeremy A. Smith"; "J Smith" and "Jem Smith" do not)
 4. **Otherwise the check becomes `needs_review`** and the admin gets an email: "A University Card is waiting for review", with a link to the admin page. The email contains no photo or personal details.
 5. **Clear failures are rejected automatically** without admin review: the model says it isn't a University Card with `high` confidence, or the expiry is in the past. The person sees the reason and can retry.
-6. **If the OpenAI call fails** (no key, network, malformed output), the check goes to `needs_review` rather than failing the person.
+6. **If the Claude call fails** (no key, network, refusal, malformed output), the check goes to `needs_review` rather than failing the person.
 7. **The photo is deleted** from storage the moment a check reaches `approved` or `rejected`. Only status, college, expiry, reason and timestamps are kept.
 
 ## Admin page
@@ -114,15 +114,15 @@ Admin email: one per check that reaches `needs_review`, through `emails.ts` (res
 
 ## Configuration
 
-- `OPENAI_API_KEY` on production (already set on dev).
+- `ANTHROPIC_API_KEY` on dev and production. (`OPENAI_API_KEY` stays: bio and tip moderation still use it.)
 - `ADMIN_EMAIL` on production: set to `admin@ox.ac.uk` on 2026-10-15 (the existing admin login, whose sign-in codes go to nobel@suhendra.com). It is compared with the signed-in account's email.
-- `CARD_CHECK_MODEL` optional, defaulting to a current OpenAI vision model.
+- `CARD_CHECK_MODEL` optional, defaulting to `claude-opus-5-5`.
 
 ## Testing
 
 - Unit tests for the auto-approve rules: each failing rule, the name matcher's edge cases, college normalisation, expiry boundary in Oxford time.
 - Backend tests: `submit` rate limit; gating on every listed mutation for pending, rejected and approved card accounts and for allowed-email accounts; photo deleted on approve and on reject; admin-only access to the review queries and mutations; account deletion removes checks and photos.
-- The OpenAI call is mocked in tests. Real-card behaviour is checked by hand on dev with a few card photos before release.
+- The Claude call is mocked in tests. Real-card behaviour is checked by hand on dev with a few card photos before release.
 
 ## Out of scope
 

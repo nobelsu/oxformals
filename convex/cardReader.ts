@@ -1,9 +1,13 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction } from "./_generated/server";
 import type { CardRead } from "./cardRules";
 
-const DEFAULT_MODEL = "gpt-4.1";
+const DEFAULT_MODEL = "claude-opus-5-5";
+/** Image types Claude accepts; anything else goes to an admin. */
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
+type ImageType = (typeof IMAGE_TYPES)[number];
 
 const PROMPT = `You check photos of University of Oxford student cards ("University Card", issued by the Bodleian, showing a photo, name, college and an expiry date).
 Read the photo and report:
@@ -30,9 +34,9 @@ const SCHEMA = {
   ],
   properties: {
     isOxfordUniversityCard: { type: "boolean" },
-    name: { type: ["string", "null"] },
-    college: { type: ["string", "null"] },
-    expiry: { type: ["string", "null"] },
+    name: { anyOf: [{ type: "string" }, { type: "null" }] },
+    college: { anyOf: [{ type: "string" }, { type: "null" }] },
+    expiry: { anyOf: [{ type: "string" }, { type: "null" }] },
     isPhotoOfPhysicalCard: { type: "boolean" },
     hasPortraitPhoto: { type: "boolean" },
     confidence: { type: "string", enum: ["high", "medium", "low"] },
@@ -68,9 +72,9 @@ function parseRead(raw: unknown): CardRead | null {
 }
 
 /**
- * Reads a card photo with OpenAI and hands the result to cardChecks.applyRead.
- * Any failure (no key, network, odd reply) passes null, which sends the card
- * to an admin rather than failing the person.
+ * Reads a card photo with Claude and hands the result to cardChecks.applyRead.
+ * Any failure (no key, network, refusal, odd reply) passes null, which sends
+ * the card to an admin rather than failing the person.
  */
 export const readCard = internalAction({
   args: { checkId: v.id("cardChecks") },
@@ -81,39 +85,37 @@ export const readCard = internalAction({
 
     let read: CardRead | null = null;
     try {
-      const apiKey = process.env.OPENAI_API_KEY;
+      const apiKey = process.env.ANTHROPIC_API_KEY;
       const blob = await ctx.storage.get(target.imageId);
+      const type = (blob?.type || "image/jpeg") as ImageType;
       if (!apiKey) {
-        console.error("readCard: OPENAI_API_KEY is not set");
+        console.error("readCard: ANTHROPIC_API_KEY is not set");
       } else if (!blob) {
         console.error("readCard: photo is missing", checkId);
+      } else if (!IMAGE_TYPES.includes(type)) {
+        console.error("readCard: unsupported image type", type);
       } else {
-        const type = blob.type || "image/jpeg";
         const data = toBase64(new Uint8Array(await blob.arrayBuffer()));
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: process.env.CARD_CHECK_MODEL || DEFAULT_MODEL,
-            messages: [
-              { role: "system", content: PROMPT },
-              {
-                role: "user",
-                content: [{ type: "image_url", image_url: { url: `data:${type};base64,${data}` } }],
-              },
-            ],
-            response_format: {
-              type: "json_schema",
-              json_schema: { name: "card_read", strict: true, schema: SCHEMA },
+        const client = new Anthropic({ apiKey });
+        const response = await client.beta.messages.create({
+          model: process.env.CARD_CHECK_MODEL || DEFAULT_MODEL,
+          max_tokens: 4000,
+          betas: ["server-side-fallback-2026-07-01"],
+          fallbacks: "default",
+          system: PROMPT,
+          messages: [
+            {
+              role: "user",
+              content: [{ type: "image", source: { type: "base64", media_type: type, data } }],
             },
-          }),
+          ],
+          output_config: { effort: "medium", format: { type: "json_schema", schema: SCHEMA } },
         });
-        if (!res.ok) {
-          console.error("readCard: OpenAI responded", res.status, await res.text());
+        if (response.stop_reason === "refusal") {
+          console.error("readCard: refused", response.stop_details);
         } else {
-          const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-          const content = body.choices?.[0]?.message?.content;
-          read = content ? parseRead(JSON.parse(content)) : null;
+          const text = response.content.find((b) => b.type === "text");
+          read = text?.type === "text" ? parseRead(JSON.parse(text.text)) : null;
         }
       }
     } catch (e) {

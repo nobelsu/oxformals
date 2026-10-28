@@ -1,7 +1,7 @@
 import { ConvexError } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { isAllowedEmail } from "./allowedEmails";
+import { isAllowedEmail, isStanfordEmail, STANFORD_NEEDS_CARD_FROM } from "./allowedEmails";
 import { requireActiveUser } from "./guards";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -19,8 +19,9 @@ export async function latestCardCheck(
 }
 
 /** Signed up with an address that doesn't prove they're a student. */
-export function needsCard(user: Doc<"users">): boolean {
-  return !isAllowedEmail(user.email);
+export function needsCard(user: Pick<Doc<"users">, "email" | "_creationTime">): boolean {
+  if (isAllowedEmail(user.email)) return false;
+  return !(isStanfordEmail(user.email) && user._creationTime < STANFORD_NEEDS_CARD_FROM);
 }
 
 /** A full member: an allowed email, or a University Card that was approved. */
