@@ -48,9 +48,10 @@ function seatsLeft(l: Listing): number {
   return clampSeatsAvailable(l.seatsAvailable, l.groupSize);
 }
 
+/** A slim band in the college's colours, calmer than full-width stripes. */
 function stripe(college: string): string {
   const [c1, c2] = collegeColours(college);
-  return `repeating-linear-gradient(90deg, ${c1} 0 30px, ${c2} 30px 40px)`;
+  return `linear-gradient(to bottom, ${c1} 0 70%, ${c2} 70%)`;
 }
 
 function UpcomingSkeleton({ college }: { college: string }) {
@@ -58,7 +59,7 @@ function UpcomingSkeleton({ college }: { college: string }) {
     <div role="status" aria-label="Loading">
       <div className="overflow-hidden rounded-[20px] border-2 border-[var(--ink)] bg-[var(--paper)]">
         <div
-          className="h-[46px] border-b-2 border-[var(--ink)] opacity-40"
+          className="h-2.5 border-b-2 border-[var(--ink)] opacity-40"
           style={{ background: stripe(college) }}
         />
         <div className="flex flex-col gap-3 p-4">
@@ -131,7 +132,7 @@ function NextUpCard({
     >
       <div
         aria-hidden
-        className="h-[46px] border-b-2 border-[var(--ink)]"
+        className="h-2.5 border-b-2 border-[var(--ink)]"
         style={{ background: stripe(college) }}
       />
       <div className="p-4">
