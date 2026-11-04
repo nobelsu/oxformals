@@ -2,6 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { ArrowLeftIcon } from "@/components/ui/icons";
+import { useNavHeightVar } from "@/lib/hooks/useNavHeightVar";
 import { useOnChange } from "@/lib/hooks/useOnChange";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -128,6 +129,7 @@ function NavInner() {
   const { status, isAuthenticated, user, signOut } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { navRef, inverted, hidden } = useNavTheme();
+  useNavHeightVar(navRef);
   const [landingScrolled, setLandingScrolled] = useState(false);
   // The feed's own For you / Following tabs have scrolled under the nav.
   const [feedTabsGone, setFeedTabsGone] = useState(false);
@@ -199,7 +201,7 @@ function NavInner() {
 
   if (isLoginPage) {
     return (
-      <nav className="sticky top-0 z-50 w-full shrink-0 relative isolate backdrop-blur-md">
+      <nav ref={navRef} className="sticky top-0 z-50 w-full shrink-0 relative isolate backdrop-blur-md">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-bg/95 via-bg/70 to-transparent"
