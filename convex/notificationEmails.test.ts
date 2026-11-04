@@ -46,6 +46,18 @@ describe("notification emails", () => {
     });
   });
 
+  test("card decisions are emailed even with every email switched off", async () => {
+    const t = convexTest(schema, modules);
+    const sam = await makeUser(t, "Sam", { emailNotifications: false });
+    for (const kind of ["card_approved", "card_rejected"] as const) {
+      const id = await t.run((ctx) => notify(ctx, { userId: sam, kind }));
+      const plan = await t.query(internal.notifications.getDeliveryPlan, { notificationId: id! });
+      expect(plan?.email).toEqual({ type: "notice" });
+      const email = await t.query(internal.emails.getNotificationEmail, { notificationId: id! });
+      expect(email).toMatchObject({ to: "sam@ox.ac.uk" });
+    }
+  });
+
   test("no email for kinds without one, or for deleted users", async () => {
     const t = convexTest(schema, modules);
     const maya = await makeUser(t, "Maya");

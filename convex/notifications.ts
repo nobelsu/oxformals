@@ -13,6 +13,7 @@ import {
 import { optionalUserId, requireActiveUser } from "./guards";
 import { visibleAvatar } from "./userVisibility";
 import {
+  ALWAYS_EMAIL_KINDS,
   EMAIL_NOTICE_KINDS,
   renderNotification,
   type NotificationView,
@@ -111,7 +112,7 @@ export const getDeliveryPlan = internalQuery({
     }
 
     let email = null;
-    if (emailAllowed(user, n.category)) {
+    if (ALWAYS_EMAIL_KINDS.has(n.kind) || emailAllowed(user, n.category)) {
       if (n.kind === "request_received" && n.requestId) {
         email = { type: "request" as const, requestId: n.requestId };
       } else if (n.kind === "wishlist_listing" && n.listingId) {

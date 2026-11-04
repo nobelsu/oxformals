@@ -234,6 +234,18 @@ export const EMAIL_NOTICE_KINDS: ReadonlySet<NotificationKind> = new Set<Notific
   "formal_cancelled",
   "swap_undone",
   "request_accepted",
+  "card_approved",
+  "card_rejected",
+]);
+
+/**
+ * Emailed whatever the person's email prefs say. Someone waiting on a card
+ * check is browse-only and probably not watching the app, so this is the
+ * only way they'd hear.
+ */
+export const ALWAYS_EMAIL_KINDS: ReadonlySet<NotificationKind> = new Set<NotificationKind>([
+  "card_approved",
+  "card_rejected",
 ]);
 
 export function notificationEmail(n: NotificationView): NotificationEmailCopy | null {
@@ -305,6 +317,22 @@ export function notificationEmail(n: NotificationView): NotificationEmailCopy | 
         heading: `${who} said yes`,
         ...(ticket ? { ticket } : {}),
         cta: formals,
+      };
+    case "card_approved":
+      return {
+        subject: "You're in: your University Card checked out",
+        eyebrow: "Card approved",
+        heading: "Welcome to Oxformals",
+        body: "Your University Card checked out. You can now request, host and message.",
+        cta: browse,
+      };
+    case "card_rejected":
+      return {
+        subject: "We couldn't accept your University Card",
+        eyebrow: "Card not accepted",
+        heading: "Your University Card wasn't accepted",
+        body: "Open Oxformals to see why and send a new photo.",
+        cta: { label: "Open Oxformals", path: FORMALS_URL },
       };
     default:
       return null;
