@@ -1,13 +1,14 @@
 import { Email } from "@convex-dev/auth/providers/Email";
 import { generateRandomString, type RandomReader } from "@oslojs/crypto/random";
 import { Resend as ResendAPI } from "resend";
+import { canSignUp, SIGN_UP_REFUSED } from "./allowedEmails";
 import { renderEmail, renderEmailText, type EmailContent } from "./emailTemplate";
 
 function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
-/** Any real-looking address can get a code; non-student ones then need a University Card. */
+/** Basic shape check; who may sign up at all is canSignUp (convex/allowedEmails.ts). */
 function looksLikeEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -48,6 +49,9 @@ const emailProvider = Email({
     const normalizedEmail = normalizeEmail(email);
     if (!looksLikeEmail(normalizedEmail)) {
       throw new Error("That doesn't look like an email address.");
+    }
+    if (!canSignUp(normalizedEmail)) {
+      throw new Error(SIGN_UP_REFUSED);
     }
 
     const apiKey = process.env.AUTH_RESEND_KEY;
