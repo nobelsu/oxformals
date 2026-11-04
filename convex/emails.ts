@@ -77,7 +77,7 @@ function firstNameOf(name: string | undefined, fallback: string): string {
 /** Send one templated email. Logs (never throws) on failure. */
 async function sendEmail(
   label: string,
-  to: string,
+  to: string | string[],
   subject: string,
   content: EmailContent,
 ): Promise<void> {
@@ -89,7 +89,7 @@ async function sendEmail(
   }
   const { error } = await new ResendAPI(apiKey).emails.send({
     from: FROM,
-    to: [to],
+    to: Array.isArray(to) ? to : [to],
     subject,
     html: renderEmail(content),
     text: renderEmailText(content),
@@ -662,12 +662,15 @@ export const sendReportEmail = internalAction({
   },
 });
 
+/** Who hears when a University Card needs a person to look at it. */
+const CARD_REVIEW_RECIPIENTS = ["team@oxformals.com", "nobel@suhendra.com"];
+
 /** Tell the team a University Card is waiting. No photo or details in the email. */
 export const sendCardReviewEmail = internalAction({
   args: {},
   returns: v.null(),
   handler: async () => {
-    await sendEmail("sendCardReviewEmail", "team@oxformals.com", "A University Card is waiting for review", {
+    await sendEmail("sendCardReviewEmail", CARD_REVIEW_RECIPIENTS, "A University Card is waiting for review", {
       eyebrow: "Card check",
       heading: "A University Card needs a look",
       body: "Someone without an Oxford email sent their card and it couldn't be approved automatically.",
