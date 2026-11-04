@@ -11,7 +11,7 @@ import {
 } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { isAllowedEmail } from "@/convex/allowedEmails";
+import { canSignUp, isAllowedEmail, SIGN_UP_REFUSED } from "@/convex/allowedEmails";
 import { useAuth } from "@/components/auth/useAuth";
 import { CardPhotoForm } from "@/components/card/CardPhotoForm";
 import { BIO_ERRORS, BioTextarea } from "@/components/ui/BioTextarea";
@@ -165,7 +165,9 @@ export function LoginForm() {
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cardSkipped, setCardSkipped] = useState(false);
+  const [cardSent, setCardSent] = useState(false);
+  const [codeAccepted, setCodeAccepted] = useState(false);
+  const verifyingRef = useRef(false);
   const collegePickerRef = useRef<HTMLDivElement | null>(null);
   const rolePickerRef = useRef<HTMLDivElement | null>(null);
 
@@ -177,21 +179,23 @@ export function LoginForm() {
 
   const greeting = DINNER_GREETINGS[greetingIdx];
 
-  // Accounts without an allowed email send a University Card photo once their
-  // profile is done, before anything else.
+  // Accounts without an allowed email (.edu ones) must send a University Card
+  // photo once their profile is done, before anything else. No skipping.
   const cardStatus = useQuery(
     api.cardChecks.myCardStatus,
     status === "ready" && isAuthenticated ? {} : "skip",
   );
   const showCardStep =
-    !cardSkipped &&
+    !cardSent &&
     !!cardStatus &&
     cardStatus.needsCard &&
     !cardStatus.member &&
     cardStatus.latest === null;
   const cardStatusLoading = isAuthenticated && cardStatus === undefined;
   const typedEmail = normalizeEmail(email);
-  const showCardNotice = looksComplete(typedEmail) && !isAllowedEmail(typedEmail);
+  const typedComplete = looksComplete(typedEmail);
+  const showRefusedNotice = typedComplete && !canSignUp(typedEmail);
+  const showCardNotice = typedComplete && canSignUp(typedEmail) && !isAllowedEmail(typedEmail);
 
   // Offer optional password setup once, when the user has none yet.
   const offerPassword =
@@ -292,12 +296,17 @@ export function LoginForm() {
       setError("That doesn't look like an email.");
       return;
     }
+    if (!canSignUp(normalized)) {
+      setError(SIGN_UP_REFUSED);
+      return;
+    }
     setSubmitting(true);
     try {
       await requestCode(normalized);
       setEmail(normalized);
       setStep("code");
       setCode("");
+      setCodeAccepted(false);
     } catch {
       setError("Couldn't send the code. Check your email.");
     } finally {
@@ -307,20 +316,27 @@ export function LoginForm() {
 
   async function onCodeSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // A code works once. Sending it again fails, and a failed sign-in makes
+    // the auth proxy clear the cookies the first send just set, signing the
+    // person straight back out. So: one send at a time, none after it worked.
+    if (verifyingRef.current || codeAccepted) return;
     setError(null);
     const trimmedCode = code.trim();
     if (!/^\d{6}$/.test(trimmedCode)) {
       setError("Enter the 6-digit code from your email.");
       return;
     }
+    verifyingRef.current = true;
     setSubmitting(true);
     try {
       await verifyCode(email.trim(), trimmedCode);
+      setCodeAccepted(true);
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Couldn't verify that code.";
       setError(formatVerifyError(msg));
     } finally {
+      verifyingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -481,8 +497,7 @@ export function LoginForm() {
               Take a photo of the front of your University Card.
             </p>
             <CardPhotoForm
-              onDone={() => setCardSkipped(true)}
-              onSkip={() => setCardSkipped(true)}
+              onDone={() => setCardSent(true)}
             />
           </div>
         ) : step === "email" ? (
@@ -501,9 +516,13 @@ export function LoginForm() {
                 placeholder="sso@ox.ac.uk"
                 className={inputCls}
               />
-              {showCardNotice ? (
+              {showRefusedNotice ? (
                 <span className="text-sm text-[var(--ink-muted)]">
-                  Not an Oxford email? You&apos;ll need a photo of your University Card.
+                  {SIGN_UP_REFUSED}
+                </span>
+              ) : showCardNotice ? (
+                <span className="text-sm text-[var(--ink-muted)]">
+                  With a .edu email you&apos;ll need a photo of your University Card.
                 </span>
               ) : null}
             </label>
@@ -583,15 +602,15 @@ export function LoginForm() {
 
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || codeAccepted}
               className="mt-2 w-full cursor-pointer rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-60 disabled:cursor-not-allowed text-[var(--accent-ink)] py-3 text-base transition-colors"
             >
-              {submitting ? "Verifying…" : "Verify"}
+              {codeAccepted ? "Signing you in…" : submitting ? "Verifying…" : "Verify"}
             </button>
 
             <button
               type="button"
-              disabled={submitting}
+              disabled={submitting || codeAccepted}
               className="w-full cursor-pointer rounded-full border-[2px] border-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--bg)] px-4 py-2.5 transition-colors disabled:opacity-60 text-sm"
               onClick={() => void onResendCode()}
             >
