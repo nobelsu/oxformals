@@ -102,7 +102,7 @@ export function MineTab() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 pb-24">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pb-24">
       <div>
         <button
           type="button"
@@ -131,7 +131,7 @@ export function MineTab() {
       {/* Solid bar pinned to the bottom, only while there is something to save. */}
       {hasUnsavedChanges || saving || saved ? (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--bg)]">
-          <div className="mx-auto flex w-full max-w-xl items-center justify-between gap-3 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-0">
+          <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-0">
             <p className="text-sm text-[var(--ink-muted)]">
               {saved && !hasUnsavedChanges ? "All changes saved" : "Unsaved changes"}
             </p>

@@ -8,7 +8,6 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/components/auth/useAuth";
 import { useData } from "@/components/data/useData";
-import { collegeColours } from "@/components/colleges/CollegeCrest";
 import { formalTypeInfo } from "@/components/swap/FormalTypeTag";
 import { Avatar } from "@/components/ui/Avatar";
 import { ListingDetailModal } from "@/components/swap/ListingDetailModal";
@@ -48,19 +47,10 @@ function seatsLeft(l: Listing): number {
   return clampSeatsAvailable(l.seatsAvailable, l.groupSize);
 }
 
-function stripe(college: string): string {
-  const [c1, c2] = collegeColours(college);
-  return `repeating-linear-gradient(90deg, ${c1} 0 30px, ${c2} 30px 40px)`;
-}
-
-function UpcomingSkeleton({ college }: { college: string }) {
+function UpcomingSkeleton() {
   return (
     <div role="status" aria-label="Loading">
       <div className="overflow-hidden rounded-[20px] border-2 border-[var(--ink)] bg-[var(--paper)]">
-        <div
-          className="h-[46px] border-b-2 border-[var(--ink)] opacity-40"
-          style={{ background: stripe(college) }}
-        />
         <div className="flex flex-col gap-3 p-4">
           <Skeleton className="h-2.5 w-14" />
           <Skeleton className="h-7 w-32" />
@@ -84,13 +74,11 @@ function UpcomingSkeleton({ college }: { college: string }) {
 
 function NextUpCard({
   listing,
-  college,
   host,
   onOpen,
   cta,
 }: {
   listing: Listing;
-  college: string;
   host: User | undefined;
   onOpen: () => void;
   cta: { label: string; onClick: () => void } | null;
@@ -129,11 +117,6 @@ function NextUpCard({
       }}
       className="cursor-pointer overflow-hidden rounded-[20px] border-2 border-[var(--ink)] bg-[var(--paper)] text-[var(--ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_3%,var(--paper))] active:translate-y-px focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ink)]"
     >
-      <div
-        aria-hidden
-        className="h-[46px] border-b-2 border-[var(--ink)]"
-        style={{ background: stripe(college) }}
-      />
       <div className="p-4">
         <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-soft)]">
           Next up
@@ -234,7 +217,7 @@ export function CollegeListingsSection({ college }: Props) {
   const listingDisabled = !isAuthenticated;
 
   if (openListings === undefined) {
-    return <UpcomingSkeleton college={college} />;
+    return <UpcomingSkeleton />;
   }
 
   if (openListings.length === 0) {
@@ -249,7 +232,6 @@ export function CollegeListingsSection({ college }: Props) {
     <>
       <NextUpCard
         listing={next}
-        college={college}
         host={getUser(next.ownerUserId)}
         onOpen={() => setDetailListing(next)}
         cta={

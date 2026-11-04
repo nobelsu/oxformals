@@ -9,7 +9,6 @@ import { useAuth } from "@/components/auth/useAuth";
 import { CollegeReviewEditor } from "@/components/colleges/CollegeReviewEditor";
 import { ReviewImageGallery } from "@/components/colleges/ReviewImageGallery";
 import { StarRating } from "@/components/colleges/StarRating";
-import { SketchCard } from "@/components/ui/SketchCard";
 import {
   applyVoteToggle,
   COLLEGE_REVIEW_CATEGORIES,
@@ -63,7 +62,7 @@ export function CollegeReviewCard({ review, variant = "default" }: Props) {
   }
 
   return (
-    <SketchCard className="p-5">
+    <div className="rounded-[18px] border-[1.5px] border-[color-mix(in_srgb,var(--ink)_14%,transparent)] bg-[var(--paper)] p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         {variant === "profile" ? (
           <Link
@@ -195,6 +194,6 @@ export function CollegeReviewCard({ review, variant = "default" }: Props) {
           </button>
         </div>
       ) : null}
-    </SketchCard>
+    </div>
   );
 }
