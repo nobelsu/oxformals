@@ -116,4 +116,82 @@ describe("wishlist notifications", () => {
       { userId: ann, kind: "wishlist_listing", actorId: hal, listingId: listing, data: { college: "Worcester" } },
     ]);
   });
+
+  test("a day's listings at one college share one bell row", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-09T10:00:00Z"));
+    const t = convexTest(schema, modules);
+    const ann = await makeUser(t, "Ann", "Keble");
+    const hal = await makeUser(t, "Hal", "Worcester");
+    const ida = await makeUser(t, "Ida", "Worcester");
+    const joe = await makeUser(t, "Joe", "Magdalen");
+    await t.run(async (ctx) => {
+      await ctx.db.insert("collegeWishlists", { userId: ann, college: "Worcester" });
+      await ctx.db.insert("collegeWishlists", { userId: ann, college: "Magdalen" });
+    });
+    const post = (who: Id<"users">) =>
+      as(t, who).mutation(api.listings.createListing, {
+        dateTime: inDays(3),
+        groupSize: 4,
+        message: "",
+        listingType: "swap",
+      });
+    const rows = () =>
+      t.run((ctx) =>
+        ctx.db
+          .query("notifications")
+          .withIndex("by_userId_and_createdAt", (q) => q.eq("userId", ann))
+          .order("desc")
+          .collect(),
+      );
+
+    const first = await post(hal);
+    const [row] = await rows();
+    const firstPlan = await t.query(internal.notifications.getDeliveryPlan, { notificationId: row._id });
+    expect(firstPlan?.email).toEqual({ type: "wishlist", listingId: first, userId: ann });
+
+    // Ann opens the bell, then two more Worcester formals go up the same day.
+    await as(t, ann).mutation(api.notifications.markAllRead, {});
+    vi.setSystemTime(new Date("2026-11-09T10:05:00Z"));
+    await post(hal);
+    vi.setSystemTime(new Date("2026-11-09T10:10:00Z"));
+    const third = await post(ida);
+
+    let all = await rows();
+    expect(all).toHaveLength(1);
+    expect(all[0]).toMatchObject({
+      _id: row._id,
+      actorId: ida,
+      listingId: third,
+      data: { college: "Worcester", count: 3 },
+      createdAt: Date.parse("2026-11-09T10:10:00Z"),
+    });
+    expect(all[0].readAt).toBeUndefined();
+    // Only the first emailed; the push still goes out with the new count.
+    const plan = await t.query(internal.notifications.getDeliveryPlan, { notificationId: row._id });
+    expect(plan?.email).toBeNull();
+
+    const page = await as(t, ann).query(api.notifications.listMyNotifications, {
+      paginationOpts: { numItems: 10, cursor: null },
+    });
+    expect(page.page[0]).toMatchObject({
+      url: "/college/worcester#listings",
+      groupCollege: "Worcester",
+    });
+    expect(page.page[0].segments.map((x) => x.text).join("")).toBe(
+      "3 new formals at Worcester. The latest is from Ida.",
+    );
+
+    // Another college gets its own row; the next day starts a new Worcester row.
+    await post(joe);
+    vi.setSystemTime(new Date("2026-11-10T09:00:00Z"));
+    await post(hal);
+    all = await rows();
+    expect(all.map((r) => [r.data?.college, r.data?.count])).toEqual([
+      ["Worcester", undefined],
+      ["Magdalen", undefined],
+      ["Worcester", 3],
+    ]);
+    vi.useRealTimers();
+  });
 });

@@ -9,6 +9,7 @@ import type { FunctionReturnType } from "convex/server";
 import type { Id } from "@/convex/_generated/dataModel";
 import { relativeTime } from "@/convex/notificationCopy";
 import { Avatar } from "@/components/ui/Avatar";
+import { CollegeCrest } from "@/components/colleges/CollegeCrest";
 import type { AvatarSource } from "@/lib/auth/types";
 import { BellIcon } from "./BellIcon";
 
@@ -103,7 +104,9 @@ export function NotificationRow({
   return (
     <li className="flex gap-3 border-t-[1.5px] border-[color-mix(in_srgb,var(--ink)_12%,transparent)] px-4 py-3">
       <Link href={item.url} onClick={onNavigate} className="shrink-0" tabIndex={-1} aria-hidden>
-        {item.actor ? (
+        {item.groupCollege ? (
+          <CollegeCrest college={item.groupCollege} size={32} />
+        ) : item.actor ? (
           <Avatar
             name={item.actor.name ?? "Someone"}
             size="sm"

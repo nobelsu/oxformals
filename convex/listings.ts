@@ -19,6 +19,7 @@ import {
   refundSeatHolderCredits,
 } from "./credits";
 import { areFriends } from "./follows";
+import { londonDayKey } from "./londonTime";
 import { notify } from "./notify";
 import { newSeatToken, SEAT_LINK_TTL_MS } from "./seatLinks";
 import {
@@ -409,6 +410,7 @@ export const createListing = mutation({
       .withIndex("by_college", (q) => q.eq("college", college))
       .take(500);
     const told = new Set<Id<"users">>();
+    const postedDay = londonDayKey(Date.now());
     for (const w of wishers) {
       if (w.userId === userId || told.has(w.userId)) continue;
       told.add(w.userId);
@@ -418,6 +420,8 @@ export const createListing = mutation({
         actorId: userId,
         listingId,
         data: { college, dateTime: new Date(timestamp).toISOString() },
+        // One bell row per college per day, however many get posted.
+        groupKey: `${college}:${postedDay}`,
       });
     }
 

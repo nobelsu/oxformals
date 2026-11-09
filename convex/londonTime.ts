@@ -31,6 +31,13 @@ function londonMidnight(year: number, month: number, day: number): number {
   return guess - londonOffsetMs(guess);
 }
 
+/** "2026-11-09": the London calendar day containing `ms`. */
+export function londonDayKey(ms: number): string {
+  const p = londonParts(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
+}
+
 export function londonHour(ms: number): number {
   return londonParts(ms).hour;
 }

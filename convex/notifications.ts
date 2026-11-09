@@ -115,7 +115,8 @@ export const getDeliveryPlan = internalQuery({
     if (ALWAYS_EMAIL_KINDS.has(n.kind) || emailAllowed(user, n.category)) {
       if (n.kind === "request_received" && n.requestId) {
         email = { type: "request" as const, requestId: n.requestId };
-      } else if (n.kind === "wishlist_listing" && n.listingId) {
+      } else if (n.kind === "wishlist_listing" && n.listingId && (n.data?.count ?? 1) === 1) {
+        // Only the day's first listing at a college emails; later ones update the bell row.
         email = { type: "wishlist" as const, listingId: n.listingId, userId: n.userId };
       } else if (EMAIL_NOTICE_KINDS.has(n.kind)) {
         email = { type: "notice" as const };
@@ -220,6 +221,10 @@ export const listMyNotifications = query({
         ...(n.requestId ? { requestId: n.requestId } : {}),
         url: rendered.url,
         segments: rendered.segments,
+        // A grouped "want to go" row shows the college's crest, not one host.
+        ...(n.kind === "wishlist_listing" && (n.data?.count ?? 1) > 1 && n.data?.college
+          ? { groupCollege: n.data.college }
+          : {}),
         actor: actor
           ? {
               _id: actor._id,
