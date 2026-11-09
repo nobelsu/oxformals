@@ -16,10 +16,17 @@ export type NotifyArgs = {
   listingId?: Id<"listings">;
   requestId?: Id<"requests">;
   data?: NotificationData;
+  /**
+   * Merge into one row: a later notify with the same kind + groupKey bumps
+   * that row's count, moves it to the top and marks it unread again, instead
+   * of adding a row. Put the time window in the key (e.g. the day).
+   */
+  groupKey?: string;
 };
 
 /** kind + the ids involved (+ a party answer, so "in" then "out" both show). */
 export function dedupeKeyFor(args: NotifyArgs): string {
+  if (args.groupKey !== undefined) return `${args.kind}:group:${args.groupKey}`;
   return [
     args.kind,
     args.actorId ?? "",
@@ -33,7 +40,7 @@ export function dedupeKeyFor(args: NotifyArgs): string {
  * Record that something happened to `userId` and schedule its push/email.
  * Call it inside the mutation where the event happens, so it commits (or rolls
  * back) with it. Returns null when skipped: yourself, a deleted user, or the
- * same thing within the last 24h.
+ * same thing within the last 24h. With a groupKey, returns the merged row.
  */
 export async function notify(
   ctx: MutationCtx,
@@ -52,6 +59,20 @@ export async function notify(
     )
     .order("desc")
     .first();
+
+  if (args.groupKey !== undefined && last) {
+    await ctx.db.patch(last._id, {
+      ...(args.actorId !== undefined ? { actorId: args.actorId } : {}),
+      ...(args.listingId !== undefined ? { listingId: args.listingId } : {}),
+      data: { ...args.data, count: (last.data?.count ?? 1) + 1 },
+      createdAt: now,
+      readAt: undefined,
+    });
+    await ctx.scheduler.runAfter(0, internal.notificationDelivery.deliver, {
+      notificationId: last._id,
+    });
+    return last._id;
+  }
   if (last && now - last.createdAt < DEDUPE_WINDOW_MS) return null;
 
   const notificationId = await ctx.db.insert("notifications", {
