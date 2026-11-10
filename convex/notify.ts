@@ -19,7 +19,8 @@ export type NotifyArgs = {
   /**
    * Merge into one row: a later notify with the same kind + groupKey bumps
    * that row's count, moves it to the top and marks it unread again, instead
-   * of adding a row. Put the time window in the key (e.g. the day).
+   * of adding a row. It only pushes again if that row had been read. Put the
+   * time window in the key (e.g. the day).
    */
   groupKey?: string;
 };
@@ -68,9 +69,12 @@ export async function notify(
       createdAt: now,
       readAt: undefined,
     });
-    await ctx.scheduler.runAfter(0, internal.notificationDelivery.deliver, {
-      notificationId: last._id,
-    });
+    // Still unread: they haven't seen the last push yet, so don't send another.
+    if (last.readAt !== undefined) {
+      await ctx.scheduler.runAfter(0, internal.notificationDelivery.deliver, {
+        notificationId: last._id,
+      });
+    }
     return last._id;
   }
   if (last && now - last.createdAt < DEDUPE_WINDOW_MS) return null;
