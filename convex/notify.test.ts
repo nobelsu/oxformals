@@ -84,6 +84,61 @@ describe("notify", () => {
   });
 });
 
+describe("grouped want-to-go alerts", () => {
+  const wish = (t: T, userId: Id<"users">, actorId: Id<"users">, college = "Worcester") =>
+    t.run((ctx) => notify(ctx, { userId, kind: "wishlist_listing", actorId, data: { college } }));
+  const deliveries = (t: T) =>
+    t.run(async (ctx) =>
+      (await ctx.db.system.query("_scheduled_functions").collect()).filter((j) =>
+        j.name.includes("deliver"),
+      ),
+    );
+
+  test("a burst at one college is one unread row with one push", async () => {
+    const t = convexTest(schema, modules);
+    const maya = await makeUser(t, "Maya");
+    const priya = await makeUser(t, "Priya");
+    await wish(t, priya, maya);
+    await wish(t, priya, maya);
+    await wish(t, priya, maya);
+    expect(await rowsFor(t, priya)).toMatchObject([
+      { actorId: maya, dedupeKey: "wishlist_listing:Worcester", data: { college: "Worcester", count: 3 } },
+    ]);
+    expect(await deliveries(t)).toHaveLength(1);
+  });
+
+  test("different hosts drop the name; another college is its own row", async () => {
+    const t = convexTest(schema, modules);
+    const maya = await makeUser(t, "Maya");
+    const tom = await makeUser(t, "Tom");
+    const priya = await makeUser(t, "Priya");
+    await wish(t, priya, maya);
+    await wish(t, priya, tom);
+    await wish(t, priya, tom, "Keble");
+    const rows = await rowsFor(t, priya);
+    expect(rows).toHaveLength(2);
+    expect(rows[0].actorId).toBeUndefined();
+    expect(rows[0].data?.count).toBe(2);
+    expect(rows[1]).toMatchObject({ actorId: tom, data: { college: "Keble" } });
+  });
+
+  test("once read, the next one is a new row and pushes again", async () => {
+    const t = convexTest(schema, modules);
+    const maya = await makeUser(t, "Maya");
+    const priya = await makeUser(t, "Priya");
+    await wish(t, priya, maya);
+    await t.run(async (ctx) => {
+      for (const n of await ctx.db.query("notifications").collect()) {
+        await ctx.db.patch(n._id, { readAt: Date.now() });
+      }
+    });
+    await wish(t, priya, maya);
+    const rows = await rowsFor(t, priya);
+    expect(rows.map((r) => r.readAt === undefined)).toEqual([false, true]);
+    expect(await deliveries(t)).toHaveLength(2);
+  });
+});
+
 describe("delivery plan", () => {
   async function seeded(extra: Record<string, unknown> = {}) {
     const t = convexTest(schema, modules);

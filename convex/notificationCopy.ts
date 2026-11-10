@@ -1,3 +1,4 @@
+import { collegeToSlug } from "../lib/data/collegeSlug";
 import type { NotificationData, NotificationKind } from "./notificationKinds";
 
 /**
@@ -205,6 +206,15 @@ export function renderNotification(n: NotificationView): RenderedNotification {
       url = FORMALS_URL;
       break;
     case "wishlist_listing":
+      // Several listings folded into one row (see notify's GROUPED_KINDS).
+      if (count > 1) {
+        title = "New formals";
+        segments = n.actorId
+          ? [b(who), t(` listed ${count} formals at `), b(college), t(".")]
+          : [t(`${plural(count, "new formal")} at `), b(college), t(".")];
+        url = n.data.college ? `/college/${collegeToSlug(n.data.college)}?section=listings` : BROWSE_URL;
+        break;
+      }
       title = "New formal";
       segments = [b(who), t(" listed a formal at "), b(college), t(day ? `, ${day}.` : ".")];
       url = n.listingId ? `/?tab=browse&listing=${n.listingId}` : BROWSE_URL;

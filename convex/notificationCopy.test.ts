@@ -54,6 +54,16 @@ describe("renderNotification", () => {
     expect(r.body).toBe("You earned 1 spoon. Sam went to their first formal.");
   });
 
+  test("grouped want-to-go alerts count the formals and open the college", () => {
+    const one = renderNotification(view({ kind: "wishlist_listing", data: { college: "St Anne's", count: 3 } }));
+    expect(one.body).toBe("Maya listed 3 formals at St Anne's.");
+    expect(one.url).toBe("/college/st-annes?section=listings");
+    const mixed = renderNotification(
+      view({ kind: "wishlist_listing", actorId: undefined, actorName: null, data: { college: "Keble", count: 2 } }),
+    );
+    expect(mixed.body).toBe("2 new formals at Keble.");
+  });
+
   test("a missing actor reads as Someone", () => {
     const r = renderNotification(view({ kind: "new_follower", actorName: null }));
     expect(r.body).toBe("Someone followed you.");
