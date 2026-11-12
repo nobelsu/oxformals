@@ -145,6 +145,13 @@ describe("wishlist notifications", () => {
           .collect(),
       );
 
+    const deliveries = () =>
+      t.run(async (ctx) =>
+        (await ctx.db.system.query("_scheduled_functions").collect()).filter(
+          (j) => j.name.includes("deliver") && j.args[0]?.notificationId === row._id,
+        ).length,
+      );
+
     const first = await post(hal);
     const [row] = await rows();
     const firstPlan = await t.query(internal.notifications.getDeliveryPlan, { notificationId: row._id });
@@ -154,8 +161,12 @@ describe("wishlist notifications", () => {
     await as(t, ann).mutation(api.notifications.markAllRead, {});
     vi.setSystemTime(new Date("2026-11-09T10:05:00Z"));
     await post(hal);
+    // Read, so the first merge pushes again.
+    expect(await deliveries()).toBe(2);
     vi.setSystemTime(new Date("2026-11-09T10:10:00Z"));
     const third = await post(ida);
+    // Still unread, so the second merge doesn't.
+    expect(await deliveries()).toBe(2);
 
     let all = await rows();
     expect(all).toHaveLength(1);
