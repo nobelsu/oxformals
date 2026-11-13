@@ -255,6 +255,20 @@ export const markAllRead = mutation({
   },
 });
 
+/** Opening one from a push reads just that one. Someone else's, or a gone one, is ignored. */
+export const markNotificationRead = mutation({
+  args: { notificationId: v.id("notifications") },
+  returns: v.null(),
+  handler: async (ctx, { notificationId }) => {
+    const { userId } = await requireActiveUser(ctx);
+    const n = await ctx.db.get(notificationId);
+    if (n && n.userId === userId && n.readAt === undefined) {
+      await ctx.db.patch(notificationId, { readAt: Date.now() });
+    }
+    return null;
+  },
+});
+
 export const getMyNotificationPrefs = query({
   args: {},
   handler: async (ctx) => {
