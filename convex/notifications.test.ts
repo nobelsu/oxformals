@@ -33,6 +33,22 @@ async function followers(t: T, target: Id<"users">, n: number) {
 }
 
 describe("bell", () => {
+  test("marking one read leaves the rest, and can't touch someone else's", async () => {
+    const t = convexTest(schema, modules);
+    const me = await makeUser(t, "Me");
+    const other = await makeUser(t, "Other");
+    await followers(t, me, 2);
+    await followers(t, other, 1);
+    const [mine, theirs] = await t.run(async (ctx) => [
+      await ctx.db.query("notifications").withIndex("by_userId_and_createdAt", (q) => q.eq("userId", me)).first(),
+      await ctx.db.query("notifications").withIndex("by_userId_and_createdAt", (q) => q.eq("userId", other)).first(),
+    ]);
+    await as(t, me).mutation(api.notifications.markNotificationRead, { notificationId: mine!._id });
+    await as(t, me).mutation(api.notifications.markNotificationRead, { notificationId: theirs!._id });
+    expect((await as(t, me).query(api.notifications.getBellState, {}))?.unread).toBe(1);
+    expect((await as(t, other).query(api.notifications.getBellState, {}))?.unread).toBe(1);
+  });
+
   test("unread count caps at 10 and mark all read clears it", async () => {
     const t = convexTest(schema, modules);
     const me = await makeUser(t, "Me");
